@@ -20,29 +20,54 @@ enum Role {
   ADMIN
 }
 
-enum TransactionType {
-  DEPOSIT
-  ESCROW_HOLD
-  ESCROW_RELEASE
-  ESCROW_REFUND
-  WITHDRAWAL
-}
-
-enum OrderStatus {
-  PENDING
-  IN_PROGRESS
-  DELIVERED
-  COMPLETED
-  DISPUTED
-  CANCELLED
-  REFUNDED
-}
-
 enum ServiceStatus {
   PENDING_REVIEW // Submitted, awaiting admin approval
   ACTIVE // Live, visible to clients
   REJECTED // Admin rejected
   PAUSED // Freelancer paused it
+}
+
+enum OrderStatus {
+  PENDING // Created, payment not yet confirmed
+  IN_PROGRESS // Payment confirmed, work started
+  DELIVERED // Freelancer marked as delivered
+  COMPLETED // Client accepted delivery
+  DISPUTED // Client opened dispute
+  CANCELLED // Cancelled before work started
+  REFUNDED // Refunded after dispute resolution
+}
+
+enum EscrowStatus {
+  HOLDING // Money held, work in progress
+  RELEASED // Released to freelancer
+  REFUNDED // Returned to client
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED_FREELANCER // Escrow released to freelancer
+  RESOLVED_CLIENT // Escrow refunded to client
+}
+
+enum TransactionType {
+  DEPOSIT // Client adds money to wallet
+  ESCROW_HOLD // Money moved to escrow
+  ESCROW_RELEASE // Money released from escrow to freelancer
+  ESCROW_REFUND // Money returned from escrow to client
+  WITHDRAWAL // Freelancer withdraws earnings
+}
+
+enum NotificationType {
+  ORDER_PLACED
+  ORDER_DELIVERED
+  ORDER_COMPLETED
+  ORDER_CANCELLED
+  DISPUTE_OPENED
+  DISPUTE_RESOLVED
+  MESSAGE_RECEIVED
+  PAYMENT_RECEIVED
+  REVIEW_RECEIVED
 }
 
 // ─── MODELS ────────────────────────────────────────────
@@ -61,10 +86,17 @@ model User {
   deletedAt              DateTime? //soft delete
 
   profile            Profile?
-  refreshTokens      RefreshToken[]
   wallet             Wallet?
+  refreshTokens      RefreshToken[]
+  servicesOffered    Service[]      @relation("FreelancerServices")
   ordersAsClient     Order[]        @relation("ClientOrders")
   ordersAsFreelancer Order[]        @relation("FreelancerOrders")
+  sentMessages       Message[]
+  reviewsGiven       Review[]       @relation("ReviewsGiven")
+  reviewsReceived    Review[]       @relation("ReviewsReceived")
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  disputes           Dispute[]      @relation("ClientDisputes")
 }
 
 model Profile {
@@ -72,32 +104,35 @@ model Profile {
   userId        String   @unique
   displayName   String
   bio           String?
-  avatarUrl     String? //S3 URL
-  skills        String[]
-  portfolioUrls String[]
+  avatarUrl     String? // S3 URL
+  skills        String[] // Array of skill tags
+  portfolioUrls String[] // S3 URLs or external links
   rating        Float    @default(0)
   totalReviews  Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id])
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model RefreshToken {
   id        String    @id @default(uuid())
   userId    String
-  tokenHash String    @unique
+  tokenHash String    @unique // Stored hashed, not plain
   expiresAt DateTime
   createdAt DateTime  @default(now())
-  revokedAt DateTime?
-  user      User      @relation(fields: [userId], references: [id])
+  revokedAt DateTime? // Null = still valid
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Wallet {
-  id           String        @id @default(uuid())
-  userId       String        @unique
-  balance      Int           @default(0)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  balance   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   user         User          @relation(fields: [userId], references: [id])
   transactions Transaction[]
 }
@@ -108,28 +143,10 @@ model Transaction {
   type        TransactionType
   amount      Int
   description String
-  orderId     String?
+  orderId     String? // Reference to related order if applicable
   createdAt   DateTime        @default(now())
-  wallet      Wallet          @relation(fields: [walletId], references: [id])
-}
 
-model Order {
-  id             String      @id @default(uuid())
-  clientId       String
-  freelancerId   String
-  serviceId      String
-  status         OrderStatus @default(PENDING)
-  price          Int
-  deliveryDays   Int
-  requirements   String?
-  deliveryNote   String?
-  autoCompleteAt DateTime?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-
-  client     User    @relation("ClientOrders", fields: [clientId], references: [id])
-  freelancer User    @relation("FreelancerOrders", fields: [freelancerId], references: [id])
-  service    Service @relation(fields: [serviceId], references: [id])
+  wallet Wallet @relation(fields: [walletId], references: [id])
 }
 
 model Service {
@@ -140,11 +157,130 @@ model Service {
   price        Int
   deliveryDays Int
   skills       String[]
-  imageUrls    String[]
+  imageUrls    String[] // S3 URLs
   status       ServiceStatus            @default(PENDING_REVIEW)
-  searchVector Unsupported("tsvector")?
+  searchVector Unsupported("tsvector")? // PostgreSQL full-text search
   createdAt    DateTime                 @default(now())
   updatedAt    DateTime                 @updatedAt
   deletedAt    DateTime?
-  orders       Order[]
+
+  freelancer User     @relation("FreelancerServices", fields: [freelancerId], references: [id])
+  orders     Order[]
+  reviews    Review[]
+
+  @@index([searchVector], type: Gin) // Full-text search index
 }
+
+model Order {
+  id             String      @id @default(uuid())
+  clientId       String
+  freelancerId   String
+  serviceId      String
+  status         OrderStatus @default(PENDING)
+  price          Int
+  deliveryDays   Int // Snapshot at time of order
+  requirements   String? // Client's specific requirements
+  deliveryNote   String? // Freelancer's delivery note
+  autoCompleteAt DateTime? // Set when DELIVERED, auto-complete after 7 days
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  client       User          @relation("ClientOrders", fields: [clientId], references: [id])
+  freelancer   User          @relation("FreelancerOrders", fields: [freelancerId], references: [id])
+  service      Service       @relation(fields: [serviceId], references: [id])
+  escrow       Escrow?
+  review       Review?
+  dispute      Dispute?
+  conversation Conversation?
+  auditLogs    AuditLog[]
+}
+
+model Escrow {
+  id         String       @id @default(uuid())
+  orderId    String       @unique
+  amount     Int
+  status     EscrowStatus @default(HOLDING)
+  heldAt     DateTime     @default(now())
+  releasedAt DateTime?
+  refundedAt DateTime?
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+model Dispute {
+  id         String        @id @default(uuid())
+  orderId    String        @unique
+  clientId   String
+  reason     String
+  status     DisputeStatus @default(OPEN)
+  adminNote  String?
+  createdAt  DateTime      @default(now())
+  resolvedAt DateTime?
+
+  order  Order @relation(fields: [orderId], references: [id])
+  client User  @relation("ClientDisputes", fields: [clientId], references: [id])
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  orderId   String   @unique
+  createdAt DateTime @default(now())
+
+  order    Order     @relation(fields: [orderId], references: [id])
+  messages Message[]
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  senderId       String
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  sender       User         @relation(fields: [senderId], references: [id])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  orderId    String   @unique
+  serviceId  String
+  reviewerId String
+  revieweeId String
+  rating     Int //1-5
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  order    Order   @relation(fields: [orderId], references: [id])
+  service  Service @relation(fields: [serviceId], references: [id])
+  reviewer User    @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  reviewee User    @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String? // Who triggered it (null = system)
+  orderId   String? // Related order if applicable
+  action    String // e.g. "ORDER_STATUS_CHANGED", "ESCROW_RELEASED"
+  before    Json? // State before change
+  after     Json? // State after change
+  createdAt DateTime @default(now())
+
+  user  User?  @relation(fields: [userId], references: [id])
+  order Order? @relation(fields: [orderId], references: [id])
+}
+
+
+
