@@ -23,7 +23,7 @@ See the `docs/` directory for architecture, API conventions, deployment notes, a
 
 - [x] Project setup
 - [x] Docker infrastructure
-- [ ] Database schema
+- [x] Database schema
 - [ ] Authentication
 - [ ] Services
 - [ ] Orders
