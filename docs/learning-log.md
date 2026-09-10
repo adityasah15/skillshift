@@ -180,3 +180,159 @@ npm run start:dev
 to verify NestJS runtime behavior.
 
 A successful TypeScript compile does **not** prove the runtime will work. Both compile-time and runtime verification matter.
+
+---
+
+# Prisma ↔ PostgreSQL Connectivity
+
+## Date
+2026-09-10
+
+### 1. PrismaClient vs PrismaPg Adapter
+
+- `PrismaClient` provides Prisma's database query API.
+- `PrismaPg` connects Prisma to PostgreSQL through the PostgreSQL driver.
+- The `pg` package provides the PostgreSQL driver.
+- `DATABASE_URL` tells the application where the PostgreSQL database is located.
+
+Conceptually:
+
+```text
+PrismaClient
+    ↓
+PrismaPg
+    ↓
+pg
+    ↓
+PostgreSQL
+````
+
+### 2. PrismaService
+
+`PrismaService` extends `PrismaClient`, so it inherits Prisma's database methods.
+
+Examples:
+
+```typescript
+this.user.findMany()
+this.user.create()
+this.user.update()
+```
+
+### 3. Raw SQL
+
+Prisma provides:
+
+```typescript
+this.$queryRaw
+```
+
+for raw SQL that returns data.
+
+Example:
+
+```typescript
+await this.$queryRaw`SELECT NOW()`;
+```
+
+`$executeRaw` is intended for raw SQL where returned rows are not the main result.
+
+### 4. `const` Inside a Class
+
+A standalone:
+
+```typescript
+const result = ...
+```
+
+cannot be placed directly inside a class body.
+
+It must be inside a method/function:
+
+```typescript
+async testDatabase() {
+  const result = ...;
+}
+```
+
+### 5. `await`
+
+Database queries are asynchronous.
+
+Therefore:
+
+```typescript
+const result = await this.$queryRaw`SELECT NOW()`;
+```
+
+waits for PostgreSQL to return the result before continuing.
+
+### 6. Smoke Testing
+
+A smoke test is a minimal test used to verify that an important part of the system works.
+
+`SELECT NOW()` was useful because it:
+
+* requires no application data
+* does not modify the database
+* directly verifies database communication
+
+The temporary endpoint was removed after verification.
+
+### 7. Docker/WSL Debugging
+
+The error:
+
+```text
+Can't reach database server at 127.0.0.1:5432
+```
+
+meant the application could not reach PostgreSQL.
+
+Checking:
+
+```bash
+docker ps
+```
+
+showed whether the PostgreSQL container was running.
+
+Restarting Docker Desktop restored Docker availability inside WSL.
+
+### 8. Important Verification
+
+Application startup alone does not prove that database queries work.
+
+The successful:
+
+```bash
+curl http://localhost:3000/test-db
+```
+
+request proved the complete chain:
+
+```text
+NestJS
+→ Prisma
+→ PostgreSQL adapter
+→ PostgreSQL
+→ query result
+→ HTTP response
+```
+
+### Key takeaway
+
+**Initialize successfully ≠ database query verified.**
+
+Always distinguish between:
+
+1. Prisma can initialize.
+2. PostgreSQL is reachable.
+3. Prisma can execute a real query.
+4. The actual application's database operations work.
+
+```
+
+These are designed to be **appended directly**, so you don't need to modify the earlier sections of either file.
+```
+

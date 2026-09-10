@@ -1815,3 +1815,438 @@ If alternatives existed, record what we chose and why.
 What concept should be remembered for interviews/rebuilding the project?
 
 This log intentionally preserves failed attempts because debugging history is part of the engineering learning process.
+
+---
+
+# Implementation Log — Prisma ↔ PostgreSQL Connectivity Verification
+
+## Date
+2026-09-10
+
+## Milestone
+Verified that the SkillShift NestJS application can successfully communicate with the PostgreSQL database through Prisma.
+
+---
+
+## 1. Objective
+
+After integrating Prisma with PostgreSQL and getting the NestJS application to start successfully, the next goal was to verify that Prisma could perform an actual database operation.
+
+Application startup alone was not enough to prove database connectivity.
+
+The intended flow to verify was:
+
+NestJS Controller → PrismaService → PrismaClient → PrismaPg Adapter → PostgreSQL
+
+A minimal temporary database query was chosen so that database connectivity could be tested independently of any actual SkillShift feature.
+
+---
+
+## 2. Why `SELECT NOW()` Was Chosen
+
+The temporary query selected was:
+
+```sql
+SELECT NOW()
+````
+
+This was intentionally chosen because:
+
+* It does not require any existing application data.
+* It does not modify the database.
+* It directly verifies that PostgreSQL can execute a query.
+* PostgreSQL returns a timestamp, making the result easy to recognize.
+* It avoids prematurely building a real feature just to test connectivity.
+
+This was treated as a temporary smoke test.
+
+---
+
+## 3. Understanding PrismaService
+
+The existing `PrismaService` extends `PrismaClient`.
+
+Conceptually:
+
+```text
+PrismaService
+    ↓ extends
+PrismaClient
+    ↓ uses
+PrismaPg adapter
+    ↓ uses
+pg driver
+    ↓ connects through
+DATABASE_URL
+    ↓
+PostgreSQL
+```
+
+The Prisma PostgreSQL adapter is responsible for providing the PostgreSQL driver connection mechanism, while `PrismaClient` provides the database query API.
+
+Because `PrismaService` extends `PrismaClient`, it inherits Prisma's query methods.
+
+Examples include:
+
+```typescript
+this.user.findMany()
+this.user.findUnique()
+this.user.create()
+this.user.update()
+```
+
+For raw SQL, Prisma provides methods such as:
+
+```typescript
+this.$queryRaw
+this.$executeRaw
+```
+
+`$queryRaw` is appropriate when the SQL query is expected to return rows.
+
+`$executeRaw` is intended for raw SQL operations where the main purpose is execution rather than retrieving result rows.
+
+---
+
+## 4. Initial Implementation Mistake
+
+The first attempt placed the query directly inside the class body:
+
+```typescript
+const result = await this.$queryRaw`SELECT NOW()`;
+```
+
+This produced the TypeScript error:
+
+```text
+A CLASS MEMBER CANNOT HAVE THE 'CONST' KEYWORD.
+```
+
+### Why this happened
+
+`const` declares a local variable and must be used inside an executable scope such as a function or method.
+
+A class body can contain methods, properties, constructors, etc., but a standalone `const` declaration cannot be placed directly in the class body.
+
+The correct structure was therefore:
+
+```text
+class
+├── constructor()
+├── onModuleInit()
+├── onModuleDestroy()
+└── testDatabase()
+        └── const result
+```
+
+---
+
+## 5. Temporary `testDatabase()` Method
+
+The query was moved into a temporary method:
+
+```typescript
+async testDatabase() {
+  const result = await this.$queryRaw`SELECT NOW()`;
+  return result;
+}
+```
+
+### What this method does
+
+1. Calls Prisma's `$queryRaw`.
+2. Sends `SELECT NOW()` to PostgreSQL.
+3. Waits for the asynchronous database operation using `await`.
+4. Stores the returned result in `result`.
+5. Returns the result to the caller.
+
+The use of `await` is necessary because database operations are asynchronous.
+
+The `$queryRaw` call uses a tagged template literal:
+
+```typescript
+this.$queryRaw`SELECT NOW()`
+```
+
+---
+
+## 6. Temporary Controller Endpoint
+
+To invoke the method through the running NestJS application, a temporary endpoint was added to `AppController`.
+
+Conceptually:
+
+```text
+GET /test-db
+      ↓
+AppController
+      ↓
+PrismaService.testDatabase()
+      ↓
+PostgreSQL
+```
+
+The controller called:
+
+```typescript
+return this.prismaService.testDatabase();
+```
+
+This allowed the database query to be tested through the actual application request path rather than executing Prisma independently.
+
+---
+
+## 7. First Runtime Failure
+
+The endpoint initially produced:
+
+```text
+PrismaClientKnownRequestError
+
+Invalid `prisma.$queryRaw()` invocation:
+
+Raw query failed.
+Message: Can't reach database server at 127.0.0.1:5432
+```
+
+The important part was:
+
+```text
+Can't reach database server at 127.0.0.1:5432
+```
+
+This indicated that the application had reached the Prisma query layer, but PostgreSQL could not be reached at the configured address and port.
+
+The problem was therefore not the SQL query itself.
+
+---
+
+## 8. Diagnosing Docker/WSL Connectivity
+
+The next step was to check whether the PostgreSQL Docker container was running.
+
+The command:
+
+```bash
+docker ps
+```
+
+initially returned:
+
+```text
+Command 'docker' not found
+```
+
+This occurred because the Docker CLI was temporarily unavailable inside the WSL environment.
+
+Docker was not immediately installed inside WSL because the development environment was using Docker Desktop and installing another Docker setup inside WSL could have unnecessarily complicated the environment.
+
+Docker Desktop was restarted.
+
+After restarting Docker Desktop, the command:
+
+```bash
+docker ps
+```
+
+successfully showed:
+
+```text
+skillshift-redis
+skillshift-postgres
+```
+
+The PostgreSQL container was running with:
+
+```text
+0.0.0.0:5432->5432/tcp
+```
+
+and Redis was running with:
+
+```text
+0.0.0.0:6379->6379/tcp
+```
+
+This confirmed that the PostgreSQL container was available and port 5432 was exposed.
+
+---
+
+## 9. Successful Database Query
+
+With Docker working again, the temporary endpoint was tested using:
+
+```bash
+curl http://localhost:3000/test-db
+```
+
+The response was:
+
+```json
+[
+  {
+    "now": "2026-09-10T09:38:58.959Z"
+  }
+]
+```
+
+This successfully demonstrated that PostgreSQL executed:
+
+```sql
+SELECT NOW()
+```
+
+and returned the result through Prisma and NestJS.
+
+The `Z` suffix indicates that the timestamp is represented in UTC.
+
+---
+
+## 10. What Was Proven
+
+The successful request verified the complete runtime path:
+
+```text
+curl
+  ↓
+GET /test-db
+  ↓
+NestJS Controller
+  ↓
+PrismaService
+  ↓
+PrismaClient
+  ↓
+PrismaPg
+  ↓
+pg driver
+  ↓
+PostgreSQL container
+  ↓
+SELECT NOW()
+  ↓
+PostgreSQL result
+  ↓
+Prisma
+  ↓
+NestJS HTTP response
+  ↓
+curl
+```
+
+This is a stronger verification than merely seeing:
+
+```text
+Nest application successfully started
+```
+
+Application startup proved that NestJS and Prisma could initialize.
+
+The `SELECT NOW()` test proved that the application could actually execute a database query against PostgreSQL.
+
+---
+
+## 11. Removing the Temporary Smoke Test
+
+The `/test-db` endpoint was not part of SkillShift's actual requirements.
+
+It was created only to verify database connectivity.
+
+After the successful test, the following temporary code was removed:
+
+* `testDatabase()` from `PrismaService`
+* `/test-db` route from `AppController`
+* The temporary controller call to `PrismaService.testDatabase()`
+
+`AppController` was restored to its original responsibility:
+
+```typescript
+@Get()
+getHello(): string {
+  return this.appService.getHello();
+}
+```
+
+`PrismaService` was restored to its intended permanent implementation containing only:
+
+* PostgreSQL adapter initialization
+* Prisma client initialization
+* `$connect()` during module initialization
+* `$disconnect()` during module destruction
+
+---
+
+## 12. Final Verification
+
+After removing the temporary smoke test:
+
+```bash
+npx tsc --noEmit
+```
+
+completed successfully.
+
+The NestJS development server also started successfully.
+
+Therefore:
+
+* TypeScript compilation passed.
+* NestJS startup passed.
+* Prisma initialization passed.
+* PostgreSQL connectivity had already been verified through the real query.
+* Temporary test code was removed.
+* The application was left in a clean state.
+
+---
+
+## 13. Development Lesson
+
+This was an example of a database connectivity smoke test.
+
+The purpose was not to build functionality, but to isolate and verify one technical dependency before continuing with feature development.
+
+The approach was:
+
+```text
+Integrate
+   ↓
+Start application
+   ↓
+Build minimal smoke test
+   ↓
+Encounter connectivity failure
+   ↓
+Diagnose infrastructure
+   ↓
+Fix Docker/WSL availability
+   ↓
+Verify real DB query
+   ↓
+Remove temporary test
+   ↓
+Continue development
+```
+
+This avoids discovering database connectivity problems later while simultaneously debugging a larger feature such as authentication or orders.
+
+---
+
+## 14. Current State After This Milestone
+
+SkillShift now has:
+
+* PostgreSQL running through Docker
+* Redis running through Docker
+* Prisma schema and initial migration
+* Prisma PostgreSQL adapter
+* `PrismaService`
+* `PrismaModule`
+* Global configuration loading through `ConfigModule`
+* Successful real PostgreSQL query verification
+* Clean NestJS startup after removing the temporary test
+
+The database integration is therefore considered **verified**.
+
+The next development step can focus on building actual SkillShift functionality rather than infrastructure verification.
+
+````
