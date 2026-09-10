@@ -531,5 +531,21 @@ DTO validation
 + relational integrity
 + safe API responses
 ```
+## Email Verification
 
-````
+### What I Learned
+
+- **SMTP** is the protocol/service interface used by applications to send email through a mail server.
+- **Nodemailer** provides the Node.js API for configuring an SMTP connection and sending emails.
+- A Nodemailer **transporter** represents the configured connection used to send messages.
+- SMTP credentials should come from environment variables through NestJS `ConfigService`, not be hard-coded.
+- **Ethereal** provides a development/test SMTP mailbox so email functionality can be tested without sending real emails.
+- Verification tokens should be generated using a cryptographically secure random source such as `crypto.randomBytes()`.
+- The raw verification token should not be stored in PostgreSQL. Store only a bcrypt hash.
+- Bcrypt hashes cannot be looked up by hashing the same token again because bcrypt uses a random salt.
+- `bcrypt.compare(rawToken, storedHash)` is the correct way to validate a stored bcrypt token.
+- Verification tokens should be single-use. After successful verification, set `isEmailVerified = true` and clear the stored token hash.
+- NestJS modules expose services through `exports` and consume them through `imports` and dependency injection.
+- Authentication logic belongs in `AuthService`, while email-delivery mechanics belong in `MailService`.
+- Email sending currently happens after the database transaction succeeds.
+- For production, BullMQ can move email delivery to a background job with retries/backoff so SMTP failures do not directly block registration.

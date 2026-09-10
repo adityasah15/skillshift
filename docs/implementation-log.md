@@ -2895,3 +2895,425 @@ The system can now:
 * Communicate successfully with PostgreSQL.
 
 The next Auth functionality can build on this foundation.
+
+Yep. Append the following to the **end** of each file.
+
+### `docs/implementation-log.md`
+
+````markdown
+## Email Verification Implementation
+
+### Overview
+
+Implemented the first complete email-verification flow for SkillShift.
+
+The registration flow now generates a cryptographically secure verification token, stores only its bcrypt hash in PostgreSQL, and sends the raw token to the user's email through Nodemailer and Ethereal SMTP.
+
+A dedicated `/auth/verify-email` endpoint validates the token and marks the user's email as verified. Verification tokens are single-use because the stored token hash is cleared after successful verification.
+
+### Dependencies Added
+
+Added:
+
+- `nodemailer`
+- `@types/nodemailer`
+
+The existing `class-validator`, `class-transformer`, and `bcrypt` dependencies from registration continue to be used.
+
+### Verification Token Generation
+
+During registration:
+
+1. Check whether the email already exists.
+2. Hash the user's password with bcrypt using cost factor 12.
+3. Generate a cryptographically secure random verification token using Node's `crypto.randomBytes()`.
+4. Convert the random bytes to a hexadecimal string.
+5. Hash the verification token with bcrypt.
+6. Store only the hashed verification token in `User.emailVerifyTokenHash`.
+7. Leave `User.isEmailVerified` as `false`.
+
+The raw verification token is kept only in application memory and is not stored in the database.
+
+Relevant implementation:
+
+```typescript
+const verificationToken = randomBytes(32).toString('hex');
+const verificationTokenHash = await bcrypt.hash(verificationToken, 12);
+````
+
+The hashed token is stored when creating the user:
+
+```typescript
+emailVerifyTokenHash: verificationTokenHash,
+```
+
+### Email Sending Architecture
+
+Created a dedicated `MailModule` and `MailService`.
+
+Structure:
+
+```text
+AuthModule
+    ↓
+MailModule
+    ↓
+MailService
+    ↓
+Nodemailer
+    ↓
+SMTP server
+    ↓
+User's email inbox
+```
+
+`MailService` owns the Nodemailer transporter and SMTP configuration.
+
+SMTP configuration is loaded through NestJS `ConfigService` rather than hard-coded credentials.
+
+Environment variables used:
+
+```text
+SMTP_HOST
+SMTP_PORT
+SMTP_USER
+SMTP_PASS
+MAIL_FROM
+```
+
+`.env` remains ignored by Git so SMTP credentials are not committed to the repository.
+
+### Nodemailer Transporter
+
+Configured a Nodemailer transporter using the SMTP settings:
+
+```typescript
+this.transporter = nodemailer.createTransport({
+  host: this.configService.get<string>('SMTP_HOST'),
+  port: Number(this.configService.get<string>('SMTP_PORT')),
+  secure: false,
+  auth: {
+    user: this.configService.get<string>('SMTP_USER'),
+    pass: this.configService.get<string>('SMTP_PASS'),
+  },
+});
+```
+
+SMTP port `587` is used with `secure: false`.
+
+### Verification Email
+
+Added:
+
+```typescript
+sendVerificationEmail(email: string, token: string)
+```
+
+to `MailService`.
+
+The service constructs a verification URL containing the user's email and raw verification token:
+
+```text
+http://localhost:3000/auth/verify-email?email=<email>&token=<token>
+```
+
+The email is sent using Nodemailer's `sendMail()`.
+
+The raw token is appropriate to include in the verification email because it is transmitted to the user for verification, while only its hash is stored in the database.
+
+### Registration → Email Flow
+
+After the database transaction successfully creates the User, Profile, and Wallet, registration sends the verification email:
+
+```typescript
+await this.mailService.sendVerificationEmail(
+  result.email,
+  verificationToken,
+);
+```
+
+The raw verification token is not included in the registration API response.
+
+Registration continues to return only:
+
+```typescript
+{
+  id,
+  email,
+  role,
+}
+```
+
+This prevents sensitive fields such as `passwordHash` and the raw verification token from being exposed through the API response.
+
+### Email Verification Endpoint
+
+Added:
+
+```text
+GET /auth/verify-email
+```
+
+The endpoint receives:
+
+```text
+email
+token
+```
+
+as query parameters and passes them to `AuthService.verifyEmail()`.
+
+Example:
+
+```text
+GET /auth/verify-email?email=user@example.com&token=<token>
+```
+
+### Verification Logic
+
+`verifyEmail()` performs the following checks:
+
+1. Find the user by email.
+2. If the user does not exist, throw `NotFoundException`.
+3. If the email is already verified, throw `BadRequestException`.
+4. If no verification token hash is available, throw `BadRequestException`.
+5. Compare the raw token with the stored bcrypt hash using `bcrypt.compare()`.
+6. Reject the request if the token does not match.
+7. If valid, update the user:
+
+   * `isEmailVerified = true`
+   * `emailVerifyTokenHash = null`
+8. Return a success message.
+
+The token comparison uses:
+
+```typescript
+const match = await bcrypt.compare(
+  token,
+  user.emailVerifyTokenHash,
+);
+```
+
+The database update uses:
+
+```typescript
+await this.prismaService.user.update({
+  where: { email },
+  data: {
+    isEmailVerified: true,
+    emailVerifyTokenHash: null,
+  },
+});
+```
+
+### Single-Use Verification Token
+
+Verification tokens are intentionally single-use.
+
+After successful verification:
+
+```text
+isEmailVerified = true
+emailVerifyTokenHash = null
+```
+
+Therefore, attempting to use the same verification link again results in:
+
+```text
+Email is already verified
+```
+
+This prevents an old verification token from remaining valid indefinitely after successful use.
+
+### Why the Token Is Not Hashed Again for Lookup
+
+The raw token cannot simply be hashed again and searched against the stored bcrypt hash.
+
+Bcrypt uses a random salt, so hashing the same raw token again produces a different bcrypt hash.
+
+The correct process is:
+
+```text
+Raw token
+    ↓
+Find candidate user
+    ↓
+bcrypt.compare(raw token, stored hash)
+    ↓
+Valid / Invalid
+```
+
+The user's email is currently included in the verification URL so the backend can identify the candidate user before performing `bcrypt.compare()`.
+
+### Module Integration
+
+`MailModule` provides and exports `MailService`:
+
+```typescript
+@Module({
+  providers: [MailService],
+  exports: [MailService],
+})
+export class MailModule {}
+```
+
+`AuthModule` imports `MailModule`, allowing `AuthService` to inject `MailService` through NestJS dependency injection.
+
+`AuthService` constructor now receives:
+
+```typescript
+constructor(
+  private readonly prismaService: PrismaService,
+  private readonly mailService: MailService,
+) {}
+```
+
+### Testing Performed
+
+#### TypeScript compilation
+
+Verified that the implementation compiles successfully:
+
+```text
+npx tsc --noEmit
+```
+
+Result: passed.
+
+#### Registration test
+
+Registered a new test account and confirmed that the API response contains only:
+
+```text
+id
+email
+role
+```
+
+The raw verification token is no longer returned by the API.
+
+#### Email delivery test
+
+Registered a test user and confirmed that the verification email appeared in the Ethereal mailbox.
+
+The email contained the expected:
+
+* Subject
+* Verification message
+* Verification link
+* Email query parameter
+* Verification token query parameter
+
+#### Verification test
+
+Opened the verification link and confirmed:
+
+```json
+{
+  "message": "Email verified successfully"
+}
+```
+
+#### Token reuse test
+
+Opened the same verification link a second time.
+
+The second attempt was rejected because the user was already verified and the token hash had been cleared.
+
+#### Database verification
+
+Queried PostgreSQL for the test user and confirmed:
+
+```text
+isEmailVerified = true
+emailVerifyTokenHash = NULL
+```
+
+This confirms that the verification state was persisted correctly in PostgreSQL.
+
+### Current Authentication Flow
+
+The implemented registration and verification flow is now:
+
+```text
+POST /auth/register
+        ↓
+Validate email/password
+        ↓
+Check duplicate email
+        ↓
+Hash password
+        ↓
+Generate random verification token
+        ↓
+Hash verification token
+        ↓
+Prisma transaction
+   ├── Create User
+   ├── Create Profile
+   └── Create Wallet
+        ↓
+Send verification email
+        ↓
+User opens verification link
+        ↓
+GET /auth/verify-email
+        ↓
+Find user by email
+        ↓
+bcrypt.compare(token, stored hash)
+        ↓
+Valid?
+   ├── No → reject
+   └── Yes
+        ↓
+isEmailVerified = true
+emailVerifyTokenHash = NULL
+        ↓
+Verification successful
+```
+
+### Production Consideration
+
+The current implementation sends the verification email synchronously after the database transaction.
+
+This is acceptable for the current development implementation and keeps the flow easy to understand.
+
+The project blueprint specifies BullMQ background email jobs with retries/backoff. A future improvement is therefore to move email sending into a background queue:
+
+```text
+Registration
+    ↓
+DB transaction
+    ↓
+Queue email job
+    ↓
+Registration response
+    ↓
+BullMQ worker
+    ↓
+MailService
+    ↓
+SMTP
+```
+
+This would prevent temporary SMTP failures from directly blocking registration and would allow failed email jobs to be retried.
+
+### Milestone Status
+
+Email verification is implemented and tested end-to-end.
+
+Completed:
+
+* Verification token generation
+* Secure token hashing
+* Verification token persistence
+* Nodemailer setup
+* SMTP configuration through `ConfigService`
+* Verification email delivery
+* Verification endpoint
+* Token validation
+* Single-use token behavior
+* Database state update
+* End-to-end Ethereal testing
+* TypeScript compilation verification
