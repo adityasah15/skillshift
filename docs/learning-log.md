@@ -336,3 +336,200 @@ Always distinguish between:
 These are designed to be **appended directly**, so you don't need to modify the earlier sections of either file.
 ```
 
+# Learning Log — Authentication & Registration
+
+## Date
+2026-09-10
+
+### 1. NestJS Module Structure
+
+Feature modules follow:
+
+```text
+Module
+├── Controller
+└── Service
+````
+
+For SkillShift:
+
+```text
+AuthModule
+├── AuthController
+└── AuthService
+```
+
+Controller handles HTTP; Service handles business logic.
+
+### 2. NestJS Dependency Injection
+
+`AuthModule` imports `PrismaModule`.
+
+`PrismaModule` exports `PrismaService`.
+
+Therefore `AuthService` can inject:
+
+```typescript
+constructor(private readonly prismaService: PrismaService) {}
+```
+
+### 3. DTO
+
+A DTO defines the expected request structure.
+
+`RegisterDto` contains:
+
+```text
+email
+password
+```
+
+`class-validator` decorators define validation rules.
+
+### 4. ValidationPipe
+
+Validation decorators alone don't execute validation.
+
+NestJS needs:
+
+```typescript
+app.useGlobalPipes(new ValidationPipe());
+```
+
+This enables validation globally.
+
+### 5. HTTP Status Codes Learned
+
+```text
+400 → Bad Request / invalid input
+409 → Conflict / resource already exists
+```
+
+Duplicate registration therefore uses `ConflictException`.
+
+### 6. Password Security
+
+Never store plaintext passwords.
+
+Registration uses:
+
+```typescript
+bcrypt.hash(password, 12)
+```
+
+Database stores the resulting hash.
+
+### 7. Prisma Transactions
+
+A transaction groups multiple database operations into one atomic unit.
+
+For registration:
+
+```text
+User + Profile + Wallet
+```
+
+must succeed together.
+
+```text
+all succeed → commit
+one fails    → rollback
+```
+
+Inside the transaction callback, use the transaction client:
+
+```typescript
+tx.user.create()
+tx.profile.create()
+tx.wallet.create()
+```
+
+not the normal Prisma service.
+
+### 8. Safe API Responses
+
+Never return sensitive User fields such as:
+
+```text
+passwordHash
+reset tokens
+verification token hashes
+```
+
+Return only fields intended for the client.
+
+### 9. curl
+
+`curl` is a command-line HTTP client.
+
+Common options:
+
+```text
+-X → HTTP method
+-H → HTTP header
+-d → request body
+```
+
+It can act as a simple replacement for a frontend while testing APIs.
+
+### 10. Docker exec + psql
+
+```bash
+docker exec -it skillshift-postgres psql -U postgres -d skillshift
+```
+
+means:
+
+```text
+enter PostgreSQL Docker container
+→ run PostgreSQL CLI
+→ connect as postgres user
+→ use skillshift database
+```
+
+Useful for directly inspecting the database.
+
+### 11. Foreign Keys
+
+A parent row cannot be deleted while child rows reference it unless cascading deletion is configured.
+
+For our test data:
+
+```text
+User
+ ↑
+Profile
+Wallet
+```
+
+So dependent records had to be removed before the User.
+
+### 12. Testing Mindset
+
+Test more than the happy path:
+
+```text
+valid registration       → success
+duplicate email          → 409
+invalid email/password   → 400
+database records         → verify
+cleanup                  → restore clean DB
+```
+
+### Key takeaway
+
+**Registration is not just `User.create()`.**
+
+It combines:
+
+```text
+DTO validation
++ business validation
++ password hashing
++ dependency injection
++ database transactions
++ relational integrity
++ safe API responses
+```
+
+````

@@ -2248,5 +2248,650 @@ SkillShift now has:
 The database integration is therefore considered **verified**.
 
 The next development step can focus on building actual SkillShift functionality rather than infrastructure verification.
+---
 
+# Authentication Module & User Registration
+
+## Date
+2026-09-10
+
+## Milestone
+Created the initial Auth module and implemented the first real SkillShift feature: user registration.
+
+---
+
+## 1. Auth Module Setup
+
+The first feature after completing database integration was Authentication.
+
+The project follows the modular NestJS architecture defined in the blueprint:
+
+```text
+src/auth/
+├── auth.module.ts
+├── auth.controller.ts
+├── auth.service.ts
+├── auth.controller.spec.ts
+├── auth.service.spec.ts
+└── dto/
+    └── register.dto.ts
 ````
+
+The module, controller, and service were generated using the Nest CLI:
+
+```bash
+nest g module auth
+nest g controller auth
+nest g service auth
+```
+
+Nest automatically registered `AuthModule` inside `AppModule`.
+
+---
+
+## 2. Auth Module Responsibilities
+
+The intended request flow is:
+
+```text
+HTTP Request
+    ↓
+AuthController
+    ↓
+AuthService
+    ↓
+PrismaService
+    ↓
+PostgreSQL
+```
+
+The controller handles HTTP-level concerns.
+
+The service contains authentication business logic.
+
+Prisma is accessed through `PrismaService` rather than directly creating Prisma clients inside the Auth feature.
+
+---
+
+## 3. Prisma Dependency Injection
+
+`AuthModule` imports `PrismaModule`.
+
+`PrismaModule` exports `PrismaService`.
+
+This allows `AuthService` to inject `PrismaService`:
+
+```typescript
+constructor(private readonly prismaService: PrismaService) {}
+```
+
+The resulting dependency relationship is:
+
+```text
+PrismaModule
+    ↓ exports
+PrismaService
+    ↓ injected into
+AuthService
+```
+
+This follows NestJS dependency-injection and module-boundary principles.
+
+---
+
+## 4. Registration DTO
+
+Created:
+
+```text
+src/auth/dto/register.dto.ts
+```
+
+The DTO accepts:
+
+```text
+email
+password
+```
+
+Validation decorators were added using `class-validator`.
+
+The intended validation rules are:
+
+* Email must be a valid email address.
+* Password must be a string.
+* Password must contain at least 8 characters.
+
+The DTO uses the TypeScript definite-assignment operator:
+
+```typescript
+email!: string;
+password!: string;
+```
+
+instead of disabling `strictPropertyInitialization` globally.
+
+This was chosen because DTO properties are populated by NestJS from the incoming request rather than initialized through a constructor.
+
+---
+
+## 5. Global ValidationPipe
+
+Initially, the DTO validation decorators existed but invalid requests were still accepted.
+
+For example:
+
+```json
+{
+  "email": "bad-email",
+  "password": "123"
+}
+```
+
+was incorrectly accepted.
+
+The reason was that validation decorators define validation rules but NestJS must be configured to execute those rules.
+
+Added to `src/main.ts`:
+
+```typescript
+app.useGlobalPipes(new ValidationPipe());
+```
+
+This enables DTO validation globally across the application.
+
+After this change, the invalid request correctly returned:
+
+```json
+{
+  "message": [
+    "email must be an email",
+    "password must be longer than or equal to 8 characters"
+  ],
+  "error": "Bad Request",
+  "statusCode": 400
+}
+```
+
+This means future DTOs can also use `class-validator` rules without configuring validation separately for every controller.
+
+---
+
+## 6. Registration Endpoint
+
+Added:
+
+```text
+POST /auth/register
+```
+
+The controller receives the request body as a `RegisterDto` and passes it to `AuthService`.
+
+The controller therefore remains thin and delegates business logic to the service.
+
+---
+
+## 7. Registration Business Logic
+
+The implemented registration flow is:
+
+```text
+POST /auth/register
+        ↓
+Validate DTO
+        ↓
+Find existing user
+        ↓
+If email exists → 409 Conflict
+        ↓
+Hash password with bcrypt
+        ↓
+Database transaction
+    ├── Create User
+    ├── Create Profile
+    └── Create Wallet
+        ↓
+Return safe response
+```
+
+---
+
+## 8. Existing Email Check
+
+Before creating a user, the service checks whether the email already exists:
+
+```typescript
+const existingUser = await this.prismaService.user.findUnique({
+  where: {
+    email: registerDto.email,
+  },
+});
+```
+
+If a matching user exists:
+
+```typescript
+throw new ConflictException('Email already registered');
+```
+
+This returns HTTP `409 Conflict`.
+
+The database also has a unique constraint on `User.email`, providing database-level protection against duplicate emails.
+
+---
+
+## 9. Password Hashing
+
+The raw password is never stored directly.
+
+The registration flow uses bcrypt:
+
+```typescript
+const passwordHash = await bcrypt.hash(registerDto.password, 12);
+```
+
+The salt/cost factor was set to `12`, following the SkillShift blueprint.
+
+The database receives:
+
+```text
+passwordHash
+```
+
+rather than:
+
+```text
+password
+```
+
+This ensures the plaintext password is not persisted.
+
+---
+
+## 10. Atomic User/Profile/Wallet Creation
+
+A newly registered user requires three related records:
+
+```text
+User
+ ├── Profile
+ └── Wallet
+```
+
+These records are created inside a single Prisma transaction:
+
+```typescript
+this.prismaService.$transaction(async (tx) => {
+  ...
+});
+```
+
+Inside the transaction, the transaction-scoped Prisma client `tx` is used:
+
+```text
+tx.user.create()
+tx.profile.create()
+tx.wallet.create()
+```
+
+This is important because all three database operations should succeed or fail together.
+
+Without a transaction, this could happen:
+
+```text
+User created
+    ↓
+Profile creation fails
+    ↓
+User remains without Profile
+```
+
+With the transaction:
+
+```text
+User
+Profile
+Wallet
+   ↓
+all succeed → COMMIT
+
+any operation fails → ROLLBACK
+```
+
+The created user's ID is used when creating the Profile and Wallet.
+
+---
+
+## 11. Profile Creation
+
+A Profile is created for every newly registered user.
+
+The initial display name is derived from the email prefix.
+
+For example:
+
+```text
+test@example.com
+        ↓
+displayName = test
+```
+
+The Profile references the newly created User through:
+
+```text
+userId
+```
+
+---
+
+## 12. Wallet Creation
+
+A Wallet is created during registration.
+
+Only the `userId` needs to be supplied because the Prisma schema defines:
+
+```text
+balance Int @default(0)
+```
+
+Therefore every newly created wallet starts with:
+
+```text
+balance = 0
+```
+
+---
+
+## 13. Safe Registration Response
+
+The complete Prisma User record is not returned.
+
+Instead, only safe fields are returned:
+
+```json
+{
+  "id": "...",
+  "email": "...",
+  "role": "CLIENT"
+}
+```
+
+Sensitive fields such as:
+
+```text
+passwordHash
+emailVerifyTokenHash
+passwordResetTokenHash
+```
+
+are not exposed.
+
+---
+
+## 14. Registration Testing
+
+The endpoint was tested using `curl`.
+
+Example:
+
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+```
+
+Successful response:
+
+```json
+{
+  "id": "d9dd2e0e-cbee-423c-89c8-2d0be2a5615a",
+  "email": "test@example.com",
+  "role": "CLIENT"
+}
+```
+
+---
+
+## 15. Duplicate Email Test
+
+The same registration request was submitted again.
+
+The API correctly returned:
+
+```json
+{
+  "message": "Email already registered",
+  "error": "Conflict",
+  "statusCode": 409
+}
+```
+
+This verified the duplicate-email business rule.
+
+---
+
+## 16. Validation Test
+
+The following invalid request was initially accepted before `ValidationPipe` was enabled:
+
+```json
+{
+  "email": "bad-email",
+  "password": "123"
+}
+```
+
+After adding the global `ValidationPipe`, the same request correctly returned:
+
+```text
+400 Bad Request
+```
+
+with validation messages for both the email and password.
+
+This confirmed that DTO validation is now being executed.
+
+---
+
+## 17. Direct Database Verification
+
+After successful registration, the database was inspected directly using PostgreSQL's CLI.
+
+The PostgreSQL CLI was opened inside the Docker container with:
+
+```bash
+docker exec -it skillshift-postgres psql -U postgres -d skillshift
+```
+
+The command means:
+
+```text
+docker exec
+    ↓
+run a command inside the skillshift-postgres container
+    ↓
+psql
+    ↓
+PostgreSQL command-line client
+    ↓
+-U postgres
+    ↓
+connect as postgres user
+    ↓
+-d skillshift
+    ↓
+connect to skillshift database
+```
+
+The following queries were used:
+
+```sql
+SELECT id, email, "role" FROM "User";
+```
+
+```sql
+SELECT "userId", "displayName" FROM "Profile";
+```
+
+```sql
+SELECT "userId", balance FROM "Wallet";
+```
+
+The results confirmed that registration created:
+
+```text
+User
+Profile
+Wallet
+```
+
+for the test account.
+
+---
+
+## 18. Foreign Key Behavior During Test Cleanup
+
+Two test users were created during testing:
+
+```text
+test@example.com
+bad-email
+```
+
+An attempt was made to delete the users directly:
+
+```sql
+DELETE FROM "User"
+WHERE email IN ('test@example.com', 'bad-email');
+```
+
+PostgreSQL rejected the deletion because Profile rows still referenced the Users:
+
+```text
+ERROR: update or delete on table "User" violates foreign key constraint
+```
+
+This demonstrated that foreign-key constraints protect referenced records.
+
+The dependent rows were therefore deleted first:
+
+```text
+Wallet
+   ↓
+Profile
+   ↓
+User
+```
+
+After cleanup:
+
+```sql
+SELECT email FROM "User";
+```
+
+returned:
+
+```text
+(0 rows)
+```
+
+The development database was therefore returned to a clean state.
+
+---
+
+## 19. New CLI Tools Learned
+
+Several command-line tools/commands were encountered during registration testing.
+
+### `curl`
+
+Used as a command-line HTTP client to interact with the NestJS API.
+
+Important options used:
+
+```text
+-X POST → HTTP method
+-H      → HTTP header
+-d      → request body/data
+```
+
+### `docker exec`
+
+Runs a command inside an existing Docker container.
+
+### `psql`
+
+PostgreSQL's command-line client.
+
+### `\q`
+
+Exits the interactive `psql` session.
+
+### SQL commands
+
+Queries such as:
+
+```sql
+SELECT ...
+DELETE ...
+```
+
+were executed directly against PostgreSQL.
+
+These tools provide a way to test the backend independently of a frontend.
+
+---
+
+## 20. Verification Summary
+
+Registration was verified at multiple levels:
+
+### TypeScript
+
+```bash
+npx tsc --noEmit
+```
+
+passed successfully.
+
+### API
+
+Valid registration succeeded.
+
+Duplicate registration returned `409 Conflict`.
+
+Invalid registration returned `400 Bad Request`.
+
+### Database
+
+Direct PostgreSQL inspection confirmed User, Profile, and Wallet creation.
+
+### Transaction
+
+The three related records were created through a single Prisma transaction.
+
+### Cleanup
+
+All test users and dependent records were removed.
+
+---
+
+## 21. Current State
+
+The first real SkillShift feature is now implemented:
+
+```text
+POST /auth/register
+```
+
+The system can now:
+
+* Validate registration input.
+* Detect duplicate emails.
+* Hash passwords using bcrypt.
+* Create User, Profile, and Wallet atomically.
+* Return a safe response.
+* Reject invalid DTO input.
+* Communicate successfully with PostgreSQL.
+
+The next Auth functionality can build on this foundation.
