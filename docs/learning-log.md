@@ -549,3 +549,35 @@ DTO validation
 - Authentication logic belongs in `AuthService`, while email-delivery mechanics belong in `MailService`.
 - Email sending currently happens after the database transaction succeeds.
 - For production, BullMQ can move email delivery to a background job with retries/backoff so SMTP failures do not directly block registration.
+
+## Authentication — Login, JWT & Refresh Tokens
+
+* **Login flow:** validate DTO → find user → `bcrypt.compare()` → check email verification → generate JWT.
+* **JWT:** short-lived access token with `{ sub, email, role }`; current expiry = **15 minutes**.
+* **Passport:** `JwtStrategy` verifies the token and returns the payload as `req.user`.
+* **Typing:** use a `JwtPayload` type instead of `any`.
+* **Global guard:** authentication is protected by default; `@Public()` explicitly bypasses the guard.
+* **Refresh token:** generate cryptographically random token → return raw token to client → store only bcrypt hash in DB.
+* **Refresh expiry:** **7 days**.
+* **Rotation:** every successful refresh revokes the old refresh token and creates a new one.
+* **Atomicity:** old-token revocation + new-token creation happen inside one Prisma transaction.
+* **Security:** a tampered JWT is rejected; a rotated refresh token cannot be reused.
+* **Database:** `revokedAt = NULL` means an active refresh session; a timestamp means the session has been revoked.
+* **Current limitation:** refresh lookup scans active bcrypt hashes; optimize later with a lookup-friendly token identifier.
+* **Important:** `npx tsc --noEmit` verifies type correctness, but API and database testing are still required for runtime verification.
+
+### Authentication Mental Model
+
+```text
+Access Token
+→ short-lived
+→ sent with API requests
+→ proves current authentication
+
+Refresh Token
+→ long-lived
+→ used to obtain new access token
+→ stored hashed
+→ rotated after use
+→ revocable
+```

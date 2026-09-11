@@ -3317,3 +3317,1207 @@ Completed:
 * Database state update
 * End-to-end Ethereal testing
 * TypeScript compilation verification
+
+
+
+# **Login, JWT Authentication & Refresh Tokens**
+
+## **Date**
+
+2026-09-11
+
+## **Milestone**
+
+Extended the SkillShift Auth module from registration/email verification into a complete access-token and refresh-token authentication flow.
+
+Implemented:
+
+* Login
+* Password verification
+* Email-verification enforcement
+* JWT access tokens
+* JWT Passport strategy
+* Typed JWT payload
+* Protected `/auth/me`
+* Global JWT authentication guard
+* `@Public()` decorator
+* Refresh tokens
+* Refresh-token hashing
+* Refresh-token expiry
+* Refresh-token rotation
+* Refresh-token revocation
+* Atomic refresh-token rotation
+
+---
+
+## **1. Login DTO**
+
+Created:
+
+```text
+src/auth/dto/login.dto.ts
+```
+
+The DTO accepts:
+
+```text
+email
+password
+```
+
+Validation rules:
+
+* Email must be valid.
+* Password must be a string.
+* Password must contain at least 8 characters.
+
+Implementation:
+
+```typescript
+import { IsEmail, IsString, MinLength } from 'class-validator';
+
+export class LoginDto {
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  @MinLength(8)
+  password!: string;
+}
+```
+
+The same global `ValidationPipe` used during registration validates the login request.
+
+---
+
+## **2. Login Endpoint**
+
+Added:
+
+```text
+POST /auth/login
+```
+
+The controller receives a `LoginDto` and delegates authentication to `AuthService`.
+
+The controller remains thin:
+
+```text
+HTTP Request
+     ↓
+AuthController
+     ↓
+AuthService
+```
+
+The authentication and credential verification logic belongs to the service layer.
+
+---
+
+## **3. Login Business Logic**
+
+The login flow is:
+
+```text
+POST /auth/login
+        ↓
+Validate DTO
+        ↓
+Find user by email
+        ↓
+Compare password with passwordHash
+        ↓
+Check email verification
+        ↓
+Generate JWT
+        ↓
+Return access token
+```
+
+If the email does not exist or the password is incorrect, the API returns:
+
+```text
+Invalid email or password
+```
+
+The implementation intentionally does not reveal whether the email exists separately from whether the password is incorrect.
+
+---
+
+## **4. Password Verification**
+
+The stored password is a bcrypt hash created during registration.
+
+During login, the supplied password is compared against the stored hash:
+
+```typescript
+const match = await bcrypt.compare(
+  loginDto.password,
+  existingUser.passwordHash,
+);
+```
+
+The raw password is therefore never compared directly with a database value and is never stored.
+
+---
+
+## **5. Email Verification Check**
+
+Users must verify their email before they can log in successfully.
+
+After successful password verification:
+
+```typescript
+if (!existingUser.isEmailVerified) {
+  throw new BadRequestException('Please verify your email first');
+}
+```
+
+The authentication flow is therefore:
+
+```text
+Correct email/password
+        ↓
+Is email verified?
+   ├── No → reject
+   └── Yes
+        ↓
+Generate JWT
+```
+
+This prevents an unverified account from obtaining an authenticated access token.
+
+---
+
+## **6. JWT Access Token**
+
+Added JWT support using `@nestjs/jwt`.
+
+A successful login generates:
+
+```typescript
+const accessToken = this.jwtService.sign({
+  sub: existingUser.id,
+  email: existingUser.email,
+  role: existingUser.role,
+});
+```
+
+The payload contains:
+
+```text
+sub   → User ID
+email → User email
+role  → User role
+```
+
+The resulting login response contains:
+
+```json
+{
+  "accessToken": "..."
+}
+```
+
+Sensitive information such as:
+
+```text
+passwordHash
+emailVerifyTokenHash
+passwordResetTokenHash
+```
+
+is never included in the response.
+
+---
+
+## **7. JWT Expiration Configuration**
+
+The JWT configuration is loaded through `ConfigService`.
+
+Environment configuration:
+
+```text
+JWT_SECRET=<secret>
+JWT_EXPIRES_IN=15m
+```
+
+The JWT module is configured asynchronously:
+
+```typescript
+JwtModule.registerAsync({
+  inject: [ConfigService],
+  useFactory: (configService: ConfigService) => ({
+    secret: configService.get<string>('JWT_SECRET'),
+    signOptions: {
+      expiresIn: configService.get<string>('JWT_EXPIRES_IN'),
+    },
+  }),
+})
+```
+
+The access token is therefore intentionally short-lived.
+
+---
+
+## **8. JWT Payload Typing**
+
+Initially, the JWT strategy used an untyped payload.
+
+This was changed to use a dedicated `JwtPayload` type.
+
+Created:
+
+```text
+src/auth/types/jwt-payload.ts
+```
+
+The payload contains:
+
+```typescript
+import { Role } from 'generated/prisma/enums';
+
+export class JwtPayload {
+  sub!: string;
+
+  email!: string;
+
+  role!: Role;
+}
+```
+
+The strategy now accepts:
+
+```typescript
+validate(payload: JwtPayload) {
+  return payload;
+}
+```
+
+This removes the need for `any` when handling the JWT payload.
+
+---
+
+## **9. JWT Strategy**
+
+Created:
+
+```text
+src/auth/strategies/jwt.strategy/jwt.strategy.ts
+```
+
+The strategy extends NestJS Passport's JWT strategy.
+
+The token is extracted from:
+
+```text
+Authorization: Bearer <token>
+```
+
+using:
+
+```typescript
+ExtractJwt.fromAuthHeaderAsBearerToken()
+```
+
+The JWT secret is loaded through:
+
+```typescript
+configService.getOrThrow<string>('JWT_SECRET')
+```
+
+Using `getOrThrow()` ensures that a missing JWT secret is treated as a configuration error instead of allowing an undefined value.
+
+---
+
+## **10. Passport Authentication**
+
+Installed the required Passport packages:
+
+```text
+@nestjs/passport
+passport
+passport-jwt
+@types/passport-jwt
+```
+
+The `JwtStrategy` was registered as a provider inside `AuthModule`.
+
+The resulting authentication architecture is:
+
+```text
+HTTP Request
+     ↓
+JwtAuthGuard
+     ↓
+Passport
+     ↓
+JwtStrategy
+     ↓
+Verify JWT
+     ↓
+validate(payload)
+     ↓
+req.user
+```
+
+---
+
+## **11. Protected `/auth/me` Endpoint**
+
+Added:
+
+```text
+GET /auth/me
+```
+
+The endpoint is protected with `JwtAuthGuard`.
+
+A successful authenticated request returns the validated JWT payload through `req.user`.
+
+Conceptually:
+
+```text
+Authorization: Bearer <JWT>
+        ↓
+JwtAuthGuard
+        ↓
+JwtStrategy
+        ↓
+JWT validated
+        ↓
+req.user
+        ↓
+/auth/me response
+```
+
+---
+
+## **12. JWT Guard**
+
+Created:
+
+```text
+src/auth/guards/jwt-auth/
+```
+
+The guard extends:
+
+```typescript
+AuthGuard('jwt')
+```
+
+The basic guard allows Passport to perform JWT authentication.
+
+The guard was later extended to support public routes.
+
+---
+
+## **13. `@Public()` Decorator**
+
+Because the authentication guard is applied globally, some routes must explicitly bypass authentication.
+
+Created a `@Public()` decorator using route metadata.
+
+The guard checks:
+
+```typescript
+const isPublic = this.reflector.getAllAndOverride<boolean>(
+  IS_PUBLIC_KEY,
+  [context.getHandler(), context.getClass()],
+);
+```
+
+If the route is public:
+
+```typescript
+return true;
+```
+
+Otherwise:
+
+```typescript
+return super.canActivate(context);
+```
+
+The intended architecture is:
+
+```text
+Every route
+    ↓
+JWT Guard
+    ↓
+@Public()?
+ ├── YES → allow
+ └── NO  → require JWT
+```
+
+---
+
+## **14. Global JWT Authentication Guard**
+
+The JWT guard was registered globally so that protected-by-default behavior applies throughout the application.
+
+This means new endpoints will automatically require authentication unless they explicitly use:
+
+```typescript
+@Public()
+```
+
+Public authentication endpoints include:
+
+```text
+POST /auth/register
+POST /auth/login
+GET  /auth/verify-email
+POST /auth/refresh
+```
+
+Protected endpoints require a valid access token.
+
+---
+
+## **15. Guard Test Issue**
+
+After adding `Reflector` to the JWT guard constructor:
+
+```typescript
+constructor(private reflector: Reflector) {
+  super();
+}
+```
+
+the generated unit test produced:
+
+```text
+TS2554: Expected 1 arguments, but got 0.
+```
+
+The generated test was attempting:
+
+```typescript
+new JwtAuthGuard()
+```
+
+but the guard now required a `Reflector`.
+
+The test was corrected to provide the required dependency.
+
+This was another example of dependency injection affecting unit-test construction.
+
+---
+
+## **16. JWT Verification Testing**
+
+Login was tested using a verified test account.
+
+A successful login returned an access token.
+
+The decoded JWT contained:
+
+```json
+{
+  "sub": "...",
+  "email": "emailtest@example.com",
+  "role": "CLIENT",
+  "iat": "...",
+  "exp": "..."
+}
+```
+
+The expiration interval was verified:
+
+```text
+exp - iat = 900 seconds
+```
+
+Therefore:
+
+```text
+900 seconds = 15 minutes
+```
+
+which confirms that the configured access-token lifetime is working.
+
+---
+
+## **17. Protected Endpoint Testing**
+
+Tested:
+
+```text
+GET /auth/me
+```
+
+### Without access token
+
+Result:
+
+```text
+401 Unauthorized
+```
+
+### With valid access token
+
+The endpoint returned the authenticated JWT payload.
+
+### With modified/tampered token
+
+A modified JWT was rejected with:
+
+```text
+401 Unauthorized
+```
+
+This confirmed that the JWT signature is being verified rather than simply trusting the token payload.
+
+---
+
+## **18. Refresh Token Design**
+
+After implementing short-lived access tokens, refresh tokens were added for persistent authentication sessions.
+
+The database already contained a dedicated:
+
+```text
+RefreshToken
+```
+
+model.
+
+The model contains:
+
+```text
+id
+userId
+tokenHash
+expiresAt
+createdAt
+revokedAt
+```
+
+This allows one user to have multiple refresh-token records representing different sessions/devices.
+
+---
+
+## **19. Refresh Token Generation**
+
+During login, a cryptographically random refresh token is generated:
+
+```typescript
+const refreshToken = randomBytes(32).toString('hex');
+```
+
+The raw token is returned to the client.
+
+It is not stored directly in PostgreSQL.
+
+---
+
+## **20. Refresh Token Hashing**
+
+Before persistence, the refresh token is hashed using bcrypt:
+
+```typescript
+const refreshTokenHash = await bcrypt.hash(refreshToken, 12);
+```
+
+The database stores:
+
+```text
+tokenHash
+```
+
+rather than:
+
+```text
+refreshToken
+```
+
+The security model is therefore:
+
+```text
+Raw refresh token
+        ↓
+      Client
+
+Raw refresh token
+        ↓
+     bcrypt
+        ↓
+    tokenHash
+        ↓
+    PostgreSQL
+```
+
+This prevents the database from containing directly usable refresh credentials.
+
+---
+
+## **21. Refresh Token Expiration**
+
+Refresh tokens are given a seven-day lifetime.
+
+The database record stores:
+
+```typescript
+expiresAt: new Date(
+  Date.now() + 7 * 24 * 60 * 60 * 1000,
+)
+```
+
+Therefore:
+
+```text
+Access token  → 15 minutes
+Refresh token → 7 days
+```
+
+The short-lived access token limits exposure while the refresh token allows the session to continue without requiring the user to log in again.
+
+---
+
+## **22. Refresh Endpoint**
+
+Added:
+
+```text
+POST /auth/refresh
+```
+
+A `RefreshTokenDto` was created:
+
+```text
+src/auth/dto/refresh-token.dto.ts
+```
+
+It validates the supplied refresh token as a string.
+
+The endpoint is marked:
+
+```typescript
+@Public()
+```
+
+because an expired access token cannot be used to authenticate the refresh request.
+
+---
+
+## **23. Refresh Token Validation**
+
+The refresh service first retrieves active refresh-token records:
+
+```typescript
+const tokens = await this.prismaService.refreshToken.findMany({
+  where: {
+    revokedAt: null,
+  },
+});
+```
+
+The supplied raw token is compared against the stored bcrypt hashes:
+
+```typescript
+for (const token of tokens) {
+  const match = await bcrypt.compare(
+    refreshToken,
+    token.tokenHash,
+  );
+
+  if (match) {
+    matchedToken = token;
+    break;
+  }
+}
+```
+
+If no active record matches:
+
+```text
+401 Invalid refresh token
+```
+
+---
+
+## **24. Refresh Token Expiry Check**
+
+After finding the matching database record, the service checks:
+
+```typescript
+if (matchedToken.expiresAt <= new Date()) {
+  throw new UnauthorizedException('Refresh token expired');
+}
+```
+
+Therefore a token can fail authentication even if its hash is correct when its expiry time has passed.
+
+---
+
+## **25. User Lookup During Refresh**
+
+The matched refresh-token record contains the user's ID.
+
+The user is retrieved using:
+
+```typescript
+const user = await this.prismaService.user.findUnique({
+  where: { id: matchedToken.userId },
+});
+```
+
+If the associated user does not exist, the request is rejected with:
+
+```text
+Invalid refresh token
+```
+
+This keeps authentication failure responses consistent.
+
+---
+
+## **26. Generating New Access and Refresh Tokens**
+
+After successful refresh-token validation, a new access token is generated using the same JWT payload:
+
+```typescript
+const accessToken = this.jwtService.sign({
+  sub: user.id,
+  email: user.email,
+  role: user.role,
+});
+```
+
+A new refresh token is also generated:
+
+```typescript
+const newRefreshToken = randomBytes(32).toString('hex');
+
+const newRefreshTokenHash = await bcrypt.hash(
+  newRefreshToken,
+  12,
+);
+```
+
+The response contains:
+
+```json
+{
+  "accessToken": "...",
+  "refreshToken": "..."
+}
+```
+
+---
+
+## **27. Refresh Token Rotation**
+
+Refresh tokens are rotated after successful use.
+
+The flow is:
+
+```text
+Refresh Token A
+       ↓
+Validate
+       ↓
+Revoke Token A
+       ↓
+Generate Token B
+       ↓
+Store hash of Token B
+       ↓
+Return Token B
+```
+
+The old refresh token is therefore no longer reusable after rotation.
+
+---
+
+## **28. Refresh Token Revocation**
+
+The old token is revoked by setting:
+
+```typescript
+revokedAt: new Date()
+```
+
+The record is not deleted.
+
+Conceptually:
+
+```text
+Old token
+
+createdAt  → session creation
+revokedAt  → session termination
+```
+
+Keeping the record preserves session history and provides an explicit revocation state.
+
+---
+
+## **29. Atomic Refresh Token Rotation**
+
+Initially, revoking the old token and creating the replacement were separate database operations.
+
+This was improved using a Prisma transaction:
+
+```typescript
+await this.prismaService.$transaction(async (tx) => {
+  await tx.refreshToken.update({
+    where: { id: matchedToken.id },
+    data: { revokedAt: new Date() },
+  });
+
+  await tx.refreshToken.create({
+    data: {
+      userId: user.id,
+      tokenHash: newRefreshTokenHash,
+      expiresAt: new Date(
+        Date.now() + 7 * 24 * 60 * 60 * 1000,
+      ),
+    },
+  });
+});
+```
+
+The important property is:
+
+```text
+Revoke old token
+       +
+Create new token
+       ↓
+ONE DATABASE TRANSACTION
+```
+
+If an operation fails, the transaction can roll back rather than leaving the session in a partially-updated state.
+
+---
+
+## **30. Refresh Token Rotation Testing**
+
+The complete refresh flow was tested.
+
+### Initial login
+
+```text
+Login
+ ↓
+Refresh Token A
+```
+
+### First refresh
+
+```text
+Refresh Token A
+ ↓
+/auth/refresh
+ ↓
+Access Token B
+Refresh Token B
+```
+
+### Reusing old token
+
+The original refresh token was used again.
+
+Result:
+
+```text
+401 Unauthorized
+```
+
+because the original token had been revoked.
+
+### Using new token
+
+The newly issued refresh token was used.
+
+Result:
+
+```text
+Successful refresh
+```
+
+This confirmed that refresh-token rotation and revocation are functioning correctly.
+
+---
+
+## **31. Refresh Token Database Verification**
+
+Prisma Studio was started successfully but could not be opened through the browser on its dynamically assigned WSL port.
+
+The server itself was verified using:
+
+```bash
+curl http://localhost:51212
+```
+
+and:
+
+```bash
+curl http://127.0.0.1:51212
+```
+
+Both returned Prisma Studio HTML.
+
+Therefore Prisma Studio itself was running correctly.
+
+For direct database verification, PostgreSQL was opened inside the Docker container:
+
+```bash
+docker exec -it skillshift-postgres psql -U postgres -d skillshift
+```
+
+The refresh-token records were inspected using:
+
+```sql
+SELECT "userId", "tokenHash", "expiresAt", "revokedAt"
+FROM "RefreshToken";
+```
+
+The new refresh-token row was present.
+
+The important verification was:
+
+```text
+tokenHash → bcrypt hash
+expiresAt → approximately 7 days in the future
+revokedAt → NULL
+```
+
+A blank `revokedAt` represents SQL `NULL`, meaning the newly created refresh session was active.
+
+---
+
+## **32. Current Refresh Authentication Flow**
+
+The complete current authentication flow is:
+
+```text
+POST /auth/login
+        ↓
+Validate credentials
+        ↓
+Check email verification
+        ↓
+Generate 15-minute access JWT
+        ↓
+Generate refresh token
+        ↓
+Hash refresh token
+        ↓
+Store RefreshToken record
+        ↓
+Return access + refresh tokens
+```
+
+When the access token expires:
+
+```text
+POST /auth/refresh
+        ↓
+Receive refresh token
+        ↓
+Find active token record
+        ↓
+bcrypt.compare()
+        ↓
+Check expiry
+        ↓
+Find user
+        ↓
+Generate new access JWT
+        ↓
+Generate new refresh token
+        ↓
+Hash new refresh token
+        ↓
+Prisma transaction
+ ├── Revoke old token
+ └── Create new token
+        ↓
+Return new access + refresh tokens
+```
+
+---
+
+## **33. Current Authentication Architecture**
+
+The authentication architecture is now:
+
+```text
+                     ┌──────────────────────┐
+                     │      AuthModule      │
+                     └──────────┬───────────┘
+                                │
+             ┌──────────────────┼──────────────────┐
+             ↓                  ↓                  ↓
+      AuthController       AuthService        JwtStrategy
+             │                  │                  │
+             │                  ↓                  │
+             │            PrismaService            │
+             │                  │                  │
+             │                  ↓                  │
+             │             PostgreSQL              │
+             │                                     │
+             └────────── JwtAuthGuard ──────────────┘
+                              │
+                              ↓
+                         Protected Routes
+```
+
+Public routes explicitly use:
+
+```text
+@Public()
+```
+
+while all other routes are protected by the global JWT guard.
+
+---
+
+## **34. Current Authentication Status**
+
+Completed:
+
+```text
+User registration             ✅
+Password hashing              ✅
+Profile creation              ✅
+Wallet creation               ✅
+Email verification            ✅
+Verification token hashing    ✅
+Login                         ✅
+Password verification         ✅
+Email verification check      ✅
+JWT access token              ✅
+15-minute JWT expiry          ✅
+Typed JWT payload             ✅
+Passport JWT strategy         ✅
+Protected /auth/me             ✅
+Global JWT guard              ✅
+@Public() decorator            ✅
+Refresh token generation      ✅
+Refresh token hashing         ✅
+7-day refresh expiry          ✅
+Refresh endpoint              ✅
+Refresh token rotation        ✅
+Refresh token revocation      ✅
+Atomic rotation               ✅
+JWT tampering rejection       ✅
+Refresh-token reuse rejection ✅
+```
+
+Not yet implemented:
+
+```text
+Logout
+Password reset
+Rate limiting
+Background email queue
+HTTP-only refresh-token cookie
+Role-based authorization
+Ownership authorization
+```
+
+These will be implemented in later authentication/security stages.
+
+---
+
+## **35. Performance Consideration — Refresh Token Lookup**
+
+The current refresh-token implementation retrieves active refresh-token records and performs bcrypt comparison until a match is found.
+
+Conceptually:
+
+```text
+find active tokens
+        ↓
+bcrypt.compare() against hashes
+        ↓
+find matching token
+```
+
+This is correct for the current implementation but does not scale efficiently if a user base contains a very large number of active sessions.
+
+The optimization is intentionally deferred until the authentication hardening stage.
+
+A future design can introduce a lookup-friendly token identifier while continuing to hash the secret portion.
+
+The important distinction is:
+
+```text
+Current priority:
+correctness + security + understanding
+
+Later priority:
+performance optimization
+```
+
+---
+
+## **36. Verification Summary**
+
+### TypeScript
+
+Repeatedly verified using:
+
+```bash
+npx tsc --noEmit
+```
+
+The authentication implementation passed TypeScript compilation after the JWT strategy, guard, refresh-token DTO, and refresh-token service changes.
+
+### API
+
+Verified:
+
+```text
+POST /auth/login
+GET  /auth/me
+POST /auth/refresh
+```
+
+including successful and failure cases.
+
+### JWT
+
+Verified:
+
+```text
+15-minute expiry
+valid signature
+tampered-token rejection
+correct payload
+```
+
+### Database
+
+Verified:
+
+```text
+RefreshToken row created
+tokenHash stored instead of raw token
+expiresAt set
+revokedAt initially NULL
+old token revoked after rotation
+```
+
+### Refresh rotation
+
+Verified:
+
+```text
+old token → rejected after rotation
+new token → successful
+```
+
+---
+
+## **37. Milestone Status**
+
+The core access-token and refresh-token authentication system is now implemented and tested.
+
+The next authentication increment is **logout/session revocation**.
