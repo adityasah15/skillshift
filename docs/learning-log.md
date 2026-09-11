@@ -581,3 +581,16 @@ Refresh Token
 → rotated after use
 → revocable
 ```
+
+## Refresh Tokens — Optimization & Logout
+
+* **Token format:** `tokenId.secret`
+* **Lookup:** use `tokenId` for direct `RefreshToken` lookup instead of scanning all active hashes.
+* **Security:** only `secret` is bcrypt-hashed; `tokenId` is a lookup identifier, not the credential.
+* **Verification:** `findUnique(id)` → check revoked/expiry → `bcrypt.compare(secret, tokenHash)`.
+* **Rotation:** every refresh revokes the old token and creates a new `tokenId.secret`.
+* **Logout:** revoke only the current refresh-token session.
+* **Authorization:** logout verifies `matchedToken.userId === req.user.sub`.
+* **Access JWT:** not blacklisted; remains valid until its 15-minute expiry.
+* **Reason:** short-lived stateless access JWT + revocable refresh session avoids maintaining an access-token blacklist.
+

@@ -44,7 +44,16 @@ export class AuthController {
   async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refresh(refreshTokenDto.refreshToken);
   }
+
+  @Post('logout')
+  async logout(
+    @Req() req: any,
+    @Body() refreshTokenDto: RefreshTokenDto,
+  ) {
+    return this.authService.logout(
+      req.user.sub,
+      refreshTokenDto.refreshToken,
+    );
+  }
 }
 
-
-// "refreshToken":"feb9ad3f0f770580bbcb44c29c9299a909c8c6fdd1f5c377147bd6c5f91bb158"

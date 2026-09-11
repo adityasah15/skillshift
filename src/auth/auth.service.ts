@@ -8,7 +8,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { MailService } from 'src/mail/mail.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
@@ -109,10 +109,13 @@ export class AuthService {
           email: existingUser.email,
           role: existingUser.role,
         });
-        const refreshToken = randomBytes(32).toString('hex');
-        const refreshTokenHash = await bcrypt.hash(refreshToken, 12);
+        const tokenId = randomUUID();
+        const secret = randomBytes(32).toString('hex');
+        const refreshToken = `${tokenId}.${secret}`;
+        const refreshTokenHash = await bcrypt.hash(secret, 12);
         await this.prismaService.refreshToken.create({
           data: {
+            id: tokenId,
             userId: existingUser.id,
             tokenHash: refreshTokenHash,
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -128,26 +131,25 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string) {
-    const tokens = await this.prismaService.refreshToken.findMany({
+    const [tokenId, secret] = refreshToken.split('.');
+
+    if (!tokenId || !secret) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    const matchedToken = await this.prismaService.refreshToken.findUnique({
       where: {
-        revokedAt: null,
+        id: tokenId,
       },
     });
-    let matchedToken: (typeof tokens)[number] | null = null;
-
-    for (const token of tokens) {
-      const match = await bcrypt.compare(refreshToken, token.tokenHash);
-
-      if (match) {
-        matchedToken = token;
-        break;
-      }
-    }
-    if (!matchedToken) {
+    if (!matchedToken || matchedToken.revokedAt) {
       throw new UnauthorizedException('Invalid refresh token');
     }
     if (matchedToken.expiresAt <= new Date()) {
       throw new UnauthorizedException('Refresh token expired');
+    }
+    const match = await bcrypt.compare(secret, matchedToken.tokenHash);
+    if (!match) {
+      throw new UnauthorizedException('Invalid refresh token');
     }
     const user = await this.prismaService.user.findUnique({
       where: { id: matchedToken.userId },
@@ -162,8 +164,12 @@ export class AuthService {
       role: user.role,
     });
 
-    const newRefreshToken = randomBytes(32).toString('hex');
-    const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, 12);
+    const newTokenId = randomUUID();
+    const newSecret = randomBytes(32).toString('hex');
+
+    const newRefreshToken = `${newTokenId}.${newSecret}`;
+
+    const newRefreshTokenHash = await bcrypt.hash(newSecret, 12);
 
     await this.prismaService.$transaction(async (tx) => {
       await tx.refreshToken.update({
@@ -173,17 +179,43 @@ export class AuthService {
 
       await tx.refreshToken.create({
         data: {
+          id: newTokenId,
           userId: user.id,
           tokenHash: newRefreshTokenHash,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         },
       });
     });
-
     return {
       accessToken,
       refreshToken: newRefreshToken,
     };
   }
-  
+
+  async logout(userId: string, refreshToken: string) {
+    const [tokenId, secret] = refreshToken.split('.');
+    if (!tokenId || !secret) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    const matchedToken = await this.prismaService.refreshToken.findUnique({
+      where: { id: tokenId },
+    });
+    if (!matchedToken || matchedToken.revokedAt) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    if (matchedToken.userId !== userId) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    const match = await bcrypt.compare(secret, matchedToken.tokenHash);
+    if (!match) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    await this.prismaService.refreshToken.update({
+      where: { id: matchedToken.id },
+      data: { revokedAt: new Date() },
+    });
+    return {
+      message: 'Logged out successfully',
+    };
+  }
 }

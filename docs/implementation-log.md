@@ -4521,3 +4521,307 @@ new token → successful
 The core access-token and refresh-token authentication system is now implemented and tested.
 
 The next authentication increment is **logout/session revocation**.
+
+## **Refresh Token Lookup Optimization**
+
+The initial refresh-token implementation searched through all active refresh-token records and used `bcrypt.compare()` until a matching hash was found.
+
+This worked correctly but was inefficient because every refresh could require multiple bcrypt comparisons.
+
+The implementation was changed to use a lookup-friendly token format:
+
+```text
+tokenId.secret
+```
+
+The `tokenId` corresponds directly to the `RefreshToken.id` stored in PostgreSQL, while only the secret portion is hashed.
+
+### Token generation
+
+```typescript
+const tokenId = randomUUID();
+const secret = randomBytes(32).toString('hex');
+
+const refreshToken = `${tokenId}.${secret}`;
+
+const refreshTokenHash = await bcrypt.hash(secret, 12);
+```
+
+The database stores:
+
+```text
+id         → tokenId
+tokenHash  → bcrypt(secret)
+```
+
+This means the raw secret is never stored.
+
+### Refresh lookup
+
+The token is split into its two components:
+
+```typescript
+const [tokenId, secret] = refreshToken.split('.');
+```
+
+Malformed tokens are rejected:
+
+```typescript
+if (!tokenId || !secret) {
+  throw new UnauthorizedException('Invalid refresh token');
+}
+```
+
+The refresh-token record can then be located directly:
+
+```typescript
+const matchedToken =
+  await this.prismaService.refreshToken.findUnique({
+    where: { id: tokenId },
+  });
+```
+
+The server then verifies the secret:
+
+```typescript
+const match = await bcrypt.compare(
+  secret,
+  matchedToken.tokenHash,
+);
+```
+
+Therefore the new flow is:
+
+```text
+refreshToken
+     ↓
+tokenId.secret
+     ↓
+extract tokenId
+     ↓
+findUnique(id)
+     ↓
+check revoked / expiry
+     ↓
+bcrypt.compare(secret, tokenHash)
+     ↓
+refresh accepted
+```
+
+This removes the previous scan through all active refresh-token hashes.
+
+### Refresh-token rotation update
+
+The newly generated refresh token also follows the same format:
+
+```typescript
+const newTokenId = randomUUID();
+const newSecret = randomBytes(32).toString('hex');
+
+const newRefreshToken = `${newTokenId}.${newSecret}`;
+
+const newRefreshTokenHash =
+  await bcrypt.hash(newSecret, 12);
+```
+
+The new database record explicitly uses:
+
+```typescript
+id: newTokenId
+```
+
+This ensures the token returned to the client can always be directly mapped to its database record.
+
+---
+
+## **Current-Session Logout**
+
+Implemented:
+
+```text
+POST /auth/logout
+```
+
+Logout revokes only the refresh-token session currently being used.
+
+The access JWT is not blacklisted.
+
+### Logout flow
+
+```text
+POST /auth/logout
+        ↓
+JWT authentication
+        ↓
+req.user.sub
+        ↓
+refreshToken
+        ↓
+extract tokenId + secret
+        ↓
+find refresh-token record
+        ↓
+verify token ownership
+        ↓
+bcrypt.compare()
+        ↓
+set revokedAt
+```
+
+The service method receives:
+
+```typescript
+async logout(
+  userId: string,
+  refreshToken: string,
+)
+```
+
+The refresh token is first parsed:
+
+```typescript
+const [tokenId, secret] =
+  refreshToken.split('.');
+```
+
+The token must contain both components.
+
+The database record is then found using the token ID:
+
+```typescript
+const matchedToken =
+  await this.prismaService.refreshToken.findUnique({
+    where: { id: tokenId },
+  });
+```
+
+Revoked or nonexistent tokens are rejected.
+
+The service also verifies that the refresh-token session belongs to the authenticated user:
+
+```typescript
+if (matchedToken.userId !== userId) {
+  throw new UnauthorizedException(
+    'Invalid refresh token',
+  );
+}
+```
+
+The secret is then verified against the stored bcrypt hash.
+
+After successful verification:
+
+```typescript
+await this.prismaService.refreshToken.update({
+  where: { id: matchedToken.id },
+  data: { revokedAt: new Date() },
+});
+```
+
+The endpoint returns:
+
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+---
+
+## **Access Token Behaviour During Logout**
+
+The access JWT remains valid until its normal expiration.
+
+This is intentional.
+
+SkillShift uses:
+
+```text
+Access JWT     → 15 minutes
+Refresh token  → 7 days
+```
+
+Logout immediately revokes the refresh-token session, preventing the user from obtaining another access token.
+
+The existing access token can remain valid for its remaining short lifetime.
+
+The design therefore avoids maintaining a server-side blacklist for every access JWT while keeping the maximum post-logout access-token lifetime limited.
+
+The resulting model is:
+
+```text
+Logout
+│
+├── Refresh token → revoked immediately
+│
+└── Access token  → valid until expiration
+```
+
+---
+
+## **Logout Testing**
+
+The logout endpoint was tested using a valid access token and its corresponding refresh token.
+
+Successful logout returned:
+
+```text
+200 OK
+```
+
+with:
+
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+The same refresh token was then submitted to:
+
+```text
+POST /auth/refresh
+```
+
+and was rejected with:
+
+```text
+401 Unauthorized
+```
+
+This verified that logout actually revoked the refresh session rather than only returning a success response.
+
+The existing access token was also used with:
+
+```text
+GET /auth/me
+```
+
+and remained valid.
+
+This confirmed the intended distinction between refresh-token revocation and short-lived access-token validity.
+
+---
+
+## **Authentication Milestone Status**
+
+The authentication module now supports:
+
+```text
+Registration                  ✅
+Email verification            ✅
+Login                         ✅
+JWT access tokens              ✅
+JWT validation                 ✅
+Protected routes               ✅
+Global authentication guard   ✅
+@Public() routes               ✅
+Refresh tokens                 ✅
+Refresh token hashing          ✅
+Refresh token rotation         ✅
+Refresh token revocation       ✅
+Direct refresh-token lookup    ✅
+Logout                         ✅
+```
+
+The authentication system is now ready for the next feature/security layer.
