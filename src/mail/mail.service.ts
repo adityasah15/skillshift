@@ -30,4 +30,18 @@ export class MailService {
       `,
     });
   }
+
+  async sendPasswordResetEmail(email: string, token: string) {
+    const forgotPasswordUrl =
+  `http://localhost:3001/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
+    await this.transporter.sendMail({
+      from: this.configService.get<string>('MAIL_FROM'),
+      to: email,
+      subject: 'Password reset link',
+      html: `
+      <p>Please click the link below to reset your password:</p>
+      <a href="${forgotPasswordUrl}">Reset password</a>
+      `,
+    });
+  }
 }

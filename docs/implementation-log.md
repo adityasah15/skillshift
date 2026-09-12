@@ -4825,3 +4825,361 @@ Logout                         ✅
 ```
 
 The authentication system is now ready for the next feature/security layer.
+
+# Password Reset & Authentication Hardening
+
+## Date
+
+2026-09-12
+
+## Milestone
+
+Completed the remaining core authentication functionality by implementing the password reset flow.
+
+The Auth module now supports:
+
+* User registration
+* Email verification
+* Login with JWT access tokens
+* Refresh-token sessions with rotation
+* Logout
+* Forgot-password flow
+* Password reset with expiring, single-use tokens
+* Session invalidation after password reset
+* Global JWT authentication with `@Public()` exceptions
+* Basic authentication hardening and TypeScript cleanup
+
+---
+
+## 22. Day 5 Objective
+
+The main objective for Day 5 was to finish the remaining core authentication functionality and perform a hardening pass before moving to the User/Profile module.
+
+The planned work was:
+
+1. Implement forgot-password.
+2. Implement password reset.
+3. Make reset tokens secure and single-use.
+4. Invalidate existing refresh sessions after a password change.
+5. Review authentication edge cases.
+6. Remove unnecessary TypeScript issues and redundant guards.
+7. Test the complete password-reset flow.
+8. Update project documentation.
+
+---
+
+## 23. Forgot-Password DTO
+
+Created:
+
+```text
+src/auth/dto/forgot-password.dto.ts
+```
+
+The DTO accepts only the user's email address:
+
+```typescript
+import { IsEmail } from 'class-validator';
+
+export class ForgotPasswordDto {
+  @IsEmail()
+  email!: string;
+}
+```
+
+The `@IsEmail()` decorator ensures that malformed email input is rejected by the global `ValidationPipe`.
+
+---
+
+## 24. Forgot-Password Endpoint
+
+Added the public endpoint:
+
+```text
+POST /auth/forgot-password
+```
+
+The endpoint accepts `ForgotPasswordDto` and delegates the operation to `AuthService`.
+
+The route is marked with:
+
+```typescript
+@Public()
+```
+
+because password recovery must be available to users who are not currently authenticated.
+
+The controller returns the result of the service call directly.
+
+---
+
+## 25. Forgot-Password Token Generation
+
+When a matching account exists, the service generates a cryptographically random reset token:
+
+```typescript
+const resetToken = randomBytes(32).toString('hex');
+```
+
+The raw token is never stored in the database.
+
+Instead, a bcrypt hash is generated:
+
+```typescript
+const resetTokenHash = await bcrypt.hash(resetToken, 12);
+```
+
+Only this hash is stored in the `User` record.
+
+This follows the same security principle used for refresh tokens: credentials that can be used for authentication should not be stored in plaintext.
+
+---
+
+## 26. Password Reset Token Expiry
+
+The reset token is given a one-hour validity period:
+
+```typescript
+passwordResetExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+```
+
+The database therefore stores both:
+
+```text
+passwordResetTokenHash
+passwordResetExpiresAt
+```
+
+The token becomes unusable after its expiry time.
+
+---
+
+## 27. Preventing Account Enumeration
+
+The forgot-password endpoint intentionally returns the same response whether or not the supplied email belongs to an account.
+
+The response is:
+
+```text
+If an account exists for this email, a password reset link has been sent.
+```
+
+This prevents attackers from using the password-reset endpoint to discover which email addresses are registered on SkillShift.
+
+The service therefore does not return an error simply because the email does not exist.
+
+---
+
+## 28. Password Reset Email
+
+Added password-reset email functionality to:
+
+```text
+src/mail/mail.service.ts
+```
+
+The raw reset token is included in the reset URL sent to the user's email.
+
+The current development URL points to the future frontend reset-password page:
+
+```text
+http://localhost:3001/reset-password
+```
+
+The frontend does not exist yet, so this URL is currently only a development placeholder for the eventual Next.js reset-password page.
+
+The API itself receives the token and email when the reset operation is submitted.
+
+---
+
+## 29. Reset-Password DTO
+
+Created:
+
+```text
+src/auth/dto/reset-password.dto.ts
+```
+
+The DTO contains:
+
+```typescript
+import { IsEmail, IsString, MinLength } from 'class-validator';
+
+export class ResetPasswordDto {
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  @MinLength(1)
+  token!: string;
+
+  @IsString()
+  @MinLength(8)
+  newPassword!: string;
+}
+```
+
+The new password must contain at least eight characters.
+
+The token itself is required, while the email identifies the account whose reset token is being validated.
+
+---
+
+## 30. Reset-Password Endpoint
+
+Added:
+
+```text
+POST /auth/reset-password
+```
+
+The endpoint is public:
+
+```typescript
+@Public()
+@Post('reset-password')
+```
+
+This is necessary because the user does not have to possess a valid JWT access token to recover an account.
+
+The reset token itself acts as the credential for this operation.
+
+---
+
+## 31. Reset Token Validation
+
+The service first finds the user by email.
+
+The reset request is rejected if:
+
+* The user does not exist.
+* No reset token hash exists.
+* No reset expiry exists.
+* The reset token has expired.
+
+The validation logic is:
+
+```typescript
+if (
+  !user ||
+  !user.passwordResetTokenHash ||
+  !user.passwordResetExpiresAt ||
+  user.passwordResetExpiresAt <= new Date()
+) {
+  throw new BadRequestException('Reset token is invalid or expired.');
+}
+```
+
+The same error message is used for invalid and expired reset tokens rather than exposing unnecessary information.
+
+---
+
+## 32. Comparing the Reset Token
+
+The raw token received from the reset request is compared against the stored bcrypt hash:
+
+```typescript
+const match = await bcrypt.compare(
+  resetPasswordDto.token,
+  user.passwordResetTokenHash,
+);
+```
+
+If the comparison fails:
+
+```typescript
+throw new BadRequestException(
+  'Reset token is invalid or expired.',
+);
+```
+
+The raw reset token is therefore never compared directly against a plaintext value stored in the database.
+
+---
+
+## 33. Updating the Password
+
+After successful token validation, the new password is hashed using bcrypt:
+
+```typescript
+const newPasswordHash = await bcrypt.hash(
+  resetPasswordDto.newPassword,
+  12,
+);
+```
+
+The plaintext password is never stored.
+
+The user's `passwordHash` is then replaced with the new hash.
+
+---
+
+## 34. Making the Reset Token Single-Use
+
+After a successful password reset, both reset-token fields are cleared:
+
+```typescript
+passwordResetTokenHash: null,
+passwordResetExpiresAt: null,
+```
+
+This makes the reset token single-use.
+
+Even if the same reset URL is submitted again, the database no longer contains a valid reset token hash, so the request is rejected.
+
+---
+
+## 35. Invalidating Existing Refresh Sessions
+
+A password change is a security-sensitive event.
+
+All existing refresh-token sessions are therefore deleted as part of the user update:
+
+```typescript
+refreshTokens: {
+  deleteMany: {},
+},
+```
+
+This prevents previously issued seven-day refresh tokens from continuing to create new access-token sessions after the password has been changed.
+
+The behavior is therefore:
+
+```text
+Password reset
+      ↓
+Change password
+      ↓
+Invalidate reset token
+      ↓
+Delete existing refresh sessions
+      ↓
+User must log in again
+```
+
+The existing access JWT is not blacklisted.
+
+As decided earlier, access tokens have a short lifetime of 15 minutes and remain valid until they expire.
+
+---
+
+## 36. Why Access Tokens Are Not Blacklisted
+
+The project intentionally does not maintain an access-token blacklist.
+
+The current authentication model is:
+
+```text
+Access Token
+15 minutes
+Stateless JWT
+        +
+Refresh Token
+7 days
+Database-backed
+Hashed
+Rotated
+Revocable
+```
+
+Blacklisting every

@@ -12,6 +12,8 @@ import { randomBytes, randomUUID } from 'crypto';
 import { MailService } from 'src/mail/mail.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -216,6 +218,70 @@ export class AuthService {
     });
     return {
       message: 'Logged out successfully',
+    };
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const user = await this.prismaService.user.findUnique({
+      where: { email: forgotPasswordDto.email },
+    });
+    if (!user) {
+      return {
+        message:
+          'If an account exists for this email, a password reset link has been sent.',
+      };
+    }
+    const resetToken = randomBytes(32).toString('hex');
+    const resetTokenHash = await bcrypt.hash(resetToken, 12);
+    await this.prismaService.user.update({
+      where: { email: forgotPasswordDto.email },
+      data: {
+        passwordResetTokenHash: resetTokenHash,
+        passwordResetExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+    await this.mailService.sendPasswordResetEmail(forgotPasswordDto.email, resetToken);
+    return {
+      message:
+        'If an account exists for this email, a password reset link has been sent.',
+    };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const user = await this.prismaService.user.findUnique({
+      where: { email: resetPasswordDto.email },
+    });
+    if (
+      !user ||
+      !user.passwordResetTokenHash ||
+      !user.passwordResetExpiresAt ||
+      user.passwordResetExpiresAt <= new Date()
+    ) {
+      throw new BadRequestException('Reset token is invalid or expired.');
+    }
+
+    const match = await bcrypt.compare(
+      resetPasswordDto.token,
+      user.passwordResetTokenHash,
+    );
+
+    if (!match) {
+      throw new BadRequestException('Reset token is invalid or expired.');
+    }
+    const newPasswordHash = await bcrypt.hash(resetPasswordDto.newPassword, 12);
+    await this.prismaService.user.update({
+      where: { email: resetPasswordDto.email },
+      data: {
+        passwordHash: newPasswordHash,
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+        refreshTokens: {
+          deleteMany: {},
+        },
+      },
+    });
+    return {
+      message: 'Password changed successfully.',
     };
   }
 }

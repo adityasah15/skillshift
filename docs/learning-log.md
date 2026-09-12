@@ -594,3 +594,59 @@ Refresh Token
 * **Access JWT:** not blacklisted; remains valid until its 15-minute expiry.
 * **Reason:** short-lived stateless access JWT + revocable refresh session avoids maintaining an access-token blacklist.
 
+## Authentication — Password Reset
+
+### Password Reset Flow
+
+```text
+Forgot Password
+    ↓
+Generate random token
+    ↓
+Hash token with bcrypt
+    ↓
+Store hash + expiry
+    ↓
+Email raw token
+    ↓
+Validate token
+    ↓
+Hash new password
+    ↓
+Clear reset token
+    ↓
+Invalidate refresh sessions
+```
+
+### Security Lessons
+
+* Never store password-reset tokens in plaintext.
+* Reset tokens should expire and be single-use.
+* Forgot-password responses should not reveal whether an email exists.
+* Password changes should invalidate existing long-lived refresh sessions.
+* Access JWTs remain short-lived and stateless instead of being blacklisted.
+* Public routes are explicitly marked with `@Public()` while the global JWT guard protects everything else.
+
+### Authentication Architecture
+
+```text
+Access JWT
+15 min
+Stateless
+
+Refresh Token
+7 days
+Hashed + DB-backed
+Rotated + Revocable
+```
+
+### NestJS / TypeScript Lessons
+
+* Global guards reduce repetitive route-level guards.
+* Authenticated request data should use a defined payload type instead of `any`.
+* DTO validation keeps input rules at the API boundary.
+* Service layer remains responsible for authentication business rules.
+
+### Production Consideration
+
+Refresh-token rotation has a potential concurrent-request race condition. The current implementation is sufficient for project scope; stronger concurrency control can be added later if required.

@@ -7,6 +7,8 @@ import { JwtAuthGuard } from './guards/jwt-auth/jwt-auth.guard';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { Public } from './decorators/public.decorator';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -34,7 +36,6 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
   getMe(@Req() req: { user: JwtPayload }) {
     return req.user;
   }
@@ -47,13 +48,21 @@ export class AuthController {
 
   @Post('logout')
   async logout(
-    @Req() req: any,
+    @Req() req: { user: JwtPayload },
     @Body() refreshTokenDto: RefreshTokenDto,
   ) {
-    return this.authService.logout(
-      req.user.sub,
-      refreshTokenDto.refreshToken,
-    );
+    return this.authService.logout(req.user.sub, refreshTokenDto.refreshToken);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Public()
+  @Post('reset-password')
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto);
   }
 }
-
