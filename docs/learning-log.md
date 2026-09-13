@@ -650,3 +650,28 @@ Rotated + Revocable
 ### Production Consideration
 
 Refresh-token rotation has a potential concurrent-request race condition. The current implementation is sufficient for project scope; stronger concurrency control can be added later if required.
+
+
+**# User & Profile Module**
+
+**## Date**
+
+2026-09-13
+
+**## Day 6 Learnings**
+
+* Learned how NestJS feature modules use shared Prisma infrastructure.
+
+* Learned the difference between `Profile.id` and `Profile.userId` when working with one-to-one relations.
+
+* Learned how `@Public()` works with a global JWT guard to selectively bypass authentication.
+
+* Learned that TypeScript's `?` does not make DTO fields optional to `class-validator`; `@IsOptional()` is required.
+
+* Learned how PATCH endpoints should support partial updates while still validating supplied fields.
+
+* Learned why public profile endpoints should explicitly select only fields intended for public exposure.
+
+* Learned how to organize reusable application-wide infrastructure under a shared `common` directory.
+
+* Practiced testing authenticated, public, validation-error, and not-found API scenarios using Postman.

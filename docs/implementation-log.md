@@ -4396,9 +4396,9 @@ JWT access token              ✅
 15-minute JWT expiry          ✅
 Typed JWT payload             ✅
 Passport JWT strategy         ✅
-Protected /auth/me             ✅
+Protected /auth/me            ✅
 Global JWT guard              ✅
-@Public() decorator            ✅
+@Public() decorator           ✅
 Refresh token generation      ✅
 Refresh token hashing         ✅
 7-day refresh expiry          ✅
@@ -5183,3 +5183,498 @@ Revocable
 ```
 
 Blacklisting every
+
+**# User & Profile Module**
+
+**## Date**
+
+2026-09-13
+
+**## Milestone**
+
+Completed the User & Profile module according to the SkillShift Implementation Blueprint.
+
+The User module now supports:
+
+* Viewing the authenticated user's profile
+
+* Updating the authenticated user's profile
+
+* Viewing another user's public profile
+
+* Public profile access without authentication
+
+* Profile field validation
+
+* Proper handling of nonexistent users/profiles
+
+* Reusable authentication infrastructure through the shared `common` directory
+
+**---**
+
+**## 37. Day 6 Objective**
+
+The main objective for Day 6 was to implement the User & Profile module following the Phase 2 requirements in the SkillShift blueprint.
+
+The planned work was:
+
+1. Create the User module.
+
+2. Implement `UserService.findById()`.
+
+3. Implement `UserService.updateProfile()`.
+
+4. Implement `UserService.getPublicProfile()`.
+
+5. Create the User controller.
+
+6. Implement `GET /users/me`.
+
+7. Implement `PATCH /users/me`.
+
+8. Implement `GET /users/:id`.
+
+9. Create `UpdateProfileDto`.
+
+10. Make the public profile endpoint accessible without authentication.
+
+11. Test profile retrieval, profile updates, validation, and public profile access.
+
+12. Clean up reusable authentication infrastructure.
+
+The blueprint defines Phase 2 as the User & Profile module containing these three service methods, three endpoints, the update DTO, and tests for updating/viewing profiles.
+
+**---**
+
+**## 38. User Module Creation**
+
+Created the NestJS User module:
+
+```text
+src/user/
+├── dto/
+│   └── update-profile.dto.ts
+├── user.controller.ts
+├── user.controller.spec.ts
+├── user.module.ts
+├── user.service.ts
+└── user.service.spec.ts
+```
+
+`PrismaModule` was added to `UserModule` so the User service can access the Prisma client.
+
+The API uses the plural `/users` route structure specified by the blueprint.
+
+**---**
+
+**## 39. `GET /users/me`**
+
+Implemented:
+
+```text
+GET /users/me
+```
+
+The endpoint retrieves the currently authenticated user's information using the user ID contained in the JWT payload.
+
+The controller obtains the authenticated user from:
+
+```typescript
+req.user.sub
+```
+
+and passes the ID to:
+
+```typescript
+UserService.findById()
+```
+
+The endpoint is protected by the global JWT authentication guard.
+
+A valid access token is therefore required.
+
+**---**
+
+**## 40. `UserService.findById()`**
+
+Implemented:
+
+```text
+UserService.findById(userId)
+```
+
+The service queries the `User` record using its ID and returns the relevant account and profile information.
+
+The response includes:
+
+```text
+User
+├── id
+├── email
+├── role
+├── isEmailVerified
+├── createdAt
+├── updatedAt
+└── profile
+    ├── id
+    ├── displayName
+    ├── bio
+    ├── avatarUrl
+    ├── skills
+    ├── portfolioUrls
+    ├── rating
+    └── totalReviews
+```
+
+A Prisma `select` was used so that only explicitly required fields are returned.
+
+Sensitive authentication information such as password hashes and refresh-token records is not exposed.
+
+If the user does not exist, the service throws:
+
+```text
+NotFoundException
+```
+
+with:
+
+```text
+User not found
+```
+
+The endpoint was tested successfully through Postman and returned `200 OK`.
+
+**---**
+
+**## 41. `UpdateProfileDto`**
+
+Created:
+
+```text
+src/user/dto/update-profile.dto.ts
+```
+
+The DTO supports updating:
+
+```text
+displayName
+bio
+avatarUrl
+skills
+portfolioUrls
+```
+
+Validation rules include:
+
+```typescript
+@MinLength(1)
+@IsString()
+displayName?: string;
+
+@IsString()
+bio?: string;
+
+@IsUrl()
+avatarUrl?: string;
+
+@IsString({ each: true })
+@IsArray()
+skills?: string[];
+
+@IsUrl({}, { each: true })
+@IsArray()
+portfolioUrls?: string[];
+```
+
+The fields are intended for partial updates because the endpoint uses HTTP `PATCH`.
+
+System-managed fields such as:
+
+```text
+rating
+totalReviews
+```
+
+are not accepted from the client.
+
+**---**
+
+**## 42. `PATCH /users/me`**
+
+Implemented:
+
+```text
+PATCH /users/me
+```
+
+The endpoint obtains the authenticated user's ID from the JWT payload and passes the request body to:
+
+```text
+UserService.updateProfile()
+```
+
+The service updates the user's existing `Profile` record using the profile's unique `userId`.
+
+The update operation was initially implemented using the wrong profile identifier. This was corrected from the profile's primary `id` to:
+
+```text
+Profile.userId
+```
+
+because the authenticated user's ID corresponds to the `userId` field on the Profile model.
+
+This was an important distinction between:
+
+```text
+Profile.id
+```
+
+and:
+
+```text
+Profile.userId
+```
+
+The endpoint was tested successfully through Postman.
+
+**---**
+
+**## 43. Partial Update Validation**
+
+During testing, a PATCH request containing only one field:
+
+```json
+{
+  "displayName": ""
+}
+```
+
+unexpectedly triggered validation errors for the other omitted fields.
+
+The reason was that TypeScript's optional property syntax:
+
+```typescript
+field?: string
+```
+
+does not make a field optional to `class-validator` at runtime.
+
+`@IsOptional()` was therefore added to the optional DTO fields.
+
+The corrected validation behavior allows requests containing only the fields being updated while still validating those fields when they are supplied.
+
+For example:
+
+```json
+{
+  "displayName": ""
+}
+```
+
+now correctly produces:
+
+```text
+400 Bad Request
+```
+
+because the supplied `displayName` violates:
+
+```text
+@MinLength(1)
+```
+
+while omitted fields are ignored.
+
+**---**
+
+**## 44. `GET /users/:id`**
+
+Implemented:
+
+```text
+GET /users/:id
+```
+
+The endpoint calls:
+
+```text
+UserService.getPublicProfile()
+```
+
+using the requested user's ID.
+
+Unlike `GET /users/me`, this endpoint returns only publicly appropriate profile information.
+
+The response contains:
+
+```text
+displayName
+bio
+avatarUrl
+skills
+portfolioUrls
+rating
+totalReviews
+```
+
+Private account information such as email, role, authentication credentials, and session information is not returned.
+
+**---**
+
+**## 45. Making Public Profiles Accessible Without JWT**
+
+The public profile endpoint was marked with:
+
+```typescript
+@Public()
+```
+
+This allows the global JWT authentication guard to bypass authentication for the endpoint.
+
+The reusable `@Public()` decorator and JWT guard were moved into the shared `common` directory:
+
+```text
+src/common/
+├── decorators/
+│   └── public.decorator.ts
+└── guards/
+    └── jwt-auth.guard.ts
+```
+
+This is more appropriate because these components are application-wide authentication infrastructure rather than functionality specific to the Auth feature.
+
+After updating the imports, the project compiled successfully.
+
+**---**
+
+**## 46. Public Profile Testing**
+
+Tested:
+
+```text
+GET /users/:id
+```
+
+without an `Authorization` header.
+
+The endpoint returned:
+
+```text
+200 OK
+```
+
+This confirmed that:
+
+```text
+Global JwtAuthGuard
+        ↓
+      @Public()
+        ↓
+Authentication bypassed
+        ↓
+Public profile returned
+```
+
+The endpoint therefore behaves as intended by the API design.
+
+The blueprint explicitly defines `/users/:id` as the public user profile endpoint.
+
+**---**
+
+**## 47. Nonexistent Profile Handling**
+
+Tested the public profile endpoint using a nonexistent UUID.
+
+The API returned:
+
+```text
+404 Not Found
+```
+
+instead of returning:
+
+```text
+200 OK
+null
+```
+
+This confirms that the service explicitly handles missing profiles using `NotFoundException`.
+
+**---**
+
+**## 48. TypeScript Verification**
+
+After moving the common authentication infrastructure and updating all affected imports, the project was compiled using:
+
+```bash
+npx tsc --noEmit
+```
+
+The command completed with no output, confirming that TypeScript compilation succeeded without errors.
+
+**---**
+
+**## 49. Day 6 API Testing Summary**
+
+The following User/Profile functionality was tested through Postman:
+
+| Endpoint          | Test                  | Result            |
+| ----------------- | --------------------- | ----------------- |
+| `GET /users/me`   | Valid JWT             | `200 OK`          |
+| `PATCH /users/me` | Profile update        | `200 OK`          |
+| `PATCH /users/me` | Invalid `displayName` | `400 Bad Request` |
+| `GET /users/:id`  | No JWT                | `200 OK`          |
+| `GET /users/:id`  | Nonexistent user      | `404 Not Found`   |
+
+The tests confirm that the main Phase 2 User/Profile behavior is functioning correctly.
+
+**---**
+
+**## 50. Phase 2 Completion**
+
+The User & Profile module is considered complete according to the SkillShift Implementation Blueprint.
+
+Implemented:
+
+* `UserService.findById()`
+
+* `UserService.updateProfile()`
+
+* `UserService.getPublicProfile()`
+
+* `GET /users/me`
+
+* `PATCH /users/me`
+
+* `GET /users/:id`
+
+* `UpdateProfileDto`
+
+* Public profile access using `@Public()`
+
+* Profile validation
+
+* Missing-profile error handling
+
+* Postman endpoint testing
+
+* TypeScript verification
+
+No additional User/Profile functionality was added beyond the defined Phase 2 scope.
+
+The blueprint's build sequence places User + Profile on Days 6–7, followed by the Wallet module on Days 8–9.
+
+**---**
+
+**## 51. Day 6 Outcome**
+
+```text
+Phase 2 — User & Profile
+             ↓
+          COMPLETE
+             ↓
+Next: Phase 3 — Wallet
+```
+
+The project is ready to proceed to the Wallet module.
+
