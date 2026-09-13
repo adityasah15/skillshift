@@ -191,10 +191,10 @@ docker compose up -d
 This brings up PostgreSQL and Redis.
 
 ### 3. Environment
-Copy the example env and fill in the values:
 ```bash
 cp .env.example .env
 ```
+Copy the example env and fill in the required values (database URL, Redis, JWT secrets, etc.).
 
 ### 4. Database
 ```bash
@@ -221,18 +221,20 @@ Once the server is running:
 - [x] Project setup & Docker infrastructure
 - [x] Database schema (Prisma)
 - [x] Authentication (registration, verification, JWT, rotation, logout, password reset)
-- [ ] User / Profile module
+- [x] User / Profile module
 - [ ] Service marketplace + search
-- [ ] Orders + Escrow + Wallet
+- [ ] Orders
+- [ ] Escrow
+- [ ] Wallet
 - [ ] Disputes
 - [ ] Reviews
 - [ ] Notifications (BullMQ + email)
 - [ ] Real-time chat
 - [ ] File uploads (S3 presigned)
 - [ ] Admin module & analytics
+- [ ] Next.js frontend
 - [ ] Automated tests (unit + integration)
 - [ ] CI/CD + production deployment (Docker → AWS EC2 + Nginx)
-- [ ] Next.js frontend
 
 See `docs/` for the full implementation blueprint and engineering decisions.
 
@@ -254,10 +256,7 @@ It intentionally avoids microservices, real payment gateways, and heavy frontend
 
 ## Documentation
 
-| Document                   | Purpose                                                 |
-|----------------------------|---------------------------------------------------------|
-| `docs/project-overview.md` | High-level architecture & goals                         |
-| `docs/` (other files)      | API conventions, schema decisions, implementation notes |
+Detailed notes on architecture, API conventions, design decisions, and implementation live in the [`docs/`](docs/) folder.
 
 ---
 
