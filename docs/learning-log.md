@@ -675,3 +675,82 @@ Refresh-token rotation has a potential concurrent-request race condition. The cu
 * Learned how to organize reusable application-wide infrastructure under a shared `common` directory.
 
 * Practiced testing authenticated, public, validation-error, and not-found API scenarios using Postman.
+
+# 2026-09-14 — Wallet & Financial Data
+
+## Concepts Learned
+
+### Financial operations need atomicity
+
+A wallet deposit changes more than one piece of state:
+
+* wallet balance
+* transaction history
+
+These operations belong inside a Prisma `$transaction` so the database does not end up with a balance change without its corresponding transaction record, or vice versa.
+
+### Read-modify-write vs atomic increment
+
+For balance updates, directly incrementing the database value is preferable to:
+
+1. reading the current balance
+2. calculating a new balance in application code
+3. writing the new balance
+
+The latter introduces unnecessary concurrency concerns.
+
+### Financial data should remain uncached
+
+Redis is useful for frequently accessed data, but wallet balances represent current financial state.
+
+Caching wallet balances could return stale information, so SkillShift deliberately keeps wallet financial data uncached.
+
+### Authentication and resource ownership
+
+Wallet operations derive the user identity from the authenticated JWT rather than allowing the client to submit a `userId`.
+
+This is an important authorization boundary: authentication identifies who the user is, while the service ensures that the requested resource belongs to that authenticated user.
+
+### Transaction records as an audit trail
+
+The wallet balance represents the current state, while `Transaction` records explain individual money movements.
+
+For deposits, the balance change is accompanied by a `DEPOSIT` transaction.
+
+This design will later support escrow-related movements such as:
+
+* `ESCROW_HOLD`
+* `ESCROW_RELEASE`
+* `ESCROW_REFUND`
+
+## Interview Takeaways
+
+Be able to explain:
+
+* Why wallet deposits use a database transaction.
+* Why direct increment is preferable to read-calculate-write.
+* Why financial data should not be cached in Redis.
+* Why `userId` should come from authentication instead of the request body.
+* Why wallet balance and transaction history serve different purposes.
+
+## 2026-09-14 — Wallet Testing & Debugging
+
+### Concepts Learned
+
+* Manual API testing should cover both successful and invalid request scenarios.
+* Multi-account testing is important for verifying resource ownership and preventing users from accessing another user's financial data.
+* Authentication testing should verify that protected wallet endpoints cannot be used without valid authentication.
+* Jest/Prisma test failures can originate from test/runtime module-resolution configuration rather than the application business logic itself.
+* Automated testing can be intentionally paused after debugging without marking the manually verified feature as incomplete.
+
+### Testing Takeaway
+
+For financial features, testing should verify not only the happy path but also:
+
+* authentication
+* invalid input handling
+* balance changes
+* transaction creation
+* data isolation between accounts
+
+The Wallet manual testing session successfully covered these areas.

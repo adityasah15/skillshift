@@ -1,47 +1,48 @@
-# SkillShift — Build Log
-
-## Environment Setup (Pre-Phase 0)
-
-**Stack:** NestJS + PostgreSQL + Redis + Prisma + Docker
-
-**Machine:** Windows 11 + WSL 2 (Ubuntu)
-
-### Why WSL?
-Windows terminal (PowerShell/CMD) behaves differently from Linux
-for shell commands, line endings, and Docker tooling. Since
-production runs Linux, WSL eliminates environment mismatch locally.
-
-### Tools installed
-- Node.js v24.18.0 (inside WSL Ubuntu)
-- Docker Desktop v29.6.1 (Windows, WSL 2 backend)
-- NestJS CLI v11.0.24
-- Git v2.55
-
-### VSCode setup
-- WSL extension installed
-- Opened via `code .` from Ubuntu terminal
-- Integrated terminal runs Ubuntu bash
-
-### Key commands
-```bash
-# Open project in VSCode from WSL
-code .
-
-# Verify environment
-node --version
-docker --version
-```
-
-### Project created
-```bash
-cd ~/projects
-nest new skillshift
-cd skillshift
-code .
-```
-
----
+# SkillShift — Setup Log
 
 ## Phase 0 — Project Setup
 
-*(in progress)*
+**Status:** Completed
+
+The initial SkillShift backend environment was established with:
+
+* NestJS
+* TypeScript
+* PostgreSQL
+* Redis
+* Prisma
+* Docker
+* Git/GitHub
+
+## Database & Infrastructure
+
+The project uses:
+
+* PostgreSQL as the persistent database
+* Redis for application infrastructure defined by the Blueprint
+* Prisma as the ORM/database access layer
+* Docker for local infrastructure
+
+The initial Prisma schema and database migration were created during project setup.
+
+## Application Foundation
+
+The NestJS application foundation includes the shared database/configuration infrastructure required by the backend modules.
+
+Authentication, User/Profile, and Wallet modules have subsequently been implemented on top of this foundation.
+
+## Current Status
+
+Phase 0 setup is complete.
+
+Development has progressed through:
+
+* Phase 1 — Authentication
+* Phase 2 — User & Profile
+* Phase 3 — Wallet
+
+The next planned implementation phase is Phase 4 — Service Listings.
+
+## Note
+
+Environment-specific version information should only be updated here when verified from the actual development environment.
