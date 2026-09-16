@@ -14,12 +14,14 @@ export class ServiceService {
   ) {}
 
   async create(userId: string, createServiceDto: CreateServiceDto) {
-    return this.prismaService.service.create({
+    const service = await this.prismaService.service.create({
       data: {
         ...createServiceDto,
         freelancerId: userId,
       },
     });
+    await this.redisService.delByPattern('services:*'); // Invalidate the cache for all services
+    return service;
   }
   async findAll(serviceQueryDto: ServiceQueryDto) {
     const key = `services:${JSON.stringify(serviceQueryDto)}`;
@@ -119,6 +121,7 @@ export class ServiceService {
     });
     // Invalidate the cache for this service
     await this.redisService.del(`service:${serviceId}`);
+    await this.redisService.delByPattern('services:*'); // Invalidate the cache for all services
     return updatedService;
   }
 
@@ -139,6 +142,7 @@ export class ServiceService {
     });
     // Invalidate the cache for this service
     await this.redisService.del(`service:${serviceId}`);
+    await this.redisService.delByPattern('services:*'); // Invalidate the cache for all services
     return deletedService;
   }
 
@@ -158,6 +162,7 @@ export class ServiceService {
     });
     // Invalidate the cache for this service
     await this.redisService.del(`service:${serviceId}`);
+    await this.redisService.delByPattern('services:*'); // Invalidate the cache for all services
     return approvedService;
   }
 
@@ -177,6 +182,7 @@ export class ServiceService {
     });
     // Invalidate the cache for this service
     await this.redisService.del(`service:${serviceId}`);
+    await this.redisService.delByPattern('services:*'); // Invalidate the cache for all services
     return rejectedService;
   }
 }
