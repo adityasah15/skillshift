@@ -218,23 +218,24 @@ Once the server is running:
 
 ## Implementation Status
 
-- [x] Project setup & Docker infrastructure
-- [x] Database schema (Prisma)
-- [x] Authentication (registration, verification, JWT, rotation, logout, password reset)
-- [x] User / Profile module
-- [ ] Service marketplace + search
-- [ ] Orders
-- [ ] Escrow
-- [ ] Wallet
-- [ ] Disputes
-- [ ] Reviews
-- [ ] Notifications (BullMQ + email)
-- [ ] Real-time chat
-- [ ] File uploads (S3 presigned)
-- [ ] Admin module & analytics
-- [ ] Next.js frontend
-- [ ] Automated tests (unit + integration)
-- [ ] CI/CD + production deployment (Docker → AWS EC2 + Nginx)
+* [x] Project setup & Docker infrastructure
+* [x] Database schema (Prisma)
+* [x] Authentication (registration, verification, JWT, rotation, logout, password reset)
+* [x] User / Profile module
+* [x] Wallet
+* [x] Service marketplace
+* [ ] Orders
+* [ ] Escrow
+* [ ] Notifications (BullMQ + email)
+* [ ] Disputes
+* [ ] Reviews
+* [ ] Real-time chat
+* [ ] File uploads (S3 presigned)
+* [ ] Search
+* [ ] Admin module & analytics
+* [ ] Automated tests (unit + integration)
+* [ ] Next.js frontend
+* [ ] CI/CD + production deployment (Docker → AWS EC2 + Nginx)
 
 See `docs/` for the full implementation blueprint and engineering decisions.
 
