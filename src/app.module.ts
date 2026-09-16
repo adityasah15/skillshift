@@ -11,6 +11,7 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { UserModule } from './user/user.module';
 import { WalletModule } from './wallet/wallet.module';
 import { RolesGuard } from './common/guards/roles.guard';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     MailModule,
     UserModule,
     WalletModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [
