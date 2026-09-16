@@ -12,6 +12,7 @@ import { UserModule } from './user/user.module';
 import { WalletModule } from './wallet/wallet.module';
 import { RolesGuard } from './common/guards/roles.guard';
 import { RedisModule } from './redis/redis.module';
+import { ServiceModule } from './service/service.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { RedisModule } from './redis/redis.module';
     UserModule,
     WalletModule,
     RedisModule,
+    ServiceModule,
   ],
   controllers: [AppController],
   providers: [
