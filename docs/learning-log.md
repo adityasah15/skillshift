@@ -754,3 +754,78 @@ For financial features, testing should verify not only the happy path but also:
 * data isolation between accounts
 
 The Wallet manual testing session successfully covered these areas.
+
+## 2026-09-17 — Service Listings, Redis Caching & Search Infrastructure
+
+### Cursor-Based Pagination
+
+* Cursor pagination uses the last returned record's ID to continue to the next page.
+* It avoids offset-based pagination.
+* Fetching `limit + 1` records allows the service to determine `hasMore`.
+* The extra record is removed before returning the response.
+* The last returned record becomes the next cursor.
+
+### Redis Cache Invalidation
+
+* Caching database results introduces a consistency problem when the underlying data changes.
+* Cache invalidation must happen after mutations that can make cached data stale.
+* Service-list caches are invalidated after create, update, delete, approve, and reject.
+* Individual service caches are invalidated when the corresponding service changes.
+
+### Redis `SCAN` vs `KEYS`
+
+* `KEYS` can block Redis while scanning a large keyspace.
+* `SCAN` iterates incrementally using a cursor.
+* `SCAN` is therefore preferable for application-level pattern-based cache invalidation.
+* The Service module uses `services:*` as the list-cache invalidation pattern.
+
+### Ownership vs Authentication
+
+* Authentication identifies the current user.
+* Ownership checks determine whether that authenticated user is allowed to modify a particular Service.
+* A freelancer's `userId` comes from authentication rather than client-provided ownership data.
+
+### Soft Deletion
+
+* Soft deletion uses `deletedAt` instead of physically deleting the row.
+* Normal queries exclude records where `deletedAt` is set.
+* This preserves historical database references.
+
+### PostgreSQL Full-Text Search Infrastructure
+
+* PostgreSQL `tsvector` stores a searchable representation of text.
+* A GIN index improves full-text search performance.
+* A PostgreSQL trigger can automatically maintain the search vector when source fields change.
+* Search weighting can give more importance to different fields.
+* Phase 4 creates the database search infrastructure, while the actual SearchModule belongs to Phase 10.
+
+### Testing Lesson
+
+* Cache testing must verify not only cache hits but also invalidation after mutations.
+* A successful database mutation does not prove that subsequent cached reads return current data.
+* Regression tests are important after fixing cache invalidation because stale data can reappear when another mutation path is missed.
+
+### Validation Lesson
+
+The global `ValidationPipe` configuration:
+
+```text
+transform
+whitelist
+forbidNonWhitelisted
+```
+
+provides an API-boundary defense against malformed and unexpected request data.
+
+### Interview Takeaways
+
+Be able to explain:
+
+* Why cursor pagination is used instead of offset pagination.
+* Why `limit + 1` is useful for determining `hasMore`.
+* Why Redis caching requires an invalidation strategy.
+* Why `SCAN` is preferable to `KEYS` for pattern-based invalidation.
+* Why authentication alone is not sufficient for ownership authorization.
+* Why soft deletion is useful for service records.
+* Why PostgreSQL full-text search uses `tsvector` + GIN.
+* Why search infrastructure can be implemented before the actual Search API without prematurely creating the SearchModule.

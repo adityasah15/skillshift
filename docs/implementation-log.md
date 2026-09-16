@@ -5869,3 +5869,303 @@ These items were not part of the Wallet implementation itself.
 Proceed to Phase 4 — Service Listings.
 
 Planned Service work includes CRUD, Redis caching, cursor-based pagination, ownership enforcement, admin moderation, and PostgreSQL full-text search.
+
+# 2026-09-17 — Phase 4: Service Listings
+
+## Session
+
+**Phase:** Phase 4 — Service Listings
+**Status:** Implemented and manually tested
+
+The Service Listings module was implemented according to the Phase 4 requirements.
+
+---
+
+## Service CRUD
+
+Implemented:
+
+* `POST /services`
+* `GET /services`
+* `GET /services/:id`
+* `PATCH /services/:id`
+* `DELETE /services/:id`
+
+Services belong to freelancers.
+
+Create operations associate the service with the authenticated user's `userId` rather than accepting the freelancer ID from the client.
+
+Update and delete operations verify that the authenticated freelancer owns the service.
+
+---
+
+## Cursor-Based Pagination
+
+`GET /services` uses cursor-based pagination rather than offset pagination.
+
+The implementation:
+
+* defaults `limit` to 20
+* caps the maximum limit at 50
+* fetches `limit + 1` records to determine whether another page exists
+* removes the extra record when necessary
+* returns the last returned service ID as the next cursor
+* uses `skip: 1` when continuing from a cursor
+
+Services are ordered by `createdAt` descending.
+
+The response contains:
+
+```text
+data
+meta.cursor
+meta.hasMore
+```
+
+Offset pagination was not introduced.
+
+---
+
+## Service Filtering
+
+The service-list endpoint supports:
+
+* skills
+* minimum price
+* maximum price
+
+Only services with `deletedAt = null` are returned from the normal service listing.
+
+Skills filtering uses the service's stored skills array.
+
+Price filtering applies the provided minimum and/or maximum boundaries.
+
+During manual testing, an invalid condition where `minPrice > maxPrice` returned an empty result rather than a `400` response.
+
+This behavior was observed and intentionally left unchanged.
+
+---
+
+## Soft Deletion
+
+Services use `deletedAt` for soft deletion.
+
+The delete operation updates `deletedAt` rather than physically removing the database row.
+
+Normal service retrieval and listing exclude deleted services.
+
+This preserves service records that may later be referenced by historical domain data.
+
+---
+
+## Admin Moderation
+
+Implemented:
+
+* `PATCH /services/:id/approve`
+* `PATCH /services/:id/reject`
+
+Approval changes the service status to `ACTIVE`.
+
+Rejection changes the service status to `REJECTED`.
+
+The endpoints are protected by the application's authentication/RBAC mechanism.
+
+---
+
+## Redis Caching
+
+Redis caching was added for:
+
+### Individual service
+
+```text
+service:{serviceId}
+```
+
+### Service lists
+
+```text
+services:{query}
+```
+
+Service-list responses are cached with a one-hour TTL.
+
+The individual service endpoint checks Redis before querying PostgreSQL.
+
+The service-list endpoint similarly checks Redis before querying PostgreSQL.
+
+PostgreSQL remains the source of truth.
+
+---
+
+## Cache Invalidation Bug
+
+During manual testing, a stale `GET /services` list-cache issue was discovered.
+
+The problem occurred because service mutations changed PostgreSQL data while previously cached service-list responses remained in Redis.
+
+This meant a subsequent list request could return stale data.
+
+The issue was fixed by invalidating service-list cache entries after mutations.
+
+The following operations now invalidate:
+
+* create
+* update
+* delete
+* approve
+* reject
+
+Individual service cache entries are also invalidated where applicable.
+
+---
+
+## Redis `delByPattern()`
+
+A reusable Redis helper was added:
+
+```text
+delByPattern(pattern)
+```
+
+The implementation uses Redis `SCAN` rather than `KEYS` to find matching keys.
+
+For Service list-cache invalidation, the pattern is:
+
+```text
+services:*
+```
+
+The scan proceeds through Redis cursors and deletes matching keys.
+
+This avoids relying on the blocking `KEYS` command for pattern-based cache invalidation.
+
+---
+
+## PostgreSQL Full-Text Search Infrastructure
+
+Phase 4 also introduced the PostgreSQL infrastructure required for future full-text service search.
+
+Added:
+
+* `searchVector` (`tsvector`)
+* GIN index
+* `update_service_search_vector()` function
+* `service_search_vector_trigger`
+
+The trigger automatically populates the search vector when Service records are inserted or updated.
+
+The search vector combines:
+
+* title — weight A
+* description — weight B
+* skills — weight C
+
+The actual SearchModule and `GET /search/services` endpoint were not implemented because they belong to Phase 10.
+
+---
+
+## Validation
+
+The global `ValidationPipe` was configured with:
+
+```text
+transform: true
+whitelist: true
+forbidNonWhitelisted: true
+```
+
+This establishes the intended API-boundary validation behavior for the application.
+
+---
+
+## Testing & Verification
+
+### Build
+
+```text
+npm run build
+```
+
+passed successfully.
+
+### Manual Postman testing
+
+Phase 4 manual testing covered:
+
+* Service creation
+* Service listing
+* Individual service retrieval
+* Service update
+* Service deletion
+* Authentication
+* RBAC
+* Freelancer ownership
+* Admin approval
+* Admin rejection
+* Cursor pagination
+* Skills filtering
+* Price filtering
+* Validation boundaries
+* Redis caching
+* Redis cache invalidation
+* Deleted-service behavior
+
+The Service module was manually verified through Postman.
+
+### Cache Regression Testing
+
+After discovering the stale list-cache issue, regression testing verified cache invalidation for:
+
+* create
+* update
+* delete
+
+The cache invalidation fix passed these regression tests.
+
+---
+
+## Git
+
+The cache invalidation fix was committed and pushed with:
+
+```text
+fix: invalidate service list cache on mutations
+```
+
+The Service implementation and full-text-search migration were committed and pushed as separate commits.
+
+Exact commit hashes were not recorded in the session handoff.
+
+An unrelated `.gitignore` change involving `note.txt` was intentionally excluded from the Service commit.
+
+---
+
+## Known Deferred Work
+
+### Registration role selection
+
+The current registration DTO does not allow users to select their role.
+
+New users therefore receive the default Prisma role (`CLIENT`).
+
+A test account was manually promoted to `FREELANCER` for Service testing.
+
+This issue is deferred and should be addressed separately.
+
+### Automated testing
+
+Automated Wallet testing was not part of this session.
+
+Broader automated testing and hardening remain ongoing work.
+
+---
+
+## Phase 4 Status
+
+Phase 4 Service Listings implementation and manual verification are complete.
+
+The Service module is build-verified and manually tested.
+
+The next implementation phase is Phase 5 — Orders.

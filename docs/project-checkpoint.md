@@ -1,12 +1,12 @@
 # SkillShift — Project Checkpoint
 
-**Last updated:** 2026-09-14
+**Last updated:** 2026-09-17
 
 ## Current State
 
-**Current phase:** Phase 3 — Wallet
-**Current day:** Day 8–9
-**Status:** Wallet implemented and manually tested
+**Current phase:** Phase 4 — Service Listings
+**Current day:** Phase 4
+**Status:** Service Listings implemented and manually tested
 
 ---
 
@@ -45,73 +45,105 @@
 
 ### Phase 3 — Wallet
 
-* Wallet module created and registered
+* Wallet module
 * `GET /wallet`
 * `POST /wallet/deposit`
 * `GET /wallet/transactions`
-* Wallet lookup using authenticated `userId`
-* Deposit DTO validation
-* Atomic wallet deposit using Prisma `$transaction`
-* Deposit creates a `DEPOSIT` transaction
-* Wallet balance incremented atomically
-* Transactions returned newest-first
-* TypeScript/build verification passed
-* Manual Postman testing completed successfully
+* Authenticated wallet access
+* Atomic deposits using Prisma `$transaction`
+* `DEPOSIT` transaction creation
+* Manual Postman testing completed
+* 11 manual tests passed
+* Multi-account wallet/transaction isolation verified
+
+### Phase 4 — Service Listings
+
+* `POST /services`
+* `GET /services`
+* `GET /services/:id`
+* `PATCH /services/:id`
+* `DELETE /services/:id`
+* Cursor-based pagination
+* Default pagination limit: 20
+* Maximum pagination limit: 50
+* Skills filtering
+* Minimum/maximum price filtering
+* Freelancer ownership enforcement
+* Soft deletion using `deletedAt`
+* Admin approve/reject
+* Redis individual-service caching
+* Redis service-list caching
+* Redis cache invalidation after mutations
+* Redis `SCAN`-based pattern deletion
+* Global `ValidationPipe` configuration
+* PostgreSQL full-text search infrastructure
+* `searchVector` column
+* GIN index
+* PostgreSQL trigger/function for automatic `searchVector` population
+* Service implementation build verification passed
+* Manual Postman testing completed
+* Cache invalidation regression tests passed for create, update, and delete
 
 ---
 
-## Wallet Design
+## Phase 4 Testing Status
 
-* Each user has one wallet.
-* Wallet access is based on the authenticated user's JWT identity.
-* `userId` is not accepted from the request body for wallet operations.
-* Wallet lookup is centralized through the wallet service.
-* Deposits update the wallet balance and create the corresponding transaction atomically.
-* Wallet balance and transaction data are not Redis-cached because financial data must remain fresh.
-* Existing `Wallet` and `Transaction` database models are used; no schema changes were required.
+Manual testing covered:
+
+* CRUD
+* authentication
+* RBAC
+* freelancer ownership
+* admin approval/rejection
+* cursor pagination
+* skills filtering
+* price filtering
+* validation boundaries
+* Redis caching
+* Redis cache invalidation
+* deleted-service behavior
+* multi-user ownership boundaries
+
+A stale service-list cache issue was discovered after mutations and fixed by invalidating `services:*` after create, update, delete, approve, and reject.
+
+Invalid `minPrice > maxPrice` and invalid cursor values currently return empty results rather than `400`. This behavior was observed during testing and was intentionally not changed.
 
 ---
 
 ## Remaining Foundation Work
 
-The following cross-cutting work remains:
-
-* Final `ValidationPipe` configuration:
-
-  * `whitelist`
-  * `forbidNonWhitelisted`
-  * `transform`
-* `GlobalExceptionFilter`
+* Global exception filter
 * Consistent API response/error shape
 * `@GetUser()` decorator
-* Meaningful automated authentication tests
-* Further automated testing and security hardening
+* Meaningful automated AuthService tests
+* Remaining automated testing and hardening
 
-These are foundation/polish items and do not block the completed Wallet implementation.
+Automated Wallet testing remains deferred.
+
+---
+
+## Known Deferred Issue
+
+Registration currently does not allow a user to select a role.
+
+`RegisterDto` currently accepts:
+
+* email
+* password
+
+New users therefore receive the default Prisma role (`CLIENT`).
+
+A test account was manually promoted to `FREELANCER` for Service testing.
+
+Role selection during registration is deferred.
 
 ---
 
 ## Next Feature
 
-### Phase 4 — Service Listings
+### Phase 5 — Orders
 
-Planned work:
-
-* `ServiceService`
-
-  * create
-  * findAll
-  * findOne
-  * update
-  * delete
-* `ServiceController`
-* Create/update DTOs
-* Redis caching
-* Cursor-based pagination
-* Ownership enforcement
-* Admin moderation endpoints
-* PostgreSQL full-text search preparation
-* Service CRUD, caching, pagination, and ownership testing
+Proceed according to the Blueprint with the Order module and its required business rules, authorization, state transitions, transactions, and testing.
 
 ---
 
