@@ -205,23 +205,4 @@ export class OrderService {
     return updatedOrder;
   }
 
-  //   async accept(userId: string, orderId: string) {
-  //   const order = await this.prismaService.order.findUnique({
-  //     where: { id: orderId },
-  //   });
-  //   if (!order) {
-  //     throw new NotFoundException('Order not found');
-  //   }
-  //   if (order.clientId !== userId) {
-  //     throw new ForbiddenException('You are not allowed to accept this order');
-  //   }
-  //   if (order.status !== OrderStatus.DELIVERED) {
-  //     throw new BadRequestException('Order is not delivered yet');
-  //   }
-  //   const updatedOrder = await this.prismaService.order.update({
-  //     where: { id: orderId },
-  //     data: { status: OrderStatus.COMPLETED},
-  //   });
-  //   return updatedOrder;
-  // }
 }
