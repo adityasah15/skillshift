@@ -41,6 +41,7 @@ export class AuthService {
           email: registerDto.email,
           passwordHash,
           emailVerifyTokenHash: verificationTokenHash,
+          role: registerDto.role,
         },
       });
       await tx.profile.create({
