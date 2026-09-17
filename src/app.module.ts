@@ -13,6 +13,8 @@ import { WalletModule } from './wallet/wallet.module';
 import { RolesGuard } from './common/guards/roles.guard';
 import { RedisModule } from './redis/redis.module';
 import { ServiceModule } from './service/service.module';
+import { EscrowModule } from './escrow/escrow.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { ServiceModule } from './service/service.module';
     WalletModule,
     RedisModule,
     ServiceModule,
+    EscrowModule,
+    OrderModule,
   ],
   controllers: [AppController],
   providers: [
