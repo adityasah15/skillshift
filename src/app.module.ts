@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -15,6 +15,7 @@ import { RedisModule } from './redis/redis.module';
 import { ServiceModule } from './service/service.module';
 import { EscrowModule } from './escrow/escrow.module';
 import { OrderModule } from './order/order.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -30,6 +31,15 @@ import { OrderModule } from './order/order.module';
     ServiceModule,
     EscrowModule,
     OrderModule,
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          url: configService.getOrThrow<string>('REDIS_URL'),
+        },
+      }),
+    }),
   ],
   controllers: [AppController],
   providers: [
@@ -40,9 +50,9 @@ import { OrderModule } from './order/order.module';
       useClass: JwtAuthGuard,
     },
     {
-  provide: APP_GUARD,
-  useClass: RolesGuard,
-},
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
   ],
 })
 export class AppModule {}

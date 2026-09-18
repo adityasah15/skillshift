@@ -12,12 +12,16 @@ import {
   TransactionType,
 } from 'generated/prisma/enums';
 import { EscrowService } from 'src/escrow/escrow.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class OrderService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly escrowService: EscrowService,
+    @InjectQueue('ORDER_AUTO_COMPLETE')
+    private readonly autoCompleteQueue: Queue,
   ) {}
 
   async create(clientId: string, createOrderDto: CreateOrderDto) {
@@ -110,6 +114,14 @@ export class OrderService {
         autoCompleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
+    await this.autoCompleteQueue.add(
+      'auto-complete-order',
+      { orderId: updatedOrder.id },
+      {
+        delay: 7 * 24 * 60 * 60 * 1000,
+        jobId: `order-${updatedOrder.id}`,
+      },
+    );
     return updatedOrder;
   }
 
@@ -176,7 +188,7 @@ export class OrderService {
     const updatedOrder = await this.prismaService.$transaction(async (tx) => {
       const order = await tx.order.update({
         where: { id: orderId },
-        data: { status: OrderStatus.CANCELLED},
+        data: { status: OrderStatus.CANCELLED },
       });
       await this.escrowService.refund(tx, order.id);
       const clientWallet = await tx.wallet.findUnique({
@@ -204,5 +216,4 @@ export class OrderService {
     });
     return updatedOrder;
   }
-
 }
