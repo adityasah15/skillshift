@@ -224,8 +224,8 @@ Once the server is running:
 * [x] User / Profile module
 * [x] Wallet
 * [x] Service marketplace
-* [ ] Orders
-* [ ] Escrow
+* [x] Orders
+* [x] Escrow
 * [ ] Notifications (BullMQ + email)
 * [ ] Disputes
 * [ ] Reviews
@@ -263,8 +263,7 @@ Detailed notes on architecture, API conventions, design decisions, and implement
 
 ## License
 
-This is a personal engineering / portfolio project.  
-Feel free to read the code and learn from the patterns. Commercial use or redistribution is not intended without permission.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
