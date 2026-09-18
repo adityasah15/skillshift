@@ -309,3 +309,201 @@ The actual search endpoint and SearchModule remain part of Phase 10.
 Phase 4 establishes the database/search infrastructure without prematurely implementing the Phase 10 Search API.
 
 This keeps the implementation aligned with the Blueprint's phased architecture.
+
+# Phase 5 — Orders + Escrow Architecture
+
+## Order / Escrow Flow
+
+Phase 5 connects Services, client wallets, escrow, freelancer wallets, and transaction history.
+
+```text
+Client
+  │
+  │ POST /orders
+  ▼
+OrderService
+  │
+  ├── verify Service
+  ├── verify client balance
+  │
+  ▼
+Prisma Transaction
+  │
+  ├── deduct Client Wallet
+  ├── create Order
+  ├── create Escrow HOLDING
+  └── create ESCROW_HOLD transaction
+```
+
+The financial state remains persisted in PostgreSQL.
+
+---
+
+## Completion Flow
+
+```text
+Client
+  │
+  │ POST /orders/:id/complete
+  ▼
+OrderService
+  │
+  ▼
+Prisma Transaction
+  │
+  ├── verify DELIVERED state
+  ├── release Escrow
+  ├── credit Freelancer Wallet
+  ├── create ESCROW_RELEASE transaction
+  └── mark Order COMPLETED
+```
+
+The state transition is:
+
+```text
+DELIVERED → COMPLETED
+```
+
+The escrow transition is:
+
+```text
+HOLDING → RELEASED
+```
+
+---
+
+## Cancellation Flow
+
+```text
+Client / Freelancer
+        │
+        │ POST /orders/:id/cancel
+        ▼
+   OrderService
+        │
+        ▼
+ Prisma Transaction
+        │
+        ├── verify cancellation rules
+        ├── refund Client Wallet
+        ├── update Escrow → REFUNDED
+        ├── create ESCROW_REFUND transaction
+        └── update Order state
+```
+
+The refund keeps the wallet and transaction history consistent.
+
+---
+
+## Financial State
+
+The Phase 5 financial relationship is:
+
+```text
+Client Wallet
+     │
+     │ ESCROW_HOLD
+     ▼
+   Escrow
+     │
+     ├── ESCROW_RELEASE ──► Freelancer Wallet
+     │
+     └── ESCROW_REFUND ───► Client Wallet
+```
+
+PostgreSQL remains the source of truth.
+
+Financial wallet data is not Redis-cached.
+
+---
+
+## BullMQ Auto-Completion
+
+Orders that remain delivered are automatically completed after the configured 7-day delay.
+
+```text
+Order delivered
+      │
+      ▼
+BullMQ delayed job
+      │
+      │ 7 days
+      ▼
+OrderAutoCompleteProcessor
+      │
+      ├── re-check Order state
+      │
+      ├── release Escrow
+      │
+      ├── credit Freelancer Wallet
+      │
+      ├── create ESCROW_RELEASE
+      │
+      ├── mark Order COMPLETED
+      │
+      └── create system AuditLog
+                   │
+                   └── userId = null
+```
+
+The job uses:
+
+```text
+order-{orderId}
+```
+
+as its deterministic BullMQ job ID.
+
+---
+
+## Duplicate Protection
+
+The auto-completion flow performs conditional state checks before executing the financial transition.
+
+This prevents an already-completed Order from being completed and paid out again.
+
+The same principle applies to normal completion.
+
+The database remains the authority for the current Order and Escrow state.
+
+---
+
+## System vs User Operations
+
+Normal Order operations originate from authenticated users.
+
+Automatic completion originates from the BullMQ worker.
+
+```text
+User request
+    ↓
+authenticated user
+    ↓
+OrderService
+    ↓
+financial operation
+    ↓
+AuditLog(userId)
+
+BullMQ job
+    ↓
+system worker
+    ↓
+OrderService / financial operation
+    ↓
+AuditLog(userId = null)
+```
+
+This provides an audit distinction between user-triggered and system-triggered operations.
+
+---
+
+## Architectural Boundary
+
+Phase 5 introduces Order/Escrow financial flows and background auto-completion.
+
+Notifications remain a separate Phase 6 concern.
+
+Search remains a Phase 10 concern.
+
+The implementation continues to use the existing NestJS monolith, PostgreSQL, Redis, Prisma, and BullMQ architecture.

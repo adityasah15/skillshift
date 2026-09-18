@@ -1,12 +1,11 @@
 # SkillShift — Project Checkpoint
 
-**Last updated:** 2026-09-17
+**Last updated:** 2026-09-18
 
 ## Current State
 
-**Current phase:** Phase 4 — Service Listings
-**Current day:** Phase 4
-**Status:** Service Listings implemented and manually tested
+**Current phase:** Phase 5 — Orders + Escrow
+**Status:** Phase 5 implementation complete and manually tested
 
 ---
 
@@ -58,18 +57,12 @@
 
 ### Phase 4 — Service Listings
 
-* `POST /services`
-* `GET /services`
-* `GET /services/:id`
-* `PATCH /services/:id`
-* `DELETE /services/:id`
+* Service CRUD
 * Cursor-based pagination
-* Default pagination limit: 20
-* Maximum pagination limit: 50
 * Skills filtering
-* Minimum/maximum price filtering
+* Price filtering
 * Freelancer ownership enforcement
-* Soft deletion using `deletedAt`
+* Soft deletion
 * Admin approve/reject
 * Redis individual-service caching
 * Redis service-list caching
@@ -77,73 +70,98 @@
 * Redis `SCAN`-based pattern deletion
 * Global `ValidationPipe` configuration
 * PostgreSQL full-text search infrastructure
-* `searchVector` column
-* GIN index
-* PostgreSQL trigger/function for automatic `searchVector` population
-* Service implementation build verification passed
 * Manual Postman testing completed
-* Cache invalidation regression tests passed for create, update, and delete
+* Cache invalidation regression tests passed
+
+### Phase 5 — Orders + Escrow
+
+* Order creation
+* Client wallet deduction during order creation
+* `ESCROW_HOLD` transaction creation
+* Order retrieval
+* Freelancer delivery
+* Client completion
+* Client/freelancer cancellation
+* Escrow hold
+* Escrow release
+* Escrow refund
+* 7-day BullMQ delayed auto-completion
+* Deterministic BullMQ job IDs using `order-{orderId}`
+* Conditional state checks preventing duplicate completion/payout
+* System AuditLog for automatic completion
+* Auto-complete flow manually tested
+* Order/Escrow flows manually tested through Postman + PostgreSQL
+* Registration role selection fixed:
+
+  * `CLIENT`
+  * `FREELANCER`
+  * `ADMIN` rejected during public registration
 
 ---
 
-## Phase 4 Testing Status
+## Phase 5 Testing Status
 
-Manual testing covered:
+Manual testing and database verification covered:
 
-* CRUD
-* authentication
-* RBAC
-* freelancer ownership
-* admin approval/rejection
-* cursor pagination
-* skills filtering
-* price filtering
-* validation boundaries
-* Redis caching
-* Redis cache invalidation
-* deleted-service behavior
-* multi-user ownership boundaries
+* Order creation
+* Escrow hold
+* Client wallet deduction
+* `ESCROW_HOLD`
+* Order retrieval
+* Freelancer delivery authorization
+* `IN_PROGRESS → DELIVERED`
+* Client completion
+* Escrow release
+* Freelancer wallet credit
+* `ESCROW_RELEASE`
+* Client/freelancer cancellation
+* Escrow refund
+* `ESCROW_REFUND`
+* Insufficient wallet balance
+* Inactive/deleted services
+* Ordering own service
+* Client/freelancer JWT authorization
+* BullMQ auto-completion
+* Auto-complete state transitions
+* System AuditLog creation
 
-A stale service-list cache issue was discovered after mutations and fixed by invalidating `services:*` after create, update, delete, approve, and reject.
+The 7-day auto-complete flow was tested using a temporary 10-second job trigger. The temporary testing endpoint was removed afterward.
 
-Invalid `minPrice > maxPrice` and invalid cursor values currently return empty results rather than `400`. This behavior was observed during testing and was intentionally not changed.
+Verified auto-completion:
+
+* `DELIVERED → COMPLETED`
+* Escrow `HOLDING → RELEASED`
+* Freelancer wallet credited
+* `ESCROW_RELEASE` transaction created
+* AuditLog created with `userId = null`
+
+Automated tests were intentionally deferred to the dedicated testing/hardening phase.
 
 ---
 
-## Remaining Foundation Work
+## Remaining Foundation / Testing Work
 
 * Global exception filter
 * Consistent API response/error shape
 * `@GetUser()` decorator
 * Meaningful automated AuthService tests
-* Remaining automated testing and hardening
-
-Automated Wallet testing remains deferred.
-
----
-
-## Known Deferred Issue
-
-Registration currently does not allow a user to select a role.
-
-`RegisterDto` currently accepts:
-
-* email
-* password
-
-New users therefore receive the default Prisma role (`CLIENT`).
-
-A test account was manually promoted to `FREELANCER` for Service testing.
-
-Role selection during registration is deferred.
+* Automated Wallet unit tests
+* Broader automated testing and security hardening
 
 ---
 
 ## Next Feature
 
-### Phase 5 — Orders
+### Phase 6 — Notifications
 
-Proceed according to the Blueprint with the Order module and its required business rules, authorization, state transitions, transactions, and testing.
+Proceed according to the Blueprint with:
+
+* Notification module
+* BullMQ notification jobs
+* Email notification flow
+* Required notification events
+* Notification persistence/read state
+* Required testing
 
 ---
 
@@ -155,4 +173,5 @@ Proceed according to the Blueprint with the Order module and its required busine
 * Ownership checks belong in the service layer.
 * Multi-step financial operations must use Prisma transactions.
 * Features are considered complete only after implementation and testing.
+* Automated testing remains tracked separately from manual verification.
 * Do not redesign the architecture without a genuine technical reason.

@@ -829,3 +829,93 @@ Be able to explain:
 * Why soft deletion is useful for service records.
 * Why PostgreSQL full-text search uses `tsvector` + GIN.
 * Why search infrastructure can be implemented before the actual Search API without prematurely creating the SearchModule.
+
+## 2026-09-18 — Orders, Escrow & BullMQ Auto-Completion
+
+### Escrow as an Intermediate Financial State
+
+* Order payments are not immediately transferred to the freelancer.
+* The client amount is first held in escrow.
+* `ESCROW_HOLD` represents the movement into escrow.
+* Completion releases the escrowed amount to the freelancer.
+* Cancellation refunds the escrowed amount to the client.
+
+### Financial Atomicity
+
+Order creation and escrow operations modify multiple pieces of financial state.
+
+These operations must be performed atomically so wallet balances, escrow state, orders, and transaction records cannot become inconsistent.
+
+### State Transitions
+
+Order operations are controlled through explicit state transitions:
+
+```text
+IN_PROGRESS → DELIVERED → COMPLETED
+```
+
+Escrow follows corresponding financial states:
+
+```text
+HOLDING → RELEASED
+```
+
+or:
+
+```text
+HOLDING → REFUNDED
+```
+
+Conditional state checks prevent duplicate completion and payout.
+
+### BullMQ Delayed Jobs
+
+* BullMQ can schedule work for a future time using delayed jobs.
+* The Order auto-completion job is scheduled for 7 days.
+* A deterministic `jobId` such as `order-{orderId}` helps prevent duplicate jobs for the same Order.
+* The delayed job must re-check the current database state before performing financial operations.
+
+### System-Initiated Operations
+
+Automatic completion is not performed by an authenticated user.
+
+The AuditLog therefore records:
+
+```text
+userId = null
+```
+
+This distinguishes a system-generated financial operation from a user-initiated operation.
+
+### Authorization
+
+Order authorization depends on the user's role and relationship to the Order.
+
+Authentication answers **who the user is**.
+
+Authorization determines whether that user can:
+
+* deliver
+* complete
+* cancel
+* access
+
+a particular Order.
+
+### Registration Roles
+
+Public registration now supports `CLIENT` and `FREELANCER`, while `ADMIN` registration is rejected.
+
+This reinforces the distinction between normal user registration and privileged administrative roles.
+
+### Interview Takeaways
+
+Be able to explain:
+
+* Why an Order payment goes through escrow instead of directly to the freelancer.
+* Why wallet/escrow/order changes require database transactions.
+* How duplicate completion/payout is prevented.
+* Why the auto-complete job needs a state check even though it is delayed.
+* Why deterministic BullMQ job IDs are useful.
+* Why system-generated AuditLogs use `userId = null`.
+* The difference between authentication and authorization.

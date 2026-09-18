@@ -6169,3 +6169,301 @@ Phase 4 Service Listings implementation and manual verification are complete.
 The Service module is build-verified and manually tested.
 
 The next implementation phase is Phase 5 — Orders.
+
+# 2026-09-18 — Phase 5: Orders + Escrow
+
+## Session
+
+**Phase:** Phase 5 — Orders + Escrow
+**Status:** Implementation complete and manually tested
+
+Phase 5 implemented the Order and Escrow workflow connecting Services, client wallets, escrow state, freelancer payouts, and BullMQ-based automatic completion.
+
+---
+
+## Order Creation
+
+Implemented:
+
+```text
+POST /orders
+```
+
+Order creation:
+
+1. Validates the requested Service.
+2. Prevents ordering inactive/deleted services.
+3. Prevents a freelancer from ordering their own service.
+4. Verifies sufficient client wallet balance.
+5. Deducts the order amount from the client wallet.
+6. Places the amount into escrow.
+7. Creates the corresponding `ESCROW_HOLD` transaction.
+8. Creates the Order.
+
+The financial operations are handled atomically.
+
+Insufficient client balance is rejected.
+
+---
+
+## Order Retrieval
+
+Implemented:
+
+```text
+GET /orders/:id
+```
+
+The endpoint supports authenticated order access according to the Order authorization rules.
+
+---
+
+## Order Delivery
+
+Implemented:
+
+```text
+PATCH /orders/:id/deliver
+```
+
+The freelancer is authorized to deliver the order.
+
+The expected state transition is:
+
+```text
+IN_PROGRESS → DELIVERED
+```
+
+The endpoint verifies that the authenticated user is the freelancer associated with the order.
+
+---
+
+## Order Completion
+
+Implemented:
+
+```text
+POST /orders/:id/complete
+```
+
+Completion is available to the client.
+
+The completion flow:
+
+1. Validates the order state.
+2. Releases the escrowed amount.
+3. Credits the freelancer wallet.
+4. Creates an `ESCROW_RELEASE` transaction.
+5. Marks the order as completed.
+
+The resulting state transition is:
+
+```text
+DELIVERED → COMPLETED
+```
+
+Conditional state checks were added to prevent duplicate completion and duplicate payout.
+
+---
+
+## Order Cancellation
+
+Implemented:
+
+```text
+POST /orders/:id/cancel
+```
+
+Cancellation supports the defined client/freelancer authorization paths.
+
+Cancellation refunds the escrowed amount to the client and creates an:
+
+```text
+ESCROW_REFUND
+```
+
+transaction.
+
+The escrow state is updated accordingly.
+
+---
+
+## Escrow
+
+The Phase 5 financial flow is:
+
+```text
+Client Wallet
+     │
+     │ ESCROW_HOLD
+     ▼
+   Escrow
+     │
+     ├── ESCROW_RELEASE ──► Freelancer Wallet
+     │
+     └── ESCROW_REFUND ───► Client Wallet
+```
+
+The Order/Escrow operations use database transactions for financial consistency.
+
+---
+
+## BullMQ Auto-Completion
+
+Implemented a delayed BullMQ job for automatic order completion.
+
+The normal delay is **7 days**.
+
+The job uses the existing `REDIS_URL` configuration.
+
+A deterministic job ID is used:
+
+```text
+order-{orderId}
+```
+
+This prevents duplicate auto-completion jobs for the same order.
+
+The auto-completion flow performs:
+
+```text
+DELIVERED
+    ↓
+COMPLETED
+
+Escrow HOLDING
+    ↓
+RELEASED
+
+Freelancer wallet
+    ↓
+credited
+
+ESCROW_RELEASE
+    ↓
+created
+```
+
+A system AuditLog is also created.
+
+Because the operation is performed by the system rather than an authenticated user, the AuditLog stores:
+
+```text
+userId = null
+```
+
+Conditional state checks prevent the delayed job from performing a duplicate completion or payout if the order has already been completed through the normal client flow.
+
+---
+
+## Auto-Completion Testing
+
+The 7-day delayed job was tested using a temporary 10-second trigger.
+
+The temporary testing endpoint was removed after verification.
+
+The test confirmed:
+
+* `DELIVERED → COMPLETED`
+* Escrow `HOLDING → RELEASED`
+* Freelancer wallet credited
+* `ESCROW_RELEASE` transaction created
+* System AuditLog created with `userId = null`
+
+---
+
+## Authorization Testing
+
+Manual testing covered both client and freelancer JWT authorization paths.
+
+Verified cases included:
+
+* freelancer delivery authorization
+* client completion authorization
+* client/freelancer cancellation paths
+* protected Order endpoints
+* prevention of unauthorized operations
+
+---
+
+## Validation / Business Rules Tested
+
+The following negative cases were verified:
+
+* insufficient client wallet balance
+* inactive service
+* deleted service
+* client ordering their own service
+* unauthorized Order operations
+
+---
+
+## Registration Role Fix
+
+During Phase 5, the previously identified registration role gap was fixed.
+
+Public registration now supports:
+
+* `CLIENT`
+* `FREELANCER`
+
+`ADMIN` registration is rejected.
+
+This removes the need to manually promote a newly registered test user to `FREELANCER` for normal Service testing.
+
+---
+
+## Testing
+
+Order and Escrow functionality was manually tested using Postman with PostgreSQL verification.
+
+The tested flows included:
+
+* order creation
+* escrow hold
+* wallet deduction
+* delivery
+* completion
+* escrow release
+* freelancer payout
+* cancellation
+* escrow refund
+* authorization
+* invalid business conditions
+* automatic completion
+
+Manual verification passed.
+
+Automated tests were intentionally deferred to the dedicated testing/hardening phase.
+
+---
+
+## Build
+
+The implementation was build-verified successfully.
+
+---
+
+## Git
+
+Latest Phase 5 implementation was committed and pushed:
+
+```text
+ca02912 — feat: add order auto-completion and audit logging
+```
+
+---
+
+## Phase 5 Status
+
+Phase 5 Order/Escrow implementation is complete.
+
+Manual testing and database verification passed.
+
+Automated testing remains deferred to the dedicated testing/hardening phase.
+
+---
+
+## Next Step
+
+Proceed to Phase 6 — Notifications (BullMQ + email).
