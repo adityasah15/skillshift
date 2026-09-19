@@ -77,6 +77,14 @@ export class OrderService {
       await this.escrowService.hold(tx, service.price, order.id);
       return order;
     });
+
+    await this.notificationService.enqueue(
+      order.freelancerId,
+      NotificationType.ORDER_PLACED,
+      'New order received',
+      'You have received a new order.',
+    );
+
     return order;
   }
 
@@ -92,13 +100,6 @@ export class OrderService {
     if (order.clientId !== userId && order.freelancerId !== userId) {
       throw new ForbiddenException('You are not allowed to view this order');
     }
-
-    await this.notificationService.enqueue(
-      order.freelancerId,
-      NotificationType.ORDER_PLACED,
-      'New order received',
-      'You have received a new order.',
-    );
     return order;
   }
 
