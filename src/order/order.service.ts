@@ -7,6 +7,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import {
+  NotificationType,
   OrderStatus,
   ServiceStatus,
   TransactionType,
@@ -14,6 +15,7 @@ import {
 import { EscrowService } from 'src/escrow/escrow.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class OrderService {
@@ -22,6 +24,7 @@ export class OrderService {
     private readonly escrowService: EscrowService,
     @InjectQueue('ORDER_AUTO_COMPLETE')
     private readonly autoCompleteQueue: Queue,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async create(clientId: string, createOrderDto: CreateOrderDto) {
@@ -90,6 +93,12 @@ export class OrderService {
       throw new ForbiddenException('You are not allowed to view this order');
     }
 
+    await this.notificationService.enqueue(
+      order.freelancerId,
+      NotificationType.ORDER_PLACED,
+      'New order received',
+      'You have received a new order.',
+    );
     return order;
   }
 
@@ -114,6 +123,14 @@ export class OrderService {
         autoCompleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
+
+    await this.notificationService.enqueue(
+      order.clientId,
+      NotificationType.ORDER_DELIVERED,
+      'Order delivered',
+      'Your order has been delivered.',
+    );
+
     await this.autoCompleteQueue.add(
       'auto-complete-order',
       { orderId: updatedOrder.id },
@@ -169,6 +186,14 @@ export class OrderService {
       });
       return order;
     });
+
+    await this.notificationService.enqueue(
+      updatedOrder.freelancerId,
+      NotificationType.ORDER_COMPLETED,
+      'Order completed',
+      'Your order has been completed and payment has been released.',
+    );
+    
     return updatedOrder;
   }
 
@@ -214,6 +239,17 @@ export class OrderService {
       });
       return order;
     });
+    
+    const recipientId =
+      order.clientId === userId ? order.freelancerId : order.clientId;
+
+    await this.notificationService.enqueue(
+      recipientId,
+      NotificationType.ORDER_CANCELLED,
+      'Order cancelled',
+      'An order you were involved in has been cancelled and the payment has been refunded.',
+    );
+
     return updatedOrder;
   }
 }
