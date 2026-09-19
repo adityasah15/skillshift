@@ -42,4 +42,8 @@ export class NotificationService {
       body,
     });
   }
+
+  async enqueueEmail(type: string, data: Record<string, unknown>) {
+    return this.notificationQueue.add(type, data);
+  }
 }

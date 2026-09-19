@@ -13,18 +13,32 @@ export class EmailProcessor extends WorkerHost {
   ) {
     super();
   }
+  
   async process(job: Job) {
-    if (job.name !== 'notification') {
+
+    if (job.name === 'notification') {
+      const { userId, type, title, body } = job.data;
+      const user = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found`);
+      }
+      await this.mailService.sendNotificationEmail(user.email, title, body);
+      await this.notificationService.create(userId, type, title, body);
       return;
     }
-    const { userId, type, title, body } = job.data;
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
+
+    if (job.name === 'verification-email') {
+      const { email, token } = job.data;
+      await this.mailService.sendVerificationEmail(email, token);
+      return;
     }
-    await this.mailService.sendNotificationEmail(user.email, title, body);
-    await this.notificationService.create(userId, type, title, body);
+
+    if (job.name === 'password-reset') {
+      const { email, token } = job.data;
+      await this.mailService.sendPasswordResetEmail(email, token);
+      return;
+    }
   }
 }

@@ -14,5 +14,6 @@ import { MailModule } from 'src/mail/mail.module';
     MailModule,
   ],
   providers: [NotificationService, EmailProcessor],
+  exports: [NotificationService],
 })
 export class NotificationModule {}

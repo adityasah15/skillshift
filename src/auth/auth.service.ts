@@ -9,18 +9,18 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { randomBytes, randomUUID } from 'crypto';
-import { MailService } from 'src/mail/mail.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly mailService: MailService,
     private readonly jwtService: JwtService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -57,10 +57,10 @@ export class AuthService {
       });
       return user;
     });
-    await this.mailService.sendVerificationEmail(
-      result.email,
-      verificationToken,
-    );
+    await this.notificationService.enqueueEmail('verification-email', {
+      email: result.email,
+      token: verificationToken,
+    });
     return {
       id: result.id,
       email: result.email,
@@ -241,7 +241,10 @@ export class AuthService {
         passwordResetExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
       },
     });
-    await this.mailService.sendPasswordResetEmail(forgotPasswordDto.email, resetToken);
+    await this.notificationService.enqueueEmail('password-reset', {
+      email: forgotPasswordDto.email,
+      token: resetToken,
+    });
     return {
       message:
         'If an account exists for this email, a password reset link has been sent.',
