@@ -919,3 +919,86 @@ Be able to explain:
 * Why deterministic BullMQ job IDs are useful.
 * Why system-generated AuditLogs use `userId = null`.
 * The difference between authentication and authorization.
+
+## 2026-09-20 — Notifications, BullMQ & Email Processing
+
+### Asynchronous Email Processing
+
+* Email delivery does not need to happen inside the HTTP request lifecycle.
+* BullMQ allows email work to be queued and processed asynchronously.
+* This keeps the API request independent from the email provider's response time.
+
+### Notification Persistence vs Email Delivery
+
+The Notification system separates:
+
+* persistent in-app Notification records
+* asynchronous email jobs
+
+`NotificationService.create()` persists notification data, while queue methods handle asynchronous processing.
+
+This allows notification state to exist independently from email delivery.
+
+### BullMQ Retry Configuration
+
+The Notification queue uses:
+
+```text id="6z1h2s"
+attempts: 3
+backoff: exponential
+delay: 5000ms
+```
+
+Retries are useful for transient processing or infrastructure failures.
+
+Exponential backoff spaces out retry attempts rather than immediately retrying every failure.
+
+### Queue Retention
+
+The queue keeps:
+
+```text id="c8v3r0"
+100 completed jobs
+500 failed jobs
+```
+
+This provides enough history for debugging without retaining completed/failed jobs indefinitely.
+
+### Testing Retries
+
+Retry configuration should be tested behaviorally rather than only checked in source code.
+
+A deliberately failing notification was used to verify:
+
+* the job entered the queue
+* retries occurred
+* three attempts were made
+* the final failure reason was preserved
+
+Redis provided direct visibility into the BullMQ job state.
+
+### Event-Driven Notification Design
+
+Order state changes can trigger notifications without making the Order module responsible for email implementation details.
+
+The Order flow identifies the event and the Notification system handles persistence and asynchronous delivery.
+
+### Deferred Event Wiring
+
+Notification infrastructure can be implemented before every future notification-producing feature exists.
+
+Events such as dispute, messaging, payment, and review notifications remain unwired until those modules exist.
+
+This avoids placeholder implementations that have no real producer yet.
+
+### Interview Takeaways
+
+Be able to explain:
+
+* Why email processing should be asynchronous.
+* Why BullMQ is appropriate for notification jobs.
+* How retry attempts and exponential backoff work.
+* Why failed jobs should be retained for debugging.
+* How notification persistence differs from email delivery.
+* Why notification producers should not own email-provider implementation details.
+* Why future notification events should not be wired before their corresponding features exist.

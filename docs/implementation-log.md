@@ -6467,3 +6467,236 @@ Automated testing remains deferred to the dedicated testing/hardening phase.
 ## Next Step
 
 Proceed to Phase 6 — Notifications (BullMQ + email).
+
+# 2026-09-20 — Phase 6: Notifications
+
+## Session
+
+**Phase:** Phase 6 — Notification Module
+**Status:** Implementation complete and manually tested
+
+Phase 6 implemented the notification infrastructure required by the Blueprint, including persistent notifications, BullMQ processing, email delivery, order-event notifications, authentication emails, and queue retry behavior.
+
+---
+
+## NotificationService
+
+Implemented `NotificationService` with separate responsibilities for notification persistence and asynchronous processing.
+
+### `create()`
+
+Persists an in-app `Notification` record.
+
+### `enqueue()`
+
+Queues an application notification through BullMQ.
+
+The queued notification can result in both persistent notification data and email processing.
+
+### `enqueueEmail()`
+
+Queues an email-only job.
+
+This is used for authentication-related emails where an in-app notification record is not required.
+
+---
+
+## EmailProcessor
+
+Implemented `EmailProcessor` to process notification-related BullMQ jobs.
+
+The processor handles:
+
+* `notification`
+* `verification-email`
+* `password-reset`
+
+Email processing uses the existing mail infrastructure and email templates.
+
+---
+
+## Order Notification Events
+
+Notification enqueueing was connected to Order state transitions.
+
+Implemented notification events:
+
+```text id="1q6s6b"
+ORDER_PLACED
+    ↓
+freelancer
+
+ORDER_DELIVERED
+    ↓
+client
+
+ORDER_COMPLETED
+    ↓
+freelancer
+
+ORDER_CANCELLED
+    ↓
+other order participant
+```
+
+The notification flow creates the required persistent Notification record and queues email processing where applicable.
+
+---
+
+## Authentication Email Events
+
+Authentication email delivery was moved onto the Notification BullMQ infrastructure.
+
+Implemented:
+
+```text id="w7v2n1"
+Registration
+    ↓
+verification email job
+    ↓
+EmailProcessor
+    ↓
+email delivery
+```
+
+and:
+
+```text id="d7e4x9"
+Forgot password
+    ↓
+password-reset email job
+    ↓
+EmailProcessor
+    ↓
+email delivery
+```
+
+This keeps email delivery asynchronous instead of performing it directly inside the request flow.
+
+---
+
+## Notification Queue
+
+The Notification queue uses BullMQ.
+
+The Blueprint-required queue configuration is:
+
+```text id="r3c8z1"
+attempts: 3
+
+backoff:
+  type: exponential
+  delay: 5000ms
+
+removeOnComplete: 100
+removeOnFail: 500
+```
+
+The configuration was initially missing.
+
+This was discovered during testing and corrected before Phase 6 was considered complete.
+
+The final configuration is confirmed in commit `c3932cf9ca6b1ad874c683188f098cdd1276fe60`, which adds the required `defaultJobOptions` to the `NOTIFICATION` queue.
+
+---
+
+## Retry Testing
+
+Retry behavior was deliberately tested by enqueueing a notification for a nonexistent user.
+
+Redis was used to inspect the failed job.
+
+The test verified:
+
+* `atm = 3`
+* `ats = 3`
+* three stack traces were recorded
+* final failure reason matched the expected nonexistent-user error
+
+This verified that the configured retry behavior was actually being applied rather than merely existing in configuration.
+
+---
+
+## Email Delivery Testing
+
+Actual emails were tested using Ethereal.
+
+Verified:
+
+* verification email delivery
+* password-reset email delivery
+* order notification email delivery
+
+Email delivery was confirmed successfully.
+
+---
+
+## Temporary Test Code
+
+A temporary Order endpoint/service method was added solely to enqueue the intentionally failing notification job used for retry testing.
+
+The temporary test code was removed after testing.
+
+It is not part of the intended production notification API.
+
+---
+
+## Build / Runtime Verification
+
+The application build passed.
+
+The NestJS application started successfully after the Phase 6 implementation.
+
+---
+
+## Deferred Notification Types
+
+The Blueprint contains notification types whose corresponding application features are not yet implemented.
+
+The following remain intentionally deferred:
+
+* `DISPUTE_OPENED`
+* `DISPUTE_RESOLVED`
+* `MESSAGE_RECEIVED`
+* `PAYMENT_RECEIVED`
+* `REVIEW_RECEIVED`
+
+No placeholder wiring was added.
+
+These events will be connected when their respective modules/features are implemented.
+
+---
+
+## Git History
+
+The Phase 6 implementation was developed through multiple commits.
+
+Verified recent commits include:
+
+```text id="3qv8k1"
+bc6591b — feat: add notification email infrastructure
+39a01e6 — feat: add order notification events
+f79cc44 — feat: add notification and auth email jobs
+b854562 — fix: enqueue order placed notification on creation
+c3932cf — fix: configure notification queue retries
+```
+
+The retry configuration fix is the latest Phase 6 commit currently visible in repository history.
+
+---
+
+## Phase 6 Status
+
+Phase 6 Notification implementation is complete.
+
+Build verification passed.
+
+Manual testing passed for notification persistence, order notification events, authentication emails, actual email delivery, and BullMQ retry behavior.
+
+The Blueprint-required queue retry configuration is implemented and verified.
+
+---
+
+## Next Step
+
+Proceed to Phase 7 — Dispute Module.
