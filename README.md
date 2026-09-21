@@ -226,8 +226,8 @@ Once the server is running:
 * [x] Service marketplace
 * [x] Orders
 * [x] Escrow
-* [ ] Notifications (BullMQ + email)
-* [ ] Disputes
+* [x] Notifications (BullMQ + email)
+* [x] Disputes
 * [ ] Reviews
 * [ ] Real-time chat
 * [ ] File uploads (S3 presigned)
