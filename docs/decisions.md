@@ -92,3 +92,60 @@ and used in the GitHub Actions CI/CD pipeline.
 **Trade-off:**
 - "Works on my machine" risk is slightly higher, but WSL
   standardizes the environment enough to mitigate this.
+
+  ## 2026-09-21 — Dispute Resolution and Notification Decisions
+
+### Atomic Dispute Financial Resolution
+
+Dispute resolution changes multiple financial and domain records:
+
+* Dispute
+* Order
+* Escrow
+* Wallet
+* Transaction
+* AuditLog
+
+These changes are executed inside a single Prisma transaction.
+
+**Reason:** A dispute resolution represents one financial decision. Partial completion could leave the system with inconsistent financial state.
+
+---
+
+### Conditional State Updates for Resolution
+
+Dispute and Escrow state updates use conditional database updates.
+
+A Dispute can only be resolved while it is `OPEN` or `UNDER_REVIEW`.
+
+Escrow can only be released/refunded while it is `HOLDING`.
+
+**Reason:** This provides protection against concurrent resolution requests and prevents duplicate financial operations.
+
+---
+
+### Notifications After Successful Transactions
+
+`DISPUTE_OPENED` and `DISPUTE_RESOLVED` notifications are queued only after their corresponding database transactions successfully complete.
+
+**Reason:** Notifications describe committed state changes. Queueing them before the transaction succeeds could produce notifications for operations that later roll back.
+
+---
+
+### Individual Admin Notification Fan-Out
+
+`DISPUTE_OPENED` is sent individually to every user with the `ADMIN` role.
+
+**Reason:** The current Notification model targets an individual `userId` and does not provide a notification-group recipient abstraction.
+
+A new group-recipient model was not introduced because the current requirement can be satisfied with individual notification jobs.
+
+---
+
+### Existing AuditLog Structure Retained
+
+No `disputeId` field was added to `AuditLog`.
+
+Dispute audit events continue using the existing order/user-based audit structure.
+
+**Reason:** The current audit model is sufficient to record the relevant Order and Dispute state transitions without expanding the database schema unnecessarily.
