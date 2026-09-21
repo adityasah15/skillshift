@@ -1,11 +1,11 @@
 # SkillShift — Project Checkpoint
 
-**Last updated:** 2026-09-20
+**Last updated:** 2026-09-21
 
 ## Current State
 
-**Current phase:** Phase 6 — Notifications
-**Status:** Phase 6 implementation complete and manually tested
+**Current phase:** Phase 7 — Dispute Module
+**Status:** Phase 7 implementation complete and manually tested
 
 ---
 
@@ -95,83 +95,120 @@
 ### Phase 6 — Notifications
 
 * `NotificationService`
-* Persistent in-app Notification records
-* Notification queueing through BullMQ
-* Email-only queueing
+* Persistent notification records
+* BullMQ notification jobs
+* Email-only jobs
 * `EmailProcessor`
 * Verification email processing
 * Password-reset email processing
-* Order notification processing
-* `ORDER_PLACED` notification
-* `ORDER_DELIVERED` notification
-* `ORDER_COMPLETED` notification
-* `ORDER_CANCELLED` notification
-* Registration verification email through BullMQ
-* Password-reset email through BullMQ
-* Email templates
+* Order notification events
 * Notification queue retry configuration
 * Actual email delivery verified
 * BullMQ retry behavior verified
+* Manual notification testing completed
+
+### Phase 7 — Disputes
+
+* `DisputeModule`
+* Client dispute creation
+* Admin dispute listing
+* Admin dispute resolution
+* Client ownership validation
+* Valid order-state validation
+* `RESOLVED_FREELANCER` resolution
+* `RESOLVED_CLIENT` resolution
+* Escrow release/refund during resolution
+* Freelancer/client wallet updates
+* `ESCROW_RELEASE` / `ESCROW_REFUND` transactions
+* Dispute audit logs
+* `DISPUTE_OPENED` notifications to all admins
+* `DISPUTE_RESOLVED` notifications to the affected participant
+* Authorization and invalid-state validation
+* Conditional state updates preventing duplicate resolution
+* Manual Postman + PostgreSQL verification completed
+* Build verified successfully
 
 ---
 
-## Phase 6 Testing Status
+## Phase 7 Testing Status
 
-Manual testing was completed using Postman, PostgreSQL, Ethereal, and Redis.
+Manual testing covered:
 
-Verified successfully:
+* Client opens dispute
+* Freelancer blocked from opening dispute
+* Admin dispute listing
+* Non-admin blocked from resolution
+* Admin resolves in freelancer's favor
+* Admin resolves in client's favor
+* Invalid resolution rejected
+* Already-resolved dispute rejected
+* Nonexistent order rejected
+* Nonexistent dispute rejected
+* Order state changes
+* Escrow state changes
+* Wallet balance changes
+* Transaction creation
+* AuditLog creation
+* `DISPUTE_OPENED` notifications
+* `DISPUTE_RESOLVED` notifications
 
-* `ORDER_PLACED` → notification DB record + email
-* `ORDER_DELIVERED` → notification DB record + client email
-* `ORDER_COMPLETED` → notification DB record + freelancer email
-* `ORDER_CANCELLED` → notification DB record + other participant email
-* Registration → verification email
-* Forgot password → password-reset email
-* Notification persistence
-* BullMQ notification processing
-* BullMQ retry behavior
-* Actual email delivery
+Financial and state side effects were verified through PostgreSQL.
 
-Retry behavior was deliberately tested using a notification for a nonexistent user.
-
-Redis confirmed the failed job reached:
-
-* `atm = 3`
-* `ats = 3`
-
-Three stack traces were recorded and the final failure reason matched the expected nonexistent-user error.
-
-A temporary test endpoint/service method used solely for this failure test was removed afterward.
+Automated tests have not yet been added and remain deferred to the dedicated testing/hardening phase.
 
 ---
 
-## Phase 6 Queue Configuration
+## Phase 7 Financial Flows
 
-The Notification queue follows the Blueprint:
+### Freelancer Resolution
 
-* `attempts: 3`
-* exponential backoff
-* `delay: 5000ms`
-* `removeOnComplete: 100`
-* `removeOnFail: 500`
+```text
+Dispute
+  ↓
+RESOLVED_FREELANCER
 
-The retry configuration was initially missing, discovered during testing, fixed, and pushed.
+Order
+  ↓
+COMPLETED
 
----
+Escrow
+  ↓
+RELEASED
 
-## Intentionally Deferred Notification Types
+Freelancer Wallet
+  ↓
+credited
 
-The following Blueprint notification types remain deferred because their corresponding features are not yet implemented:
+Transaction
+  ↓
+ESCROW_RELEASE
+```
 
-* `DISPUTE_OPENED`
-* `DISPUTE_RESOLVED`
-* `MESSAGE_RECEIVED`
-* `PAYMENT_RECEIVED`
-* `REVIEW_RECEIVED`
+### Client Resolution
 
-No placeholder wiring has been added for these events.
+```text
+Dispute
+  ↓
+RESOLVED_CLIENT
 
-They will be connected when their respective modules/features are implemented.
+Order
+  ↓
+REFUNDED
+
+Escrow
+  ↓
+REFUNDED
+
+Client Wallet
+  ↓
+credited
+
+Transaction
+  ↓
+ESCROW_REFUND
+```
+
+These financial/state changes are performed atomically through Prisma transactions.
 
 ---
 
@@ -182,17 +219,25 @@ They will be connected when their respective modules/features are implemented.
 * `@GetUser()` decorator
 * Meaningful automated AuthService tests
 * Automated Wallet unit tests
+* Automated testing for later modules
 * Broader automated testing and security hardening
 
-Automated Phase 6 tests were not added; Phase 6 completion is based on implementation, build verification, and successful manual testing.
+---
+
+## Deferred
+
+* Admin UI
+* Real-time WebSocket notifications
+* Notification-group abstraction
+* Additional dispute workflow states beyond the existing Blueprint/schema
 
 ---
 
 ## Next Feature
 
-### Phase 7 — Dispute Module
+### Phase 8 — Reviews / Ratings
 
-Proceed according to the Blueprint with the Dispute module and its required business rules, authorization, state transitions, notifications, testing, and hardening.
+Proceed according to the Blueprint with the next feature after Disputes.
 
 ---
 
@@ -205,5 +250,5 @@ Proceed according to the Blueprint with the Dispute module and its required busi
 * Multi-step financial operations must use Prisma transactions.
 * Features are considered complete only after implementation and testing.
 * Automated testing remains tracked separately from manual verification.
-* Do not implement placeholder notification wiring for future modules.
+* Notifications are queued only after successful financial/state transactions.
 * Do not redesign the architecture without a genuine technical reason.

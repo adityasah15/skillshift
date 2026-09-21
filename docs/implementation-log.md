@@ -6700,3 +6700,311 @@ The Blueprint-required queue retry configuration is implemented and verified.
 ## Next Step
 
 Proceed to Phase 7 — Dispute Module.
+
+
+# 2026-09-21 — Phase 7: Dispute Module
+
+## Session
+
+**Phase:** Phase 7 — Dispute Module
+**Status:** Implementation complete and manually tested
+
+Phase 7 implemented the dispute workflow connecting clients, Orders, Escrow, Wallets, Transactions, AuditLogs, and Notifications.
+
+---
+
+## Dispute Module
+
+Implemented `DisputeModule` with:
+
+* dispute creation
+* admin dispute listing
+* admin dispute resolution
+
+Controller endpoints:
+
+```text
+POST  /disputes
+GET   /admin/disputes
+PATCH /admin/disputes/:id/resolve
+```
+
+Authentication and role authorization use the existing project-wide authentication and roles infrastructure.
+
+---
+
+## Dispute Creation
+
+Implemented `CreateDisputeDto`.
+
+Only the client associated with an Order can create a dispute.
+
+The creation flow validates:
+
+1. The Order exists.
+2. The authenticated user owns the Order as the client.
+3. The Order is currently `IN_PROGRESS` or `DELIVERED`.
+
+The dispute creation transaction then:
+
+* creates the Dispute with status `OPEN`
+* changes the Order status to `DISPUTED`
+* creates a `DISPUTE_OPENED` AuditLog
+
+These database changes occur inside one Prisma transaction.
+
+---
+
+## Dispute Notifications
+
+After the dispute transaction succeeds, all users with the `ADMIN` role are retrieved.
+
+A `DISPUTE_OPENED` notification is then queued individually for each admin.
+
+The notification is deliberately queued **after** the transaction succeeds.
+
+This prevents an admin notification from being generated for a dispute whose database transaction failed.
+
+The current Notification model targets an individual `userId`, so admin notification fan-out is implemented as one notification job per admin rather than through a group-recipient abstraction.
+
+---
+
+## Admin Dispute Listing
+
+Implemented:
+
+```text
+GET /admin/disputes
+```
+
+The endpoint is protected with the existing `ADMIN` role authorization.
+
+The dispute listing includes:
+
+* Order information
+* Client information
+* dispute data
+
+Disputes are ordered newest-first.
+
+---
+
+## Dispute Resolution
+
+Implemented `ResolveDisputeDto`.
+
+Only administrators can resolve disputes.
+
+Supported resolutions:
+
+```text
+RESOLVED_FREELANCER
+RESOLVED_CLIENT
+```
+
+Before resolution, the service verifies:
+
+* the Dispute exists
+* the Dispute is still `OPEN` or `UNDER_REVIEW`
+* the associated Escrow exists
+* Escrow is currently `HOLDING`
+
+---
+
+## Resolution Transaction
+
+Dispute resolution uses one Prisma transaction for the complete financial/state transition.
+
+The transaction updates:
+
+* Dispute
+* Order
+* Escrow
+* Wallet
+* Transaction
+* AuditLog
+
+This prevents partial financial resolution.
+
+---
+
+## Freelancer Resolution
+
+For:
+
+```text
+RESOLVED_FREELANCER
+```
+
+the transaction performs:
+
+```text
+Dispute
+  ↓
+RESOLVED_FREELANCER
+
+Order
+  ↓
+COMPLETED
+
+Escrow
+  ↓
+RELEASED
+
+Freelancer Wallet
+  ↓
+increment by escrow amount
+
+Transaction
+  ↓
+ESCROW_RELEASE
+```
+
+A `DISPUTE_RESOLVED` notification is then queued for the freelancer after the transaction succeeds.
+
+---
+
+## Client Resolution
+
+For:
+
+```text
+RESOLVED_CLIENT
+```
+
+the transaction performs:
+
+```text
+Dispute
+  ↓
+RESOLVED_CLIENT
+
+Order
+  ↓
+REFUNDED
+
+Escrow
+  ↓
+REFUNDED
+
+Client Wallet
+  ↓
+increment by escrow amount
+
+Transaction
+  ↓
+ESCROW_REFUND
+```
+
+A `DISPUTE_RESOLVED` notification is then queued for the client after the transaction succeeds.
+
+---
+
+## Concurrency Protection
+
+Resolution uses conditional state updates.
+
+The Dispute update only succeeds while the Dispute remains:
+
+* `OPEN`
+* or `UNDER_REVIEW`
+
+Escrow is similarly updated only while it remains `HOLDING`.
+
+If another request has already resolved the Dispute or changed the Escrow state, the update affects zero records and the operation is rejected.
+
+This prevents duplicate dispute resolution and duplicate escrow release/refund under concurrent requests.
+
+---
+
+## Audit Logging
+
+Two dispute-related audit events are recorded.
+
+### `DISPUTE_OPENED`
+
+Records the Order status transition:
+
+```text
+IN_PROGRESS / DELIVERED
+        ↓
+DISPUTED
+```
+
+The audit entry includes the authenticated client as `userId`.
+
+### `DISPUTE_RESOLVED`
+
+Records the Dispute status transition:
+
+```text
+OPEN / UNDER_REVIEW
+        ↓
+RESOLVED_FREELANCER / RESOLVED_CLIENT
+```
+
+The audit entry includes the resolving admin as `userId`.
+
+No `disputeId` field was added to `AuditLog`.
+
+The existing order/user-based audit structure is retained.
+
+---
+
+## Testing
+
+Manual testing was completed successfully.
+
+Verified:
+
+* Client can open a dispute
+* Freelancer cannot open a dispute
+* Non-admin cannot resolve a dispute
+* Admin can resolve for freelancer
+* Admin can resolve for client
+* Invalid resolution is rejected
+* Already-resolved dispute is rejected
+* Nonexistent Order is rejected
+* Nonexistent Dispute is rejected
+* Order state changes
+* Escrow state changes
+* Wallet balance changes
+* Transaction creation
+* AuditLog creation
+* `DISPUTE_OPENED` notifications
+* `DISPUTE_RESOLVED` notifications
+
+PostgreSQL was used to verify financial and audit side effects.
+
+Build verification passed.
+
+Automated tests were not added during this phase and remain deferred to the dedicated testing/hardening phase.
+
+---
+
+## Deferred Work
+
+The following remain outside Phase 7:
+
+* Admin UI
+* Real-time WebSocket notifications
+* Notification-group abstraction
+* Additional dispute workflow states beyond the current Blueprint/schema
+
+---
+
+## Phase 7 Status
+
+Phase 7 Dispute Module implementation is complete.
+
+Manual testing and database verification passed.
+
+The module is build-verified.
+
+Automated testing remains deferred.
+
+---
+
+## Next Step
+
+Proceed to the next Blueprint phase after Disputes.

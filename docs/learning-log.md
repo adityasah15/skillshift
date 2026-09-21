@@ -1002,3 +1002,110 @@ Be able to explain:
 * How notification persistence differs from email delivery.
 * Why notification producers should not own email-provider implementation details.
 * Why future notification events should not be wired before their corresponding features exist.
+
+## 2026-09-21 — Disputes, Atomic Financial Resolution & Concurrency
+
+### Dispute as a Financial Workflow
+
+A dispute is not only a status change.
+
+Resolving a dispute can simultaneously change:
+
+* Dispute state
+* Order state
+* Escrow state
+* Wallet balance
+* Transaction history
+* Audit history
+
+Because these changes represent one financial decision, they must remain consistent.
+
+### Atomic Resolution
+
+The dispute resolution flow uses one Prisma transaction for the complete financial/state transition.
+
+This prevents situations such as:
+
+* escrow released without freelancer credit
+* wallet credited without transaction history
+* order changed without dispute resolution
+* dispute resolved while escrow remains in `HOLDING`
+
+### Authorization vs Ownership
+
+Dispute creation is client-only, but it is not enough to check that the user has the `CLIENT` role.
+
+The authenticated user must also own the specific Order.
+
+This is resource-level authorization.
+
+### Conditional State Updates
+
+A simple:
+
+```text
+read → check → update
+```
+
+flow can be vulnerable to concurrent requests.
+
+Conditional updates make the database participate in the concurrency check.
+
+For dispute resolution:
+
+```text
+OPEN / UNDER_REVIEW
+        ↓
+resolution update
+```
+
+For escrow:
+
+```text
+HOLDING
+   ↓
+RELEASED / REFUNDED
+```
+
+If another request already changed the state, the conditional update affects zero records and the second operation is rejected.
+
+### Notification Timing
+
+Financial/state transactions complete first.
+
+Notifications are queued only after the transaction succeeds.
+
+This prevents a notification from being sent about a state transition that ultimately rolled back.
+
+### Admin Notification Fan-Out
+
+The current Notification model targets individual users through `userId`.
+
+Therefore, notifying all admins is implemented as:
+
+```text
+Find ADMIN users
+      ↓
+one notification job per admin
+```
+
+No group-recipient abstraction was introduced.
+
+### Audit Logs
+
+The existing AuditLog model does not require a dedicated `disputeId`.
+
+Dispute events can be represented through the existing user/order-based audit structure.
+
+This avoids unnecessary schema expansion.
+
+### Interview Takeaways
+
+Be able to explain:
+
+* Why dispute resolution must be transactional.
+* Why checking ownership is different from checking a user's role.
+* How conditional updates help prevent duplicate financial operations.
+* Why notifications are queued after successful transactions.
+* Why admin notifications are fanned out individually.
+* Why a dedicated `disputeId` was not added to AuditLog.
