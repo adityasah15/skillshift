@@ -1162,3 +1162,73 @@ Be able to explain:
 * Why Review creation and Profile aggregation should be transactional.
 * Why notifications should be triggered after successful persistence.
 * Why Reviews/Ratings does not become a new numbered Blueprint phase.
+
+## Phase 8 — Chat
+
+### WebSocket Authentication
+
+JWT authentication can be applied during the Socket.IO connection lifecycle rather than only through normal HTTP guards.
+
+The authenticated identity must be attached to the socket before allowing protected Chat operations.
+
+### WebSocket Authorization
+
+Authentication answers:
+
+```text
+Who is this user?
+```
+
+Authorization answers:
+
+```text
+Is this user allowed to access this Order's chat?
+```
+
+For SkillShift, joining an Order room requires the authenticated user to be a participant in that Order.
+
+### Safe Disconnect Handling
+
+A socket can disconnect before authentication completes.
+
+Therefore lifecycle handlers such as `handleDisconnect()` must not assume that authentication state exists.
+
+This was demonstrated by the disconnect bug found during manual testing.
+
+### Multi-Socket Presence
+
+Presence cannot simply be a boolean when a user can have multiple active sockets.
+
+A counter allows:
+
+```text
+connect → increment
+disconnect → decrement
+```
+
+The user is considered offline only when the final active socket disconnects.
+
+### Cursor Pagination
+
+Chat history uses cursor pagination rather than offset pagination.
+
+The client can use the returned cursor to request the next page without relying on an offset that can become unstable as new messages arrive.
+
+### Redis Rate Limiting
+
+Redis can maintain short-lived message-rate state shared across application instances.
+
+The Chat implementation uses this to enforce the message limit independently of a single application process.
+
+### Asynchronous Notification Integration
+
+Real-time message delivery and notification processing serve different purposes:
+
+```text
+WebSocket → immediate Chat delivery
+BullMQ    → asynchronous notification processing
+PostgreSQL → persistent message state
+Redis     → presence / rate limiting
+```
+
+The existing project infrastructure can therefore be reused instead of introducing separate systems for Chat.

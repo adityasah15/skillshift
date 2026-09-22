@@ -1,86 +1,76 @@
-### Supplemental Feature — Reviews/Ratings
+### Phase 8 — Chat
 
 **Status:** Implemented + manually tested
 
-Reviews/Ratings was implemented as a supplemental Blueprint-gap feature. It is **not a numbered Blueprint phase**.
-
 Implemented:
 
-* Client reviews freelancer
-* `POST /reviews`
-* One review per Order
-* Completed-order requirement
-* Duplicate-review protection
-* Rating validation from 1–5
-* Freelancer Profile rating update
-* Freelancer `totalReviews` update
-* `REVIEW_RECEIVED` notification
-* Review/Profile updates handled transactionally
+* Socket.IO/WebSocket chat gateway
+* Socket JWT authentication
+* Order-room joining with participant authorization
+* Message sending and PostgreSQL persistence
+* `new_message` broadcast
+* REST message history
+* Cursor-based message pagination
+* Redis multi-socket presence tracking
+* Redis message rate limiting
+* `MESSAGE_RECEIVED` notification integration
 
-The Review direction is:
+### Chat Testing
 
-```text
-Client
-  ↓ reviews
-Freelancer
-```
+Manual testing passed for:
 
-`reviewerId`, `revieweeId`, and `serviceId` are derived server-side rather than supplied by the client.
+* Valid socket JWT authentication
+* Missing/invalid JWT rejection
+* Safe disconnect lifecycle
+* `join_order` authorization
+* `send_message`
+* Message persistence
+* `new_message` broadcast
+* REST message history
+* Cursor pagination
+* Redis presence with multiple simultaneous sockets
+* Message rate limiting: 10 messages accepted, 11th rejected
+* `MESSAGE_RECEIVED` notification
 
-The existing Prisma constraint remains:
+### Bug Fixed
 
-```text
-Review.orderId @unique
-```
+`handleDisconnect()` originally assumed `client.user` was always available.
 
-Therefore, the implementation maintains one Review per Order.
-
-### Reviews/Ratings Testing
-
-Manually verified:
-
-* Valid review on a `COMPLETED` Order
-* Duplicate review rejection
-* Rating `0` rejection
-* Rating `6` rejection
-* Non-integer rating rejection
-* Freelancer attempting to review rejection
-* Review on an `IN_PROGRESS` Order rejection
-* Review persistence
-* Freelancer Profile rating update
-* Freelancer `totalReviews` update
-* `REVIEW_RECEIVED` notification creation
-
-For the successful review:
+An unauthenticated socket could therefore cause an error while disconnecting:
 
 ```text
-Review.rating = 5
-Profile.rating = 5
-Profile.totalReviews = 1
-Notification.type = REVIEW_RECEIVED
-Notification recipient = reviewed freelancer
+TypeError: Cannot read properties of undefined (reading 'sub')
 ```
 
-Not separately verified in this manual pass:
+The disconnect handler was updated to safely handle sockets that never completed authentication.
 
-* Non-existent Order
-* Invalid comment type
-* Optional comment omission
-* Second-review aggregation
-* Automated tests
+### Testing Notes
 
-These remain candidates for the dedicated automated-testing/hardening phase.
+Temporary manual Socket.IO testing scripts were used:
 
-### Official Phase Sequence
+* `test-chat.js`
+* `test-presence.js`
 
-Reviews/Ratings does **not** change the official phase numbering.
+These were temporary testing files and are not treated as permanent project functionality.
+
+`socket.io-client` was added during the manual testing workflow. Its final dependency status should be verified against the repository before any documentation claims that it is intentionally retained.
+
+### Git
+
+Chat disconnect fix:
 
 ```text
-Phase 7 — Disputes
-        ↓
-Supplemental Reviews/Ratings
-        ↓
-Phase 8 — Chat
+Commit: 0859aa0015d1719e1aff67c7f353bdd94d804ae0
+Message: fix: handle unauthenticated chat disconnects
+Pushed: yes
 ```
 
-**Next official phase:** Phase 8 — Chat
+### Testing Scope
+
+Phase 8 has been manually tested successfully.
+
+Automated testing is not marked as complete by this handoff.
+
+### Next
+
+Proceed to the next Blueprint phase after final Chat implementation/dependency cleanup and documentation commit.

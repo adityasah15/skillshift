@@ -218,3 +218,74 @@ Review creation and freelancer Profile rating statistics are updated within one 
 `REVIEW_RECEIVED` is created/queued only after the Review/Profile transaction successfully commits.
 
 **Reason:** The notification represents a persisted Review and should not be generated for a transaction that rolls back.
+
+## Phase 8 — Chat Architecture Decisions
+
+### Reuse Existing Infrastructure
+
+The Chat module reuses the project's existing:
+
+* JWT authentication
+* Redis service
+* PostgreSQL persistence
+* Notification/BullMQ infrastructure
+
+No separate authentication, Redis, or notification infrastructure was introduced.
+
+**Reason:** Chat is a domain module inside the existing NestJS monolith and should follow the project's established infrastructure boundaries.
+
+---
+
+### Order-Participant Authorization
+
+Chat access is restricted to participants of the relevant Order.
+
+The authenticated user identity comes from the JWT, and the Chat service verifies participation before allowing the user to join the Order room or retrieve its message history.
+
+**Reason:** Authentication alone does not establish authorization to access a specific Order conversation.
+
+---
+
+### Multi-Socket Redis Presence
+
+Presence is tracked using a counter rather than a simple online/offline flag.
+
+**Reason:** One user can have multiple simultaneous sockets. A boolean would incorrectly mark the user offline when only one of several active sockets disconnects.
+
+---
+
+### Redis Chat Rate Limiting
+
+Redis is used for Chat message rate limiting.
+
+The manually tested limit is:
+
+```text
+10 messages / 10 seconds / user
+```
+
+**Reason:** Redis provides shared short-lived state and is already part of the project's infrastructure.
+
+---
+
+### Cursor-Based Message History
+
+Chat history uses cursor-based pagination.
+
+**Reason:** Message streams can receive new records while users are paging through history. Cursor pagination avoids the shifting-offset behavior associated with offset pagination.
+
+---
+
+### Notification Separation
+
+`MESSAGE_RECEIVED` notifications continue to use the existing Notification/BullMQ system rather than being implemented as a second real-time notification mechanism.
+
+**Reason:** WebSocket Chat delivery and asynchronous application notifications have different responsibilities, while the existing notification infrastructure already provides queueing and processing.
+
+---
+
+### Safe WebSocket Lifecycle Handling
+
+Socket lifecycle handlers must support connections that never successfully authenticate.
+
+**Reason:** A socket can disconnect before JWT authentication completes. Assuming authentication state exists in `handleDisconnect()` caused a runtime error during manual testing and was subsequently fixed.

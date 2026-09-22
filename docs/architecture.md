@@ -507,3 +507,41 @@ Notifications remain a separate Phase 6 concern.
 Search remains a Phase 10 concern.
 
 The implementation continues to use the existing NestJS monolith, PostgreSQL, Redis, Prisma, and BullMQ architecture.
+
+## Chat Architecture
+
+SkillShift Chat is implemented inside the existing NestJS monolith using Socket.IO/WebSockets for real-time messaging.
+
+```text
+Authenticated Socket
+        │
+        ▼
+   ChatGateway
+        │
+        ├── JWT authentication
+        │
+        ├── Order participant authorization
+        │
+        ├── Order room
+        │
+        ▼
+   ChatService
+        │
+        ├── PostgreSQL
+        │      └── persistent messages
+        │
+        └── NotificationService
+               └── BullMQ → MESSAGE_RECEIVED
+
+Redis
+ ├── presence
+ └── message rate limiting
+```
+
+PostgreSQL remains the persistent source of truth for messages.
+
+Redis is used for ephemeral Chat concerns such as presence and rate limiting.
+
+The existing Notification/BullMQ infrastructure handles asynchronous `MESSAGE_RECEIVED` notification processing.
+
+Chat history is exposed through a REST endpoint with cursor-based pagination, while WebSockets provide real-time message delivery.

@@ -7225,3 +7225,216 @@ Additional manual cases not covered in this pass also remain available for later
 Proceed to:
 
 **Phase 8 — Chat Module**
+
+# Phase 8 — Chat
+
+## Feature Status
+
+**Status:** Implemented + manually tested successfully
+
+The Chat module was implemented using the existing NestJS, JWT, Redis, PostgreSQL, and Notification/BullMQ infrastructure.
+
+No duplicate authentication, Redis, or notification infrastructure was introduced.
+
+---
+
+## WebSocket / Socket.IO Chat
+
+The Chat gateway provides authenticated real-time communication for Order participants.
+
+Implemented behavior:
+
+* Socket JWT authentication
+* Authenticated socket connections
+* Order-specific rooms
+* Participant authorization before joining an Order room
+* Message sending
+* `new_message` broadcast
+* Safe socket disconnect handling
+
+The authenticated user's identity is derived from the JWT rather than being supplied by the client.
+
+---
+
+## Message Persistence
+
+Messages are persisted through the existing Chat service/database flow.
+
+A successful message records:
+
+* conversation/order association
+* sender
+* message content
+* timestamp
+
+The WebSocket layer therefore provides real-time delivery while PostgreSQL remains the persistent source of truth.
+
+---
+
+## REST Message History
+
+Implemented:
+
+```text
+GET /chat/:orderId/messages
+```
+
+The endpoint:
+
+* verifies Order participation
+* returns message history
+* supports cursor-based pagination
+
+Cursor pagination was manually verified by requesting an initial page and then using the returned cursor to retrieve the next page.
+
+---
+
+## Redis Presence
+
+Redis is used for Chat presence tracking.
+
+Presence supports multiple simultaneous sockets for the same user.
+
+Manual testing verified:
+
+```text
+1 socket  → presence 1
+2 sockets → presence 2
+3 sockets → presence 3
+```
+
+Disconnecting sockets correctly decremented the presence count.
+
+This prevents a user with multiple active connections from being incorrectly considered offline when only one socket disconnects.
+
+---
+
+## Redis Message Rate Limiting
+
+Chat message rate limiting was implemented using Redis.
+
+The configured behavior tested during the manual pass was:
+
+```text
+10 messages → accepted
+11th message → rejected
+```
+
+The rejection message was:
+
+```text
+Too many messages. Please slow down.
+```
+
+This provides application-level protection against excessive message sending.
+
+---
+
+## Message Notifications
+
+Chat integrates with the existing Notification/BullMQ infrastructure.
+
+A successfully sent message generates:
+
+```text
+MESSAGE_RECEIVED
+```
+
+for the other Order participant.
+
+The notification integration reuses the existing notification system rather than introducing another queue or notification mechanism.
+
+---
+
+## Manual Testing
+
+The following were manually verified successfully:
+
+1. Socket JWT authentication
+2. Missing/invalid JWT rejection
+3. Safe unauthenticated disconnect handling
+4. `join_order` authorization
+5. Authorized participant joining
+6. Unauthorized participant rejection
+7. `send_message`
+8. Message persistence
+9. `new_message` broadcast
+10. REST message history
+11. Cursor pagination
+12. Redis presence
+13. Multiple simultaneous sockets
+14. Redis message rate limiting
+15. `MESSAGE_RECEIVED` notification
+
+The manual test also verified that the application remained stable when unauthenticated sockets disconnected.
+
+---
+
+## Bug Fix
+
+During testing, `handleDisconnect()` assumed that `client.user` was always present.
+
+This assumption was invalid because a socket can disconnect before completing JWT authentication.
+
+The resulting error was:
+
+```text
+TypeError: Cannot read properties of undefined (reading 'sub')
+```
+
+The disconnect handler was changed to safely handle sockets without an authenticated user.
+
+The fix was committed and pushed:
+
+```text
+Commit: 0859aa0015d1719e1aff67c7f353bdd94d804ae0
+Message: fix: handle unauthenticated chat disconnects
+```
+
+---
+
+## Temporary Testing Artifacts
+
+Manual Socket.IO testing used temporary scripts:
+
+```text
+test-chat.js
+test-presence.js
+```
+
+These were testing utilities rather than Chat application functionality.
+
+They should not be documented as permanent project files unless explicitly retained later.
+
+`socket.io-client` was added to support the temporary manual Socket.IO testing workflow. Its final retained/dependency status should be determined from the repository before making a permanent dependency statement.
+
+---
+
+## Files / Areas
+
+The Phase 8 implementation affected the following areas according to the implementation handoff:
+
+```text
+src/chat/
+src/redis/redis.service.ts
+src/auth/auth.module.ts
+src/app.module.ts
+package.json
+package-lock.json
+```
+
+The exact final repository state remains the source of truth for individual file changes.
+
+---
+
+## Testing Scope
+
+Phase 8 manual testing is complete.
+
+This handoff does not establish completion of automated Chat tests. Automated testing remains part of the project's broader testing/hardening work.
+
+---
+
+## Next Step
+
+Complete any remaining temporary testing dependency/file cleanup and proceed to the next Blueprint phase.
