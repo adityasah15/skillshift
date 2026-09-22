@@ -18,6 +18,7 @@ import { OrderModule } from './order/order.module';
 import { BullModule } from '@nestjs/bullmq';
 import { NotificationModule } from './notification/notification.module';
 import { DisputeModule } from './dispute/dispute.module';
+import { ReviewModule } from './review/review.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { DisputeModule } from './dispute/dispute.module';
     }),
     NotificationModule,
     DisputeModule,
+    ReviewModule,
   ],
   controllers: [AppController],
   providers: [
