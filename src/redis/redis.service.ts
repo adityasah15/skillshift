@@ -53,4 +53,22 @@ export class RedisService implements OnModuleDestroy {
       }
     } while (cursor !== '0');
   }
+
+  async incr(key: string): Promise<number> {
+    return this.redis.incr(key);
+  }
+
+  async decr(key: string): Promise<number> {
+    return this.redis.decr(key);
+  }
+
+  async incrWithTtl(key: string, ttl: number): Promise<number> {
+  const count = await this.redis.incr(key);
+
+  if (count === 1) {
+    await this.redis.expire(key, ttl);
+  }
+
+  return count;
+}
 }
