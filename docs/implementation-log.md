@@ -7008,3 +7008,220 @@ Automated testing remains deferred.
 ## Next Step
 
 Proceed to the next Blueprint phase after Disputes.
+
+
+# 2026-09-22 — Supplemental Feature: Reviews/Ratings
+
+## Feature Status
+
+**Status:** Implemented + manually tested
+
+Reviews/Ratings was implemented as a supplemental feature because the Blueprint defines the Review model, business rules, profile rating fields, and `REVIEW_RECEIVED` notification type, but does not provide a dedicated numbered implementation phase.
+
+Official phase numbering therefore remains:
+
+```text
+Phase 7 — Disputes
+        ↓
+Supplemental Reviews/Ratings
+        ↓
+Phase 8 — Chat
+```
+
+Reviews/Ratings is not treated as Phase 8.
+
+---
+
+## Review Model / Direction
+
+The implemented workflow is:
+
+```text
+Client
+  ↓ reviews
+Freelancer
+```
+
+The freelancer does not review the client under the current implementation.
+
+The existing Review relationships are used:
+
+```text
+reviewerId → client
+revieweeId → freelancer
+serviceId  → purchased service
+```
+
+The existing Prisma constraint remains:
+
+```text
+orderId String @unique
+```
+
+This enforces one Review per Order.
+
+No change was made to convert the uniqueness constraint to `(orderId, reviewerId)`.
+
+---
+
+## Review Creation
+
+Endpoint:
+
+```text
+POST /reviews
+```
+
+Request fields:
+
+```text
+orderId
+rating
+comment?
+```
+
+The client does not provide:
+
+* `reviewerId`
+* `revieweeId`
+* `serviceId`
+
+These values are derived from the Order and authenticated user.
+
+The service validates:
+
+1. Order exists.
+2. Authenticated user is the Order's client.
+3. Order status is `COMPLETED`.
+4. No existing Review exists for the Order.
+5. Rating is within the valid range.
+6. The reviewed user is the Order's freelancer.
+
+---
+
+## Review Transaction
+
+Review creation and freelancer Profile statistics are handled within one Prisma transaction.
+
+The transaction:
+
+1. Creates the Review.
+2. Retrieves the freelancer Profile.
+3. Updates `totalReviews`.
+4. Calculates the updated rating.
+5. Updates `Profile.rating`.
+
+The exact averaging formula is an implementation decision based on the meaning of `Profile.rating` and `Profile.totalReviews`. The Blueprint defines these fields but does not explicitly prescribe the aggregation formula.
+
+---
+
+## Notification Integration
+
+After the Review transaction successfully commits:
+
+```text
+REVIEW_RECEIVED
+```
+
+is created/queued for the reviewed freelancer.
+
+Notification processing occurs after the database transaction so a failed Review transaction does not produce a notification for a Review that was not committed.
+
+---
+
+## Review Module
+
+The Review feature uses the following module structure:
+
+```text
+src/review/
+├── dto/
+│   └── create-review.dto.ts
+├── review.controller.ts
+├── review.service.ts
+└── review.module.ts
+```
+
+`ReviewModule` is registered in `AppModule`.
+
+Exact final repository state should remain the source of truth for any additional modified files.
+
+---
+
+## Testing
+
+Manual testing successfully verified:
+
+* Valid Review on a `COMPLETED` Order
+* Duplicate Review rejection
+* Rating `0` rejection
+* Rating `6` rejection
+* Rating `3.5` rejection
+* Freelancer attempting to Review rejection
+* Review on an `IN_PROGRESS` Order rejection
+* Review persistence
+* Freelancer Profile rating update
+* Freelancer `totalReviews` update
+* `REVIEW_RECEIVED` notification creation
+
+Successful database state included:
+
+```text
+Review.rating = 5
+Profile.rating = 5
+Profile.totalReviews = 1
+Notification.type = REVIEW_RECEIVED
+Notification recipient = reviewed freelancer
+```
+
+The following were **not separately tested in the manual pass**:
+
+* Non-existent Order
+* Invalid comment type
+* Optional comment omission
+* Second-review aggregation
+* Automated tests
+
+These should not be marked as tested until they are actually verified.
+
+---
+
+## Blueprint Interpretation
+
+The Blueprint explicitly provides:
+
+* Review model
+* `orderId @unique`
+* `serviceId`
+* `reviewerId`
+* `revieweeId`
+* rating/comment
+* `Profile.rating`
+* `Profile.totalReviews`
+* `REVIEW_RECEIVED`
+* completed-order requirement
+* no-existing-review requirement
+
+The Blueprint does not provide a dedicated numbered Reviews implementation phase.
+
+Therefore Reviews/Ratings is documented as a **supplemental Blueprint-gap closure**, not as Phase 8.
+
+The implementation also interprets the review direction as client → freelancer. This is an implementation decision rather than an explicitly stated Blueprint requirement.
+
+The exact rating aggregation formula is likewise an implementation decision because the Blueprint does not explicitly prescribe one.
+
+---
+
+## Deferred Testing
+
+Automated Review tests remain deferred to the dedicated testing/hardening phase.
+
+Additional manual cases not covered in this pass also remain available for later verification.
+
+---
+
+## Next Step
+
+Proceed to:
+
+**Phase 8 — Chat Module**

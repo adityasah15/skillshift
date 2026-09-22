@@ -1,254 +1,86 @@
-# SkillShift — Project Checkpoint
+### Supplemental Feature — Reviews/Ratings
 
-**Last updated:** 2026-09-21
+**Status:** Implemented + manually tested
 
-## Current State
+Reviews/Ratings was implemented as a supplemental Blueprint-gap feature. It is **not a numbered Blueprint phase**.
 
-**Current phase:** Phase 7 — Dispute Module
-**Status:** Phase 7 implementation complete and manually tested
+Implemented:
 
----
+* Client reviews freelancer
+* `POST /reviews`
+* One review per Order
+* Completed-order requirement
+* Duplicate-review protection
+* Rating validation from 1–5
+* Freelancer Profile rating update
+* Freelancer `totalReviews` update
+* `REVIEW_RECEIVED` notification
+* Review/Profile updates handled transactionally
 
-## Completed
-
-### Phase 0 — Project Setup
-
-* NestJS project setup
-* PostgreSQL + Redis
-* Prisma
-* Docker-based development environment
-* Initial database schema and migration
-* Config/Prisma foundation
-
-### Phase 1 — Authentication
-
-* User registration
-* Email verification
-* Login
-* JWT authentication
-* Refresh token rotation
-* Logout
-* Forgot password
-* Reset password
-* Global `JwtAuthGuard`
-* `@Public()` decorator
-* Authentication flows tested through Postman
-* Public registration supports `CLIENT` and `FREELANCER`
-* Public `ADMIN` registration rejected
-
-### Phase 2 — User & Profile
-
-* `GET /users/me`
-* `PATCH /users/me`
-* `GET /users/:id`
-* Profile validation
-* User/profile flows tested through Postman
-
-### Phase 3 — Wallet
-
-* Wallet module
-* `GET /wallet`
-* `POST /wallet/deposit`
-* `GET /wallet/transactions`
-* Authenticated wallet access
-* Atomic deposits using Prisma `$transaction`
-* `DEPOSIT` transaction creation
-* Manual Postman testing completed
-* 11 manual tests passed
-* Multi-account wallet/transaction isolation verified
-
-### Phase 4 — Service Listings
-
-* Service CRUD
-* Cursor-based pagination
-* Skills filtering
-* Price filtering
-* Freelancer ownership enforcement
-* Soft deletion
-* Admin approve/reject
-* Redis individual-service caching
-* Redis service-list caching
-* Redis cache invalidation after mutations
-* Redis `SCAN`-based pattern deletion
-* Global `ValidationPipe` configuration
-* PostgreSQL full-text search infrastructure
-* Manual Postman testing completed
-* Cache invalidation regression tests passed
-
-### Phase 5 — Orders + Escrow
-
-* Order creation
-* Client wallet deduction
-* Escrow hold/release/refund
-* `ESCROW_HOLD`
-* `ESCROW_RELEASE`
-* `ESCROW_REFUND`
-* Freelancer delivery
-* Client completion
-* Client/freelancer cancellation
-* 7-day BullMQ delayed auto-completion
-* Deterministic auto-complete job IDs
-* Duplicate completion/payout protection
-* System AuditLog for auto-completion
-* Manual Postman + PostgreSQL verification completed
-
-### Phase 6 — Notifications
-
-* `NotificationService`
-* Persistent notification records
-* BullMQ notification jobs
-* Email-only jobs
-* `EmailProcessor`
-* Verification email processing
-* Password-reset email processing
-* Order notification events
-* Notification queue retry configuration
-* Actual email delivery verified
-* BullMQ retry behavior verified
-* Manual notification testing completed
-
-### Phase 7 — Disputes
-
-* `DisputeModule`
-* Client dispute creation
-* Admin dispute listing
-* Admin dispute resolution
-* Client ownership validation
-* Valid order-state validation
-* `RESOLVED_FREELANCER` resolution
-* `RESOLVED_CLIENT` resolution
-* Escrow release/refund during resolution
-* Freelancer/client wallet updates
-* `ESCROW_RELEASE` / `ESCROW_REFUND` transactions
-* Dispute audit logs
-* `DISPUTE_OPENED` notifications to all admins
-* `DISPUTE_RESOLVED` notifications to the affected participant
-* Authorization and invalid-state validation
-* Conditional state updates preventing duplicate resolution
-* Manual Postman + PostgreSQL verification completed
-* Build verified successfully
-
----
-
-## Phase 7 Testing Status
-
-Manual testing covered:
-
-* Client opens dispute
-* Freelancer blocked from opening dispute
-* Admin dispute listing
-* Non-admin blocked from resolution
-* Admin resolves in freelancer's favor
-* Admin resolves in client's favor
-* Invalid resolution rejected
-* Already-resolved dispute rejected
-* Nonexistent order rejected
-* Nonexistent dispute rejected
-* Order state changes
-* Escrow state changes
-* Wallet balance changes
-* Transaction creation
-* AuditLog creation
-* `DISPUTE_OPENED` notifications
-* `DISPUTE_RESOLVED` notifications
-
-Financial and state side effects were verified through PostgreSQL.
-
-Automated tests have not yet been added and remain deferred to the dedicated testing/hardening phase.
-
----
-
-## Phase 7 Financial Flows
-
-### Freelancer Resolution
+The Review direction is:
 
 ```text
-Dispute
-  ↓
-RESOLVED_FREELANCER
-
-Order
-  ↓
-COMPLETED
-
-Escrow
-  ↓
-RELEASED
-
-Freelancer Wallet
-  ↓
-credited
-
-Transaction
-  ↓
-ESCROW_RELEASE
+Client
+  ↓ reviews
+Freelancer
 ```
 
-### Client Resolution
+`reviewerId`, `revieweeId`, and `serviceId` are derived server-side rather than supplied by the client.
+
+The existing Prisma constraint remains:
 
 ```text
-Dispute
-  ↓
-RESOLVED_CLIENT
-
-Order
-  ↓
-REFUNDED
-
-Escrow
-  ↓
-REFUNDED
-
-Client Wallet
-  ↓
-credited
-
-Transaction
-  ↓
-ESCROW_REFUND
+Review.orderId @unique
 ```
 
-These financial/state changes are performed atomically through Prisma transactions.
+Therefore, the implementation maintains one Review per Order.
 
----
+### Reviews/Ratings Testing
 
-## Remaining Foundation / Testing Work
+Manually verified:
 
-* Global exception filter
-* Consistent API response/error shape
-* `@GetUser()` decorator
-* Meaningful automated AuthService tests
-* Automated Wallet unit tests
-* Automated testing for later modules
-* Broader automated testing and security hardening
+* Valid review on a `COMPLETED` Order
+* Duplicate review rejection
+* Rating `0` rejection
+* Rating `6` rejection
+* Non-integer rating rejection
+* Freelancer attempting to review rejection
+* Review on an `IN_PROGRESS` Order rejection
+* Review persistence
+* Freelancer Profile rating update
+* Freelancer `totalReviews` update
+* `REVIEW_RECEIVED` notification creation
 
----
+For the successful review:
 
-## Deferred
+```text
+Review.rating = 5
+Profile.rating = 5
+Profile.totalReviews = 1
+Notification.type = REVIEW_RECEIVED
+Notification recipient = reviewed freelancer
+```
 
-* Admin UI
-* Real-time WebSocket notifications
-* Notification-group abstraction
-* Additional dispute workflow states beyond the existing Blueprint/schema
+Not separately verified in this manual pass:
 
----
+* Non-existent Order
+* Invalid comment type
+* Optional comment omission
+* Second-review aggregation
+* Automated tests
 
-## Next Feature
+These remain candidates for the dedicated automated-testing/hardening phase.
 
-### Phase 8 — Reviews / Ratings
+### Official Phase Sequence
 
-Proceed according to the Blueprint with the next feature after Disputes.
+Reviews/Ratings does **not** change the official phase numbering.
 
----
+```text
+Phase 7 — Disputes
+        ↓
+Supplemental Reviews/Ratings
+        ↓
+Phase 8 — Chat
+```
 
-## Project Rules
-
-* PostgreSQL is the persistent source of truth.
-* Redis is used only where defined by the Blueprint.
-* Financial data must not be cached.
-* Ownership checks belong in the service layer.
-* Multi-step financial operations must use Prisma transactions.
-* Features are considered complete only after implementation and testing.
-* Automated testing remains tracked separately from manual verification.
-* Notifications are queued only after successful financial/state transactions.
-* Do not redesign the architecture without a genuine technical reason.
+**Next official phase:** Phase 8 — Chat

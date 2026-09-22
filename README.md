@@ -228,7 +228,7 @@ Once the server is running:
 * [x] Escrow
 * [x] Notifications (BullMQ + email)
 * [x] Disputes
-* [ ] Reviews
+* [x] Reviews
 * [ ] Real-time chat
 * [ ] File uploads (S3 presigned)
 * [ ] Search

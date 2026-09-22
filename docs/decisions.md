@@ -149,3 +149,72 @@ No `disputeId` field was added to `AuditLog`.
 Dispute audit events continue using the existing order/user-based audit structure.
 
 **Reason:** The current audit model is sufficient to record the relevant Order and Dispute state transitions without expanding the database schema unnecessarily.
+
+
+## 2026-09-22 — Reviews/Ratings Scope and Review Direction
+
+### Reviews/Ratings as a Supplemental Feature
+
+Reviews/Ratings is implemented as a supplemental Blueprint-gap feature rather than a new numbered phase.
+
+**Reason:** The Blueprint defines the Review model, business rules, Profile rating fields, and `REVIEW_RECEIVED` notification type, but does not define a dedicated Reviews implementation phase.
+
+The official phase sequence therefore remains:
+
+```text
+Phase 7 — Disputes
+        ↓
+Supplemental Reviews/Ratings
+        ↓
+Phase 8 — Chat
+```
+
+---
+
+### One Review Per Order
+
+The existing:
+
+```text
+Review.orderId @unique
+```
+
+constraint is retained.
+
+**Reason:** The Blueprint's review rule requires no existing Review for the Order, and the schema explicitly models `orderId` as unique.
+
+The implementation therefore treats one Review per Order as the intended business rule.
+
+---
+
+### Client → Freelancer Review Direction
+
+The current implementation supports:
+
+```text
+Client
+  ↓
+Freelancer
+```
+
+The reviewer and reviewee are derived from the authenticated user and Order.
+
+**Reason:** This matches the implemented marketplace workflow while preventing clients from choosing arbitrary reviewer/reviewee identities through the request body.
+
+The Blueprint does not explicitly define the review direction, so this is documented as an implementation decision rather than a direct Blueprint requirement.
+
+---
+
+### Transactional Review/Profile Update
+
+Review creation and freelancer Profile rating statistics are updated within one Prisma transaction.
+
+**Reason:** A successful Review and its corresponding `rating` / `totalReviews` statistics should remain consistent.
+
+---
+
+### Notification After Review Commit
+
+`REVIEW_RECEIVED` is created/queued only after the Review/Profile transaction successfully commits.
+
+**Reason:** The notification represents a persisted Review and should not be generated for a transaction that rolls back.

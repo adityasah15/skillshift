@@ -1109,3 +1109,56 @@ Be able to explain:
 * Why notifications are queued after successful transactions.
 * Why admin notifications are fanned out individually.
 * Why a dedicated `disputeId` was not added to AuditLog.
+
+
+## 2026-09-22 — Reviews/Ratings
+
+### One Review Per Order
+
+The Review model uses:
+
+```text
+orderId @unique
+```
+
+This means the current business rule is one Review per Order.
+
+The uniqueness constraint is enforced at the database level rather than relying only on application checks.
+
+### Derived Review Relationships
+
+The client does not provide reviewer, reviewee, or service identifiers.
+
+These relationships are derived from the authenticated user and Order.
+
+This prevents the client from manipulating who receives the Review.
+
+### Transactional Profile Aggregation
+
+Creating a Review also changes the freelancer's Profile statistics.
+
+The Review creation and Profile rating/count updates therefore belong in the same Prisma transaction.
+
+This prevents the Review and Profile statistics from becoming inconsistent.
+
+### Notification Timing
+
+The `REVIEW_RECEIVED` notification is created/queued only after the Review transaction succeeds.
+
+This follows the same pattern used by the other financial/domain events in the project.
+
+### Blueprint Gap Handling
+
+A feature can exist in the Blueprint without having a dedicated numbered implementation phase.
+
+Reviews/Ratings was implemented as a supplemental feature without changing the official phase numbering.
+
+### Interview Takeaways
+
+Be able to explain:
+
+* Why `orderId @unique` enforces one Review per Order.
+* Why reviewer/reviewee identities should be derived server-side.
+* Why Review creation and Profile aggregation should be transactional.
+* Why notifications should be triggered after successful persistence.
+* Why Reviews/Ratings does not become a new numbered Blueprint phase.
