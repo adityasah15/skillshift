@@ -229,7 +229,7 @@ Once the server is running:
 * [x] Notifications (BullMQ + email)
 * [x] Disputes
 * [x] Reviews
-* [ ] Real-time chat
+* [x] Real-time chat
 * [ ] File uploads (S3 presigned)
 * [ ] Search
 * [ ] Admin module & analytics
