@@ -37,7 +37,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
-    private readonly notificationService: NotificationService
+    private readonly notificationService: NotificationService,
   ) {}
 
   async handleConnection(client: AuthenticatedSocket) {
@@ -59,6 +59,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async handleDisconnect(client: AuthenticatedSocket) {
+    if (!client.user) {
+      return;
+    }
+
     const key = `chat:presence:${client.user.sub}`;
 
     const count = await this.redisService.decr(key);
@@ -92,47 +96,39 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       forbidNonWhitelisted: true,
     }),
   )
-@SubscribeMessage('send_message')
-async handleSendMessage(
-  @ConnectedSocket() client: AuthenticatedSocket,
-  @MessageBody() data: SendMessageEventDto,
-) {
-  const key = `chat:rate:${client.user.sub}`;
+  @SubscribeMessage('send_message')
+  async handleSendMessage(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: SendMessageEventDto,
+  ) {
+    const key = `chat:rate:${client.user.sub}`;
 
-  const count = await this.redisService.incrWithTtl(key, 10);
+    const count = await this.redisService.incrWithTtl(key, 10);
 
-  if (count > 10) {
-    throw new WsException(
-      'Too many messages. Please slow down.',
+    if (count > 10) {
+      throw new WsException('Too many messages. Please slow down.');
+    }
+
+    const message = await this.chatService.saveMessage(
+      data.orderId,
+      client.user.sub,
+      data.content,
     );
+
+    const order = await this.chatService.getOrderParticipants(data.orderId);
+
+    const recipientId =
+      order.clientId === client.user.sub ? order.freelancerId : order.clientId;
+
+    await this.notificationService.enqueue(
+      recipientId,
+      NotificationType.MESSAGE_RECEIVED,
+      'New message',
+      'You received a new message',
+    );
+
+    this.server.to(`order-${data.orderId}`).emit('new_message', message);
+
+    return message;
   }
-
- const message = await this.chatService.saveMessage(
-  data.orderId,
-  client.user.sub,
-  data.content,
-);
-
-const order = await this.chatService.getOrderParticipants(
-  data.orderId,
-);
-
-const recipientId =
-  order.clientId === client.user.sub
-    ? order.freelancerId
-    : order.clientId;
-
-await this.notificationService.enqueue(
-  recipientId,
-  NotificationType.MESSAGE_RECEIVED,
-  'New message',
-  'You received a new message',
-);
-
-this.server
-  .to(`order-${data.orderId}`)
-  .emit('new_message', message);
-
-return message;
-}
 }
