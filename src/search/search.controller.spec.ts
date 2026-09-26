@@ -8,7 +8,12 @@ describe('SearchController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SearchController],
-      providers: [SearchService],
+      providers: [
+        {
+          provide: SearchService,
+          useValue: {},
+        },
+      ],
     }).compile();
 
     controller = module.get<SearchController>(SearchController);
