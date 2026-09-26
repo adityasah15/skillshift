@@ -7797,3 +7797,186 @@ Phase 10 implements the dedicated Search API.
 The PostgreSQL `searchVector`, GIN index, and trigger were already introduced during Phase 4 and are reused here.
 
 No duplicate search infrastructure was introduced.
+
+# Phase 11 — Admin
+
+## Feature Status
+
+**Status:** Implemented + manually tested successfully.
+
+Phase 11 introduces the Admin module for administrative analytics, user management, and service moderation.
+
+---
+
+## Admin Module
+
+Implemented:
+
+```text
+AdminModule
+AdminController
+AdminService
+```
+
+Admin routes are protected using the existing role-based authorization mechanism:
+
+```text
+@Roles(Role.ADMIN)
+```
+
+Non-admin users are therefore prevented from accessing administrative endpoints.
+
+---
+
+## Endpoints
+
+The Admin module exposes:
+
+```text
+GET   /admin/analytics
+
+PATCH /admin/users/:id/disable
+
+PATCH /admin/users/:id/enable
+
+PATCH /admin/services/:id/moderate
+```
+
+---
+
+## Analytics
+
+The analytics endpoint provides:
+
+* total orders grouped by status
+* released escrow revenue
+* top freelancers by rating
+* dispute rate
+* new users per day for the last 30 days
+
+Analytics responses use Redis caching.
+
+Redis key:
+
+```text
+admin:analytics:dashboard
+```
+
+Cache TTL:
+
+```text
+60 seconds
+```
+
+PostgreSQL remains the persistent source of truth.
+
+---
+
+## User Management
+
+Admin users can disable and enable users.
+
+Disabling a user uses the existing soft-delete mechanism and populates:
+
+```text
+deletedAt
+```
+
+Enabling a user restores:
+
+```text
+deletedAt = null
+```
+
+No separate user-status schema field was introduced.
+
+---
+
+## Service Moderation
+
+The Admin module provides:
+
+```text
+PATCH /admin/services/:id/moderate
+```
+
+for service moderation.
+
+Manual testing verified successful moderation to:
+
+```text
+REJECTED
+```
+
+The test service was subsequently restored to:
+
+```text
+ACTIVE
+```
+
+after testing.
+
+---
+
+## Build Verification
+
+The implementation handoff reports:
+
+```text
+npm run build
+```
+
+passed.
+
+---
+
+## Manual Testing
+
+Phase 11 manual testing successfully verified:
+
+1. Non-admin access to admin routes
+2. Admin analytics response
+3. User disable
+4. User enable
+5. Service moderation
+6. Restoration of the test service after moderation testing
+
+Non-admin administrative access returned:
+
+```text
+403 Forbidden
+```
+
+Admin analytics returned:
+
+```text
+200 OK
+```
+
+Disposable/test users and services were used during testing, and the test fixtures were restored afterward.
+
+---
+
+## Automated Testing
+
+Automated tests were skipped for Phase 11.
+
+This is consistent with the manual-testing approach used for the preceding project phases.
+
+The phase is therefore documented as **implemented + manually tested**, rather than automated-tested.
+
+---
+
+## Database Changes
+
+No new Prisma/database schema changes were introduced during Phase 11.
+
+The implementation uses the existing user soft-delete field and existing service/order/dispute/profile data.
+
+---
+
+## Scope
+
+Phase 11 adds administrative operations without introducing a separate service or microservice architecture.
+
+The existing NestJS monolith, PostgreSQL persistence, Redis caching, JWT authentication, and role-based authorization infrastructure are reused.

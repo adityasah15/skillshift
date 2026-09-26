@@ -1,61 +1,66 @@
-### Phase 10 — Search
+### Phase 11 — Admin
 
 **Status:** Implemented + manually tested
 
 Implemented:
 
-* `SearchModule`
-* `SearchController`
-* `SearchService`
-* `SearchServicesDto`
-* `GET /search/services`
-* PostgreSQL full-text search using `Service.searchVector`
-* Skills filtering
-* Minimum price filtering
-* Maximum price filtering
-* Cursor-based pagination
+* `AdminModule`
+* `AdminController`
+* `AdminService`
+* Admin-only route protection using `@Roles(Role.ADMIN)`
+* Admin analytics
+* Analytics Redis caching
+* User enable/disable through soft deletion
+* Service moderation
 
-  * default limit: 20
-  * maximum limit: 50
-* Redis search-result caching
+### Admin Endpoints
 
-  * TTL: 120 seconds
-* Visibility filtering
+```text
+GET   /admin/analytics
+PATCH /admin/users/:id/disable
+PATCH /admin/users/:id/enable
+PATCH /admin/services/:id/moderate
+```
 
-  * only `ACTIVE` services
-  * deleted services excluded
+### Analytics
 
-### Search Testing
+Implemented analytics include:
 
-Manual testing successfully verified:
+* Total orders by status
+* Released escrow revenue
+* Top freelancers by rating
+* Dispute rate
+* New users per day for the last 30 days
 
-* PostgreSQL full-text search by title/query
-* Skills filtering
-* Price-range filtering
-* Active/non-deleted service filtering
-* Redis search caching behavior
+Analytics are cached using:
 
-### Deferred
+```text
+admin:analytics:dashboard
+```
 
-Cursor pagination was tested and found inconsistent with the current `createdAt DESC, id DESC` ordering.
+with a 60-second TTL.
 
-**Deferred for later pagination review.**
+### Manual Testing
 
-No implementation change was made during Phase 10 testing.
+Verified successfully:
+
+* Non-admin access to admin routes → `403 Forbidden`
+* Admin analytics → `200 OK`
+* Disable user → `deletedAt` populated
+* Enable user → `deletedAt` restored to `null`
+* Service moderation → `REJECTED`
+* Moderated test service restored to `ACTIVE`
+
+Disposable test users/services were used and test fixtures were restored after testing.
 
 ### Database
 
-No new database schema changes were introduced.
+No new schema changes were introduced.
 
-The existing `Service.searchVector` infrastructure from Phase 4 is reused.
+### Automated Testing
 
-### Verification
-
-* `npm run build` passed.
-* Manual Search testing passed.
+Automated tests were skipped for this phase, consistent with the testing approach used for previous phases.
 
 ### Next
 
-Continue according to the Blueprint after documenting Phase 10.
-
-Deferred pagination behavior should be reviewed separately and should not be treated as resolved.
+Continue to **Phase 12** according to the Blueprint.

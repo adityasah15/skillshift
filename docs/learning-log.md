@@ -1328,3 +1328,45 @@ ordering.
 The issue was deferred rather than patched without further analysis.
 
 This reinforced that cursor pagination must be designed around a stable, deterministic ordering rather than treating the cursor as simply another filter.
+
+## Phase 11 — Admin
+
+### Role-Based Authorization
+
+Admin endpoints are protected through the existing role-based authorization mechanism.
+
+The important distinction is:
+
+```text
+Authentication
+→ Who is the user?
+
+Authorization
+→ Is this authenticated user an ADMIN?
+```
+
+The Admin module relies on the existing JWT identity plus `@Roles(Role.ADMIN)` protection rather than implementing separate authentication.
+
+### Soft Delete for User Management
+
+Disabling a user uses the existing `deletedAt` field rather than physically deleting the user.
+
+Enabling the user restores:
+
+```text
+deletedAt = null
+```
+
+This preserves the user's database record while allowing the application to treat the account as disabled.
+
+### Short-Lived Analytics Caching
+
+Admin analytics are suitable for short-lived Redis caching because the dashboard does not require every request to execute all analytics queries against PostgreSQL.
+
+The configured cache TTL is 60 seconds.
+
+PostgreSQL remains the source of truth.
+
+### Interview Takeaway
+
+Be able to explain why admin functionality is implemented as another NestJS module protected by existing authentication/authorization infrastructure rather than creating a separate admin application or authentication system.
