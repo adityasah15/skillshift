@@ -545,3 +545,57 @@ Redis is used for ephemeral Chat concerns such as presence and rate limiting.
 The existing Notification/BullMQ infrastructure handles asynchronous `MESSAGE_RECEIVED` notification processing.
 
 Chat history is exposed through a REST endpoint with cursor-based pagination, while WebSockets provide real-time message delivery.
+
+## Upload Architecture
+
+SkillShift uses AWS S3 for file storage with presigned `PUT` URLs.
+
+```text
+Authenticated Client
+        │
+        ▼
+   NestJS Upload API
+        │
+        ├── JWT authentication
+        ├── ownership authorization
+        ├── file validation
+        │
+        ▼
+ Presigned S3 PUT URL
+        │
+        ▼
+       S3
+        │
+        ▼
+ Upload confirmation
+        │
+        ▼
+ S3 HeadObject
+        │
+        ▼
+ PostgreSQL metadata
+```
+
+The NestJS backend does not act as the primary file-transfer path.
+
+S3 stores the actual uploaded objects while PostgreSQL stores application-level metadata and relationships.
+
+Resource-specific persistence:
+
+```text
+Avatar / Portfolio
+        ↓
+Profile
+
+Service Images
+        ↓
+Service.imageUrls
+
+Delivery Files
+        ↓
+DeliveryFile
+        ↓
+Order
+```
+
+The backend remains responsible for authentication, authorization, validation, presigned URL generation, and upload confirmation.

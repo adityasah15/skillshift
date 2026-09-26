@@ -289,3 +289,57 @@ Chat history uses cursor-based pagination.
 Socket lifecycle handlers must support connections that never successfully authenticate.
 
 **Reason:** A socket can disconnect before JWT authentication completes. Assuming authentication state exists in `handleDisconnect()` caused a runtime error during manual testing and was subsequently fixed.
+
+## Phase 9 — S3 Upload Architecture
+
+### Direct Client-to-S3 Uploads
+
+SkillShift uses S3 presigned `PUT` URLs for file uploads.
+
+**Reason:** Large file contents can be transferred directly between the client and S3 instead of passing through the NestJS application server.
+
+The backend remains responsible for authentication, authorization, validation, URL generation, and upload confirmation.
+
+---
+
+### Upload Confirmation Through `HeadObject`
+
+An upload is not considered successfully persisted merely because a presigned URL was generated.
+
+The backend confirms the uploaded object using S3 `HeadObject` before persisting the corresponding application metadata.
+
+**Reason:** This prevents application records from being created for objects that were never successfully uploaded.
+
+---
+
+### Resource-Specific Ownership
+
+Upload authorization is evaluated according to the requested resource.
+
+Service and delivery uploads require the appropriate ownership checks.
+
+**Reason:** Authentication identifies the user, but the upload resource determines whether that user is authorized to modify the associated application data.
+
+---
+
+### Delivery File Persistence
+
+Delivery uploads create `DeliveryFile` records and are associated with Orders.
+
+Service image uploads instead update `Service.imageUrls`.
+
+**Reason:** Delivery files and service images have different domain semantics and persistence requirements.
+
+---
+
+### DeliveryFile Schema Addition
+
+Phase 9 introduced the `DeliveryFile` model and `Order.deliveryFiles` relation.
+
+Migration:
+
+```text
+20260926140735_add_delivery_file
+```
+
+**Reason:** Delivery files require structured application metadata and an explicit relationship with the corresponding Order.

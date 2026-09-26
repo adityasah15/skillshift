@@ -1,76 +1,62 @@
-### Phase 8 — Chat
+### Phase 9 — Uploads
 
 **Status:** Implemented + manually tested
 
 Implemented:
 
-* Socket.IO/WebSocket chat gateway
-* Socket JWT authentication
-* Order-room joining with participant authorization
-* Message sending and PostgreSQL persistence
-* `new_message` broadcast
-* REST message history
-* Cursor-based message pagination
-* Redis multi-socket presence tracking
-* Redis message rate limiting
-* `MESSAGE_RECEIVED` notification integration
+* S3 presigned `PUT` URL generation
+* S3 upload confirmation
+* `HeadObject` verification
+* Supported upload resources:
 
-### Chat Testing
+  * avatar
+  * portfolio
+  * service images
+  * delivery files
+* JWT authentication
+* Resource ownership authorization
+* Filename/key validation
+* File type validation
+* File size validation
+* Service image persistence through `Service.imageUrls`
+* Delivery file persistence through `DeliveryFile`
 
-Manual testing passed for:
+### Upload Testing
 
-* Valid socket JWT authentication
-* Missing/invalid JWT rejection
-* Safe disconnect lifecycle
-* `join_order` authorization
-* `send_message`
-* Message persistence
-* `new_message` broadcast
-* REST message history
-* Cursor pagination
-* Redis presence with multiple simultaneous sockets
-* Message rate limiting: 10 messages accepted, 11th rejected
-* `MESSAGE_RECEIVED` notification
+Manual testing successfully verified:
 
-### Bug Fixed
+* Presigned URL generation
+* S3 upload
+* Upload confirmation
+* Service ownership authorization
+* Delivery ownership authorization
+* Invalid file type rejection
+* Files larger than 5 MB rejection
+* `DeliveryFile` persistence
+* Service upload persistence through `imageUrls`
 
-`handleDisconnect()` originally assumed `client.user` was always available.
+### Database
 
-An unauthenticated socket could therefore cause an error while disconnecting:
-
-```text
-TypeError: Cannot read properties of undefined (reading 'sub')
-```
-
-The disconnect handler was updated to safely handle sockets that never completed authentication.
-
-### Testing Notes
-
-Temporary manual Socket.IO testing scripts were used:
-
-* `test-chat.js`
-* `test-presence.js`
-
-These were temporary testing files and are not treated as permanent project functionality.
-
-`socket.io-client` was added during the manual testing workflow. Its final dependency status should be verified against the repository before any documentation claims that it is intentionally retained.
-
-### Git
-
-Chat disconnect fix:
+Added and applied migration:
 
 ```text
-Commit: 0859aa0015d1719e1aff67c7f353bdd94d804ae0
-Message: fix: handle unauthenticated chat disconnects
-Pushed: yes
+20260926140735_add_delivery_file
 ```
+
+The migration adds the `DeliveryFile` model and `Order.deliveryFiles` relation.
+
+### Verification
+
+* `npm run build` passed
+* `npx prisma validate` passed
+* Manual Postman/S3 testing passed
 
 ### Testing Scope
 
-Phase 8 has been manually tested successfully.
+Automated Upload tests were **not run**.
 
-Automated testing is not marked as complete by this handoff.
+They remain deferred to the project's automated testing/hardening work.
 
 ### Next
 
-Proceed to the next Blueprint phase after final Chat implementation/dependency cleanup and documentation commit.
+Continue with the next Blueprint phase after documentation and commit verification.

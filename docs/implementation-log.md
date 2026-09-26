@@ -7438,3 +7438,208 @@ This handoff does not establish completion of automated Chat tests. Automated te
 ## Next Step
 
 Complete any remaining temporary testing dependency/file cleanup and proceed to the next Blueprint phase.
+
+# Phase 9 — Uploads
+
+## Feature Status
+
+**Status:** Implemented + manually tested successfully
+
+Phase 9 implements S3-based file uploads using presigned `PUT` URLs and upload confirmation.
+
+The implementation supports multiple upload resources while keeping authorization and persistence within the existing application architecture.
+
+---
+
+## S3 Upload Flow
+
+The upload flow is:
+
+```text
+Authenticated Client
+        │
+        ▼
+Upload API
+        │
+        ├── authenticate JWT
+        │
+        ├── validate resource
+        │
+        ├── validate ownership
+        │
+        ├── validate filename
+        │
+        ├── validate file type / size
+        │
+        ▼
+Generate presigned PUT URL
+        │
+        ▼
+Client uploads directly to S3
+        │
+        ▼
+Upload confirmation
+        │
+        ▼
+S3 HeadObject verification
+        │
+        ▼
+Persist application metadata
+```
+
+S3 therefore handles the file transfer while the SkillShift backend controls authorization, validation, confirmation, and persistence.
+
+---
+
+## Supported Upload Resources
+
+The Upload module supports:
+
+* avatar
+* portfolio
+* service images
+* delivery files
+
+The implementation uses the resource type to determine the relevant ownership and persistence behavior.
+
+---
+
+## Security / Validation
+
+Upload requests are protected by JWT authentication.
+
+Ownership checks are performed for protected resources.
+
+The implementation also validates:
+
+* filename/key information
+* file type
+* file size
+
+Manual testing verified rejection of invalid file types and files larger than 5 MB.
+
+---
+
+## Upload Confirmation
+
+Presigned URL generation does not by itself establish that the expected object was successfully uploaded.
+
+The confirmation flow uses S3 `HeadObject` to verify the uploaded object before application persistence.
+
+This separates:
+
+```text
+URL generation
+```
+
+from:
+
+```text
+successful upload confirmation
+```
+
+---
+
+## Persistence
+
+Different upload resources use the existing database models according to their purpose.
+
+### Service images
+
+Service uploads update:
+
+```text
+Service.imageUrls
+```
+
+Manual testing verified successful persistence of the uploaded service image information.
+
+### Delivery files
+
+Delivery uploads create:
+
+```text
+DeliveryFile
+```
+
+records.
+
+`DeliveryFile` is created only for:
+
+```text
+resource = "delivery"
+```
+
+Manual testing verified successful `DeliveryFile` persistence.
+
+---
+
+## Database Changes
+
+Added the `DeliveryFile` model and the corresponding `Order.deliveryFiles` relation.
+
+Migration:
+
+```text
+20260926140735_add_delivery_file
+```
+
+The migration was applied successfully.
+
+---
+
+## Verification
+
+Implementation verification:
+
+```text
+npm run build
+```
+
+Passed.
+
+Prisma validation:
+
+```text
+npx prisma validate
+```
+
+Passed.
+
+---
+
+## Manual Testing
+
+The following Upload functionality was manually tested successfully:
+
+1. Presigned URL generation
+2. S3 upload
+3. Upload confirmation
+4. Service ownership authorization
+5. Delivery ownership authorization
+6. Invalid file type rejection
+7. File size rejection above 5 MB
+8. `DeliveryFile` persistence
+9. Service image persistence through `imageUrls`
+
+No known Phase 9 manual-testing failure remains from this testing pass.
+
+---
+
+## Automated Testing
+
+Required automated Upload tests were not run during this implementation/testing pass.
+
+They remain deferred to the dedicated automated testing/hardening work.
+
+This documentation therefore marks Phase 9 as **manually tested**, not fully automated-tested.
+
+---
+
+## Git / Working Tree
+
+The testing handoff states that the working tree was clean and the relevant work was committed.
+
+The exact Upload commit hash was not supplied in the handoff and is therefore not recorded here.
+
+Do not invent a commit hash; obtain it from Git history when needed.

@@ -1232,3 +1232,55 @@ Redis     → presence / rate limiting
 ```
 
 The existing project infrastructure can therefore be reused instead of introducing separate systems for Chat.
+
+## Phase 9 — Uploads
+
+### Presigned S3 Uploads
+
+The backend does not need to receive the actual file contents for every upload.
+
+Instead, it can generate a short-lived presigned `PUT` URL and allow the client to upload directly to S3.
+
+This keeps large file transfer outside the NestJS application process.
+
+### Upload Confirmation
+
+Generating a presigned URL does not prove that the upload succeeded.
+
+The backend uses S3 `HeadObject` during confirmation to verify that the expected object exists before persisting the corresponding application state.
+
+### Authorization Before Storage
+
+S3 storage does not replace application authorization.
+
+The backend must determine whether the authenticated user is allowed to upload the requested resource before generating the presigned URL.
+
+### Resource-Specific Persistence
+
+Different upload types have different persistence requirements:
+
+```text
+avatar / portfolio → Profile
+service images     → Service.imageUrls
+delivery files     → DeliveryFile
+```
+
+The upload system therefore handles storage and application metadata as separate concerns.
+
+### File Validation
+
+Upload validation includes file type and file size restrictions.
+
+The manual testing pass verified rejection of unsupported file types and files larger than 5 MB.
+
+### Interview Takeaway
+
+Be able to explain why the backend uses:
+
+```text
+NestJS → authorization / validation / presigned URL
+S3    → actual file storage
+PostgreSQL → application metadata
+```
+
+rather than sending the entire file through the NestJS API.
