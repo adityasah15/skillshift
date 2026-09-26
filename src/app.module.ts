@@ -22,6 +22,7 @@ import { ReviewModule } from './review/review.module';
 import { ChatModule } from './chat/chat.module';
 import { UploadModule } from './upload/upload.module';
 import { SearchModule } from './search/search.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { SearchModule } from './search/search.module';
     ChatModule,
     UploadModule,
     SearchModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [
