@@ -21,6 +21,7 @@ import { DisputeModule } from './dispute/dispute.module';
 import { ReviewModule } from './review/review.module';
 import { ChatModule } from './chat/chat.module';
 import { UploadModule } from './upload/upload.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { UploadModule } from './upload/upload.module';
     ReviewModule,
     ChatModule,
     UploadModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [
