@@ -1284,3 +1284,47 @@ PostgreSQL → application metadata
 ```
 
 rather than sending the entire file through the NestJS API.
+
+## Phase 10 — Search
+
+### PostgreSQL Full-Text Search
+
+The Search module reuses PostgreSQL's existing `searchVector` infrastructure rather than performing application-level text matching.
+
+This allows search to use the database's full-text-search capabilities and the GIN index created during Phase 4.
+
+### Search vs Service Listing
+
+The Service module owns normal service listing and CRUD behavior.
+
+The Search module owns:
+
+```text
+GET /search/services
+```
+
+and search-specific query behavior.
+
+This keeps the Phase 10 Search API separate from the Phase 4 Service module while reusing its database search infrastructure.
+
+### Redis Search Caching
+
+Search results can be cached because they are read-heavy data and PostgreSQL remains the source of truth.
+
+The Phase 10 search cache uses a 120-second TTL.
+
+### Cursor Pagination Tradeoff
+
+Cursor pagination depends on the ordering fields and cursor condition matching exactly.
+
+During testing, an inconsistency was found between the implemented cursor behavior and the current:
+
+```text
+createdAt DESC, id DESC
+```
+
+ordering.
+
+The issue was deferred rather than patched without further analysis.
+
+This reinforced that cursor pagination must be designed around a stable, deterministic ordering rather than treating the cursor as simply another filter.

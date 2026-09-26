@@ -7643,3 +7643,157 @@ The testing handoff states that the working tree was clean and the relevant work
 The exact Upload commit hash was not supplied in the handoff and is therefore not recorded here.
 
 Do not invent a commit hash; obtain it from Git history when needed.
+
+# Phase 10 — Search
+
+## Feature Status
+
+**Status:** Implemented + manually tested successfully.
+
+Phase 10 adds the dedicated Search API using the PostgreSQL full-text-search infrastructure established during Phase 4.
+
+---
+
+## Search Module
+
+Implemented:
+
+```text
+src/search/
+├── SearchModule
+├── SearchController
+├── SearchService
+└── SearchServicesDto
+```
+
+The module is registered with the application.
+
+Endpoint:
+
+```text
+GET /search/services
+```
+
+---
+
+## Search Implementation
+
+Service search uses the existing PostgreSQL `Service.searchVector` field.
+
+The Phase 4 database infrastructure is therefore reused rather than introducing another search mechanism.
+
+The Search API supports:
+
+* full-text query
+* skills filtering
+* minimum price filtering
+* maximum price filtering
+
+Only services satisfying the required visibility conditions are returned:
+
+```text
+Service.deletedAt IS NULL
+Service.status = ACTIVE
+```
+
+---
+
+## Pagination
+
+Search results use cursor-based pagination.
+
+Configured limits:
+
+```text
+default limit = 20
+maximum limit = 50
+```
+
+However, manual testing identified an inconsistency between cursor pagination behavior and the current:
+
+```text
+createdAt DESC, id DESC
+```
+
+ordering.
+
+This was **not changed during Phase 10 testing**.
+
+Cursor pagination has therefore been explicitly deferred for later review.
+
+It should not be documented as fully verified or as a resolved issue.
+
+---
+
+## Redis Caching
+
+Search results are cached using Redis.
+
+Configured TTL:
+
+```text
+120 seconds
+```
+
+Manual testing exercised the search caching behavior successfully.
+
+Redis remains a performance layer; PostgreSQL remains the persistent source of truth.
+
+---
+
+## Database
+
+No new Prisma schema changes were introduced for Phase 10.
+
+The implementation reuses the existing:
+
+```text
+Service.searchVector
+```
+
+full-text-search infrastructure created during Phase 4.
+
+---
+
+## Build Verification
+
+```text
+npm run build
+```
+
+Passed.
+
+---
+
+## Manual Testing
+
+The following areas were manually verified:
+
+1. PostgreSQL full-text search by title/query
+2. Skills filtering
+3. Minimum/maximum price filtering
+4. Active service visibility
+5. Deleted service exclusion
+6. Redis search caching
+
+Two sample React services were activated directly in PostgreSQL for testing.
+
+---
+
+## Deferred Testing / Issues
+
+Cursor pagination was tested but found inconsistent with the current `createdAt DESC, id DESC` ordering.
+
+The issue was intentionally deferred rather than changing the implementation during this phase.
+
+Automated Search tests were not reported as completed in the testing handoff and therefore remain unmarked here.
+
+---
+
+## Scope Boundary
+
+Phase 10 implements the dedicated Search API.
+
+The PostgreSQL `searchVector`, GIN index, and trigger were already introduced during Phase 4 and are reused here.
+
+No duplicate search infrastructure was introduced.

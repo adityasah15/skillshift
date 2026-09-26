@@ -1,62 +1,61 @@
-### Phase 9 — Uploads
+### Phase 10 — Search
 
 **Status:** Implemented + manually tested
 
 Implemented:
 
-* S3 presigned `PUT` URL generation
-* S3 upload confirmation
-* `HeadObject` verification
-* Supported upload resources:
+* `SearchModule`
+* `SearchController`
+* `SearchService`
+* `SearchServicesDto`
+* `GET /search/services`
+* PostgreSQL full-text search using `Service.searchVector`
+* Skills filtering
+* Minimum price filtering
+* Maximum price filtering
+* Cursor-based pagination
 
-  * avatar
-  * portfolio
-  * service images
-  * delivery files
-* JWT authentication
-* Resource ownership authorization
-* Filename/key validation
-* File type validation
-* File size validation
-* Service image persistence through `Service.imageUrls`
-* Delivery file persistence through `DeliveryFile`
+  * default limit: 20
+  * maximum limit: 50
+* Redis search-result caching
 
-### Upload Testing
+  * TTL: 120 seconds
+* Visibility filtering
+
+  * only `ACTIVE` services
+  * deleted services excluded
+
+### Search Testing
 
 Manual testing successfully verified:
 
-* Presigned URL generation
-* S3 upload
-* Upload confirmation
-* Service ownership authorization
-* Delivery ownership authorization
-* Invalid file type rejection
-* Files larger than 5 MB rejection
-* `DeliveryFile` persistence
-* Service upload persistence through `imageUrls`
+* PostgreSQL full-text search by title/query
+* Skills filtering
+* Price-range filtering
+* Active/non-deleted service filtering
+* Redis search caching behavior
+
+### Deferred
+
+Cursor pagination was tested and found inconsistent with the current `createdAt DESC, id DESC` ordering.
+
+**Deferred for later pagination review.**
+
+No implementation change was made during Phase 10 testing.
 
 ### Database
 
-Added and applied migration:
+No new database schema changes were introduced.
 
-```text
-20260926140735_add_delivery_file
-```
-
-The migration adds the `DeliveryFile` model and `Order.deliveryFiles` relation.
+The existing `Service.searchVector` infrastructure from Phase 4 is reused.
 
 ### Verification
 
-* `npm run build` passed
-* `npx prisma validate` passed
-* Manual Postman/S3 testing passed
-
-### Testing Scope
-
-Automated Upload tests were **not run**.
-
-They remain deferred to the project's automated testing/hardening work.
+* `npm run build` passed.
+* Manual Search testing passed.
 
 ### Next
 
-Continue with the next Blueprint phase after documentation and commit verification.
+Continue according to the Blueprint after documenting Phase 10.
+
+Deferred pagination behavior should be reviewed separately and should not be treated as resolved.
