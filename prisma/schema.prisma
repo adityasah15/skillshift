@@ -186,14 +186,15 @@ model Order {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  client       User          @relation("ClientOrders", fields: [clientId], references: [id])
-  freelancer   User          @relation("FreelancerOrders", fields: [freelancerId], references: [id])
-  service      Service       @relation(fields: [serviceId], references: [id])
-  escrow       Escrow?
-  review       Review?
-  dispute      Dispute?
-  conversation Conversation?
-  auditLogs    AuditLog[]
+  client        User           @relation("ClientOrders", fields: [clientId], references: [id])
+  freelancer    User           @relation("FreelancerOrders", fields: [freelancerId], references: [id])
+  service       Service        @relation(fields: [serviceId], references: [id])
+  escrow        Escrow?
+  review        Review?
+  dispute       Dispute?
+  conversation  Conversation?
+  auditLogs     AuditLog[]
+  deliveryFiles DeliveryFile[]
 }
 
 model Escrow {
@@ -281,4 +282,18 @@ model AuditLog {
 
   user  User?  @relation(fields: [userId], references: [id])
   order Order? @relation(fields: [orderId], references: [id])
+}
+
+model DeliveryFile {
+  id           String   @id @default(uuid())
+  orderId      String
+  key          String
+  originalName String
+  contentType  String
+  size         Int
+  createdAt    DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
 }

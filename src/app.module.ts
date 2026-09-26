@@ -20,6 +20,7 @@ import { NotificationModule } from './notification/notification.module';
 import { DisputeModule } from './dispute/dispute.module';
 import { ReviewModule } from './review/review.module';
 import { ChatModule } from './chat/chat.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ChatModule } from './chat/chat.module';
     DisputeModule,
     ReviewModule,
     ChatModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [
