@@ -7980,3 +7980,214 @@ The implementation uses the existing user soft-delete field and existing service
 Phase 11 adds administrative operations without introducing a separate service or microservice architecture.
 
 The existing NestJS monolith, PostgreSQL persistence, Redis caching, JWT authentication, and role-based authorization infrastructure are reused.
+
+# Phase 12 — Polish + Quality
+
+## Feature Status
+
+**Status:** Complete.
+
+Phase 12 focused on production-oriented polish, cross-cutting API behavior, security middleware, API documentation, error handling, and automated test coverage.
+
+---
+
+## Global Logging
+
+Added a global `LoggingInterceptor`.
+
+It records:
+
+* request method
+* request URL
+* response status code
+* request duration
+* authenticated user ID where available
+
+NestJS's built-in `Logger` is used rather than introducing an external logging framework.
+
+---
+
+## Global Response Transformation
+
+Added a global `TransformInterceptor`.
+
+The interceptor provides a consistent structure for successful API responses.
+
+Both the logging and transformation interceptors are registered globally in:
+
+```text
+src/main.ts
+```
+
+---
+
+## Global Exception Handling
+
+Added `GlobalExceptionFilter`.
+
+The filter handles NestJS `HttpException` responses and translates relevant Prisma errors into appropriate HTTP responses.
+
+Prisma mappings:
+
+```text
+P2002 → 409 Conflict
+P2025 → 404 Not Found
+P2003 → 400 Bad Request
+```
+
+The filter also provides a consistent error-response structure.
+
+Error messages were reviewed and improved for consistency.
+
+---
+
+## Security Middleware
+
+Added Helmet to provide HTTP security headers.
+
+HTTP response compression was also enabled globally.
+
+These changes improve production readiness without changing the existing application architecture.
+
+---
+
+## Swagger / OpenAPI
+
+Added Swagger/OpenAPI documentation to the existing NestJS application.
+
+Swagger Bearer authentication was configured, and relevant controllers were reviewed and annotated with:
+
+```text
+@ApiBearerAuth()
+```
+
+Swagger remains part of the existing application rather than being deployed as a separate documentation service.
+
+---
+
+## Business Rule / Authorization Review
+
+Relevant controllers and services were reviewed for:
+
+* ownership enforcement
+* authorization
+* business-rule validation
+* consistent error handling
+
+The review also resulted in improvements to relevant service logic, including changes involving:
+
+* `EscrowService`
+* `DisputeService`
+
+---
+
+## Automated Testing
+
+Phase 12 expanded unit-test coverage for important service and cross-cutting logic.
+
+The complete Jest suite passed:
+
+```text
+32 test suites passed
+136 tests passed
+0 failures
+```
+
+Coverage:
+
+```text
+Statements: 60.41%
+Branches:   61.69%
+Functions:  42.61%
+Lines:      60.19%
+```
+
+Important coverage results:
+
+```text
+Escrow service  → 100%
+Auth service    → 100% statements
+Order service   → 100% statements
+```
+
+The project's Phase 12 coverage target of **60%+ overall** was achieved.
+
+---
+
+## Coverage Limitation
+
+Some modules continue to have lower individual coverage.
+
+Additional tests were not added solely to increase the overall percentage. The focus remains on tests that exercise meaningful business logic and important failure paths.
+
+---
+
+## Files / Areas Changed
+
+Phase 12 work included changes to:
+
+```text
+src/common/interceptors/logging.interceptor.ts
+src/common/interceptors/logging.interceptor.spec.ts
+src/common/interceptors/transform.interceptor.ts
+src/common/interceptors/transform.interceptor.spec.ts
+src/common/filters/global-exception.filter.ts
+src/main.ts
+nest-cli.json
+package.json
+package-lock.json
+```
+
+Additional changes were made across relevant controllers and service spec files for Swagger support and test coverage, as well as:
+
+```text
+src/escrow/escrow.service.ts
+src/dispute/dispute.service.ts
+```
+
+The exact final Git history should be used when recording any additional commit hashes.
+
+---
+
+## Git History
+
+Relevant Phase 12 commits reported during the implementation:
+
+```text
+7631ce7 — test: expand auth escrow and order service coverage
+d3ad418 — feat: add global response interceptors
+8cfbaba — feat: add API documentation and security middleware
+```
+
+Additional Phase 12 work was completed afterward.
+
+Any newer commit hash should be obtained from the current repository history rather than inferred or invented.
+
+---
+
+## Architectural Decisions
+
+The existing NestJS monolith architecture was retained.
+
+Phase 12 uses:
+
+* NestJS built-in `Logger`
+* global interceptors for cross-cutting request/response behavior
+* a global exception filter for consistent error handling
+* Prisma error translation at the global exception boundary
+* Swagger within the existing NestJS application
+* globally applied Helmet and compression
+
+No microservices or unrelated infrastructure were introduced.
+
+---
+
+## Deferred Work
+
+Phase 13 remains:
+
+**Docker + CI/CD + Deployment**
+
+The Next.js frontend remains deferred.
+
+Phase 13 should begin by inspecting the current repository and comparing the existing Docker/GitHub Actions configuration against the Blueprint rather than assuming the infrastructure is missing.

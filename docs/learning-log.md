@@ -1370,3 +1370,52 @@ PostgreSQL remains the source of truth.
 ### Interview Takeaway
 
 Be able to explain why admin functionality is implemented as another NestJS module protected by existing authentication/authorization infrastructure rather than creating a separate admin application or authentication system.
+
+## Phase 12 — Polish + Quality
+
+### Interceptors
+
+Learned how NestJS interceptors can handle cross-cutting concerns without duplicating logic across controllers.
+
+SkillShift uses global interceptors for:
+
+* request logging
+* response transformation
+
+### Exception Filters
+
+Learned how a global NestJS exception filter can provide a single boundary for consistent API error handling.
+
+The filter also allows Prisma-specific database errors to be translated into meaningful HTTP responses.
+
+### Prisma Error Mapping
+
+Important mappings implemented:
+
+```text
+P2002 → conflict
+P2025 → not found
+P2003 → bad request
+```
+
+This keeps database-specific error codes out of the API contract exposed to clients.
+
+### API Documentation
+
+Swagger/OpenAPI can be integrated directly into the NestJS application.
+
+Bearer authentication configuration allows protected endpoints to be represented correctly in the generated API documentation.
+
+### Production Middleware
+
+Helmet and compression are examples of cross-cutting HTTP concerns that can be applied globally rather than implemented separately in each controller.
+
+### Test Coverage
+
+Learned that coverage percentage is useful as a project-level signal, but high coverage does not automatically mean high-quality tests.
+
+Phase 12 reached the 60%+ overall target while prioritizing meaningful business logic and failure-path coverage.
+
+### Interview Takeaway
+
+Be able to explain why cross-cutting concerns such as logging, response transformation, exception handling, security headers, and compression belong at the application boundary rather than being duplicated throughout individual business modules.
