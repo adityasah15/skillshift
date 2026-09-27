@@ -29,7 +29,7 @@ export class DisputeService {
       where: { id: createDisputeDto.orderId },
     });
     if (!order) {
-      throw new NotFoundException('order not found');
+      throw new NotFoundException('Order not found');
     }
     if (userId !== order.clientId) {
       throw new ForbiddenException(

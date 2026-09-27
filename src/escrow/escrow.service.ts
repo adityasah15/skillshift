@@ -5,13 +5,10 @@ import {
 } from '@nestjs/common';
 
 import { EscrowStatus } from 'generated/prisma/enums';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from 'generated/prisma/client';
 
 @Injectable()
 export class EscrowService {
-  constructor(private readonly prismaService: PrismaService) {}
-
   async hold(tx: Prisma.TransactionClient, amount: number, orderId: string) {
     return tx.escrow.create({
       data: {
@@ -23,8 +20,8 @@ export class EscrowService {
 
   async release(tx: Prisma.TransactionClient, orderId: string) {
     const escrow = await tx.escrow.findUnique({
-  where: { orderId },
-});
+      where: { orderId },
+    });
     if (!escrow) {
       throw new NotFoundException('Escrow not found');
     }

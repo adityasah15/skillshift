@@ -99,9 +99,9 @@ describe('OrderService', () => {
     it('should throw when service does not exist', async () => {
       prisma.service.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.create('client-1', dto),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.create('client-1', dto)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
 
     it('should throw when service is deleted', async () => {
@@ -110,28 +110,28 @@ describe('OrderService', () => {
         deletedAt: new Date(),
       });
 
-      await expect(
-        service.create('client-1', dto),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.create('client-1', dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
 
     it('should throw when service is not active', async () => {
       prisma.service.findUnique.mockResolvedValue({
         ...serviceData,
-        status: ServiceStatus.PENDING,
+        status: ServiceStatus.PENDING_REVIEW,
       });
 
-      await expect(
-        service.create('client-1', dto),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.create('client-1', dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
 
     it('should reject ordering own service', async () => {
       prisma.service.findUnique.mockResolvedValue(serviceData);
 
-      await expect(
-        service.create('freelancer-1', dto),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.create('freelancer-1', dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
 
     it('should reject insufficient balance', async () => {
@@ -143,9 +143,9 @@ describe('OrderService', () => {
         balance: 50,
       });
 
-      await expect(
-        service.create('client-1', dto),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.create('client-1', dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
 
     it('should create order and hold escrow', async () => {
@@ -232,17 +232,17 @@ describe('OrderService', () => {
     it('should return order for client', async () => {
       prisma.order.findUnique.mockResolvedValue(order);
 
-      await expect(
-        service.findOne('client-1', 'order-1'),
-      ).resolves.toEqual(order);
+      await expect(service.findOne('client-1', 'order-1')).resolves.toEqual(
+        order,
+      );
     });
 
     it('should return order for freelancer', async () => {
       prisma.order.findUnique.mockResolvedValue(order);
 
-      await expect(
-        service.findOne('freelancer-1', 'order-1'),
-      ).resolves.toEqual(order);
+      await expect(service.findOne('freelancer-1', 'order-1')).resolves.toEqual(
+        order,
+      );
     });
   });
 
@@ -296,11 +296,7 @@ describe('OrderService', () => {
       notificationService.enqueue.mockResolvedValue(undefined);
       autoCompleteQueue.add.mockResolvedValue({});
 
-      const result = await service.deliver(
-        'freelancer-1',
-        'order-1',
-        'Done',
-      );
+      const result = await service.deliver('freelancer-1', 'order-1', 'Done');
 
       expect(result).toEqual(updatedOrder);
 
@@ -428,10 +424,7 @@ describe('OrderService', () => {
       escrowService.release.mockResolvedValue({});
       notificationService.enqueue.mockResolvedValue(undefined);
 
-      const result = await service.complete(
-        'client-1',
-        'order-1',
-      );
+      const result = await service.complete('client-1', 'order-1');
 
       expect(result).toEqual(completedOrder);
 
@@ -546,10 +539,7 @@ describe('OrderService', () => {
       escrowService.refund.mockResolvedValue({});
       notificationService.enqueue.mockResolvedValue(undefined);
 
-      const result = await service.cancel(
-        'client-1',
-        'order-1',
-      );
+      const result = await service.cancel('client-1', 'order-1');
 
       expect(result).toEqual(cancelledOrder);
 
