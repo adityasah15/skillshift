@@ -10,12 +10,10 @@ import {
 } from '@nestjs/websockets';
 
 import { Server } from 'socket.io';
-import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Socket } from 'socket.io';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { ChatService } from './chat.service';
-import { SendMessageDto } from './dto/send-message.dto';
 import { SendMessageEventDto } from './dto/send-message-event.dto';
 import { ValidationPipe, UsePipes } from '@nestjs/common';
 import { RedisService } from 'src/redis/redis.service';
@@ -42,9 +40,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
-      const token = client.handshake.auth?.token;
+      const token: unknown = client.handshake.auth?.token;
 
-      if (!token) {
+      if (typeof token !== 'string' || token.length === 0) {
         throw new WsException('Authentication required');
       }
 

@@ -7,7 +7,12 @@ import { OrderAutoCompleteModule } from './order-auto-complete/order-auto-comple
 import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
-  imports: [PrismaModule, EscrowModule, OrderAutoCompleteModule, NotificationModule],
+  imports: [
+    PrismaModule,
+    EscrowModule,
+    OrderAutoCompleteModule,
+    NotificationModule,
+  ],
   controllers: [OrderController],
   providers: [OrderService],
 })

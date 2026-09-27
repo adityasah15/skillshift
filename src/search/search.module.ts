@@ -5,10 +5,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
-  imports: [
-    PrismaModule,
-    RedisModule,
-  ],
+  imports: [PrismaModule, RedisModule],
   controllers: [SearchController],
   providers: [SearchService],
   exports: [SearchService],

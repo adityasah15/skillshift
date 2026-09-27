@@ -23,8 +23,8 @@ export class ServiceQueryDto {
   limit?: number;
 
   @IsOptional()
-  @Transform(({ value }) => {
-    if (!value) return value;
+  @Transform(({ value }: { value: unknown }) => {
+    if (typeof value !== 'string' || value.length === 0) return value;
     return value.split(',');
   })
   @IsArray()

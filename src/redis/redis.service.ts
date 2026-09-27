@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
@@ -63,12 +63,12 @@ export class RedisService implements OnModuleDestroy {
   }
 
   async incrWithTtl(key: string, ttl: number): Promise<number> {
-  const count = await this.redis.incr(key);
+    const count = await this.redis.incr(key);
 
-  if (count === 1) {
-    await this.redis.expire(key, ttl);
+    if (count === 1) {
+      await this.redis.expire(key, ttl);
+    }
+
+    return count;
   }
-
-  return count;
-}
 }

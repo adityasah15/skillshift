@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { DisputeService } from './dispute.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NotificationService } from 'src/notification/notification.service';
+import { Prisma } from 'generated/prisma/client';
 
 describe('DisputeService', () => {
   let service: DisputeService;
@@ -26,7 +27,10 @@ describe('DisputeService', () => {
     user: {
       findMany: jest.fn(),
     },
-    $transaction: jest.fn((callback) => callback(transactionMock)),
+    $transaction: jest.fn(
+      (callback: (transaction: Prisma.TransactionClient) => Promise<unknown>) =>
+        callback(transactionMock as unknown as Prisma.TransactionClient),
+    ),
   };
 
   const notificationMock = {
@@ -147,7 +151,7 @@ describe('DisputeService', () => {
         orderId: 'order-id',
         before: { orderStatus: 'IN_PROGRESS' },
         after: { orderStatus: 'DISPUTED' },
-      }),
+      }) as unknown,
     });
     expect(notificationMock.enqueue).toHaveBeenCalledTimes(2);
     expect(notificationMock.enqueue).toHaveBeenCalledWith(

@@ -34,9 +34,7 @@ export class ReviewService {
     }
 
     if (order.status !== OrderStatus.COMPLETED) {
-      throw new BadRequestException(
-        'You can only review completed orders',
-      );
+      throw new BadRequestException('You can only review completed orders');
     }
 
     const existingReview = await this.prismaService.review.findUnique({
@@ -46,9 +44,7 @@ export class ReviewService {
     });
 
     if (existingReview) {
-      throw new BadRequestException(
-        'A review already exists for this order',
-      );
+      throw new BadRequestException('A review already exists for this order');
     }
 
     const revieweeId = order.freelancerId;
@@ -78,8 +74,7 @@ export class ReviewService {
       const newTotalReviews = profile.totalReviews + 1;
 
       const newRating =
-        (profile.rating * profile.totalReviews +
-          createReviewDto.rating) /
+        (profile.rating * profile.totalReviews + createReviewDto.rating) /
         newTotalReviews;
 
       await tx.profile.update({

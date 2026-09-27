@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from 'generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RedisService } from 'src/redis/redis.service';
@@ -16,7 +20,7 @@ export class AdminService {
     const cached = await this.redisService.get(cacheKey);
 
     if (cached) {
-      return JSON.parse(cached);
+      return JSON.parse(cached) as unknown;
     }
 
     const [
@@ -94,9 +98,7 @@ export class AdminService {
     const disputeRate =
       totalOrders === 0
         ? 0
-        : Number(
-            ((totalDisputes / totalOrders) * 100).toFixed(2),
-          );
+        : Number(((totalDisputes / totalOrders) * 100).toFixed(2));
 
     const result = {
       ordersByStatus: ordersByStatus.map((item) => ({
@@ -116,79 +118,72 @@ export class AdminService {
       })),
     };
 
-    await this.redisService.set(
-      cacheKey,
-      JSON.stringify(result),
-      60,
-    );
+    await this.redisService.set(cacheKey, JSON.stringify(result), 60);
 
     return result;
   }
 
   async manageUser(userId: string, action: 'disable' | 'enable') {
-  const user = await this.prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      role: true,
-      deletedAt: true,
-    },
-  });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        deletedAt: true,
+      },
+    });
 
-  if (!user) {
-    throw new NotFoundException('User not found');
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role === 'ADMIN') {
+      throw new ForbiddenException(
+        'Admin users cannot be managed through this endpoint',
+      );
+    }
+
+    const deletedAt = action === 'disable' ? new Date() : null;
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        deletedAt,
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        deletedAt: true,
+      },
+    });
   }
 
-  if (user.role === 'ADMIN') {
-    throw new ForbiddenException(
-      'Admin users cannot be managed through this endpoint',
-    );
+  async moderateService(serviceId: string, status: 'ACTIVE' | 'REJECTED') {
+    const service = await this.prisma.service.findUnique({
+      where: { id: serviceId },
+      select: {
+        id: true,
+        status: true,
+        deletedAt: true,
+      },
+    });
+
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+
+    return this.prisma.service.update({
+      where: { id: serviceId },
+      data: {
+        status,
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        deletedAt: true,
+      },
+    });
   }
-
-  const deletedAt = action === 'disable' ? new Date() : null;
-
-  return this.prisma.user.update({
-    where: { id: userId },
-    data: {
-      deletedAt,
-    },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      deletedAt: true,
-    },
-  });
-}
-
-async moderateService(
-  serviceId: string,
-  status: 'ACTIVE' | 'REJECTED',
-) {
-  const service = await this.prisma.service.findUnique({
-    where: { id: serviceId },
-    select: {
-      id: true,
-      status: true,
-      deletedAt: true,
-    },
-  });
-
-  if (!service) {
-    throw new NotFoundException('Service not found');
-  }
-
-  return this.prisma.service.update({
-    where: { id: serviceId },
-    data: {
-      status,
-    },
-    select: {
-      id: true,
-      title: true,
-      status: true,
-      deletedAt: true,
-    },
-  });
-}
 }

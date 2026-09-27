@@ -40,9 +40,7 @@ describe('LoggingInterceptor', () => {
     interceptor.intercept(context, next).subscribe({
       complete: () => {
         expect(loggerSpy).toHaveBeenCalledWith(
-          expect.stringMatching(
-            /GET \/services 200 - \d+ms - userId=user-123/,
-          ),
+          expect.stringMatching(/GET \/services 200 - \d+ms - userId=user-123/),
         );
 
         loggerSpy.mockRestore();

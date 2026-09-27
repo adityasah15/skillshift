@@ -13,7 +13,7 @@ export class OrderAutoCompleteProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job) {
+  async process(job: Job<{ orderId: string }>) {
     if (job.name !== 'auto-complete-order') {
       return;
     }

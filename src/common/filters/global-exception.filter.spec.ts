@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
@@ -95,13 +94,10 @@ describe('GlobalExceptionFilter', () => {
   });
 
   it('should map Prisma P2025 to 404 Not Found', () => {
-    const error = new Prisma.PrismaClientKnownRequestError(
-      'Record not found',
-      {
-        code: 'P2025',
-        clientVersion: '7.8.0',
-      },
-    );
+    const error = new Prisma.PrismaClientKnownRequestError('Record not found', {
+      code: 'P2025',
+      clientVersion: '7.8.0',
+    });
 
     filter.catch(error, host as any);
 
@@ -148,4 +144,3 @@ describe('GlobalExceptionFilter', () => {
     );
   });
 });
-

@@ -1,12 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 import { EscrowService } from './escrow.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { EscrowStatus } from 'generated/prisma/enums';
+import { Prisma } from 'generated/prisma/client';
 
 describe('EscrowService', () => {
   let service: EscrowService;
@@ -47,7 +45,7 @@ describe('EscrowService', () => {
       tx.escrow.create.mockResolvedValue(escrow);
 
       const result = await service.hold(
-        tx as any,
+        tx as unknown as Prisma.TransactionClient,
         100,
         'order-1',
       );
@@ -68,7 +66,7 @@ describe('EscrowService', () => {
       tx.escrow.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.release(tx as any, 'order-1'),
+        service.release(tx as unknown as Prisma.TransactionClient, 'order-1'),
       ).rejects.toBeInstanceOf(NotFoundException);
 
       expect(tx.escrow.findUnique).toHaveBeenCalledWith({
@@ -88,7 +86,7 @@ describe('EscrowService', () => {
       });
 
       await expect(
-        service.release(tx as any, 'order-1'),
+        service.release(tx as unknown as Prisma.TransactionClient, 'order-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(tx.escrow.update).not.toHaveBeenCalled();
@@ -111,7 +109,7 @@ describe('EscrowService', () => {
       tx.escrow.update.mockResolvedValue(releasedEscrow);
 
       const result = await service.release(
-        tx as any,
+        tx as unknown as Prisma.TransactionClient,
         'order-1',
       );
 
@@ -121,7 +119,7 @@ describe('EscrowService', () => {
         },
         data: {
           status: EscrowStatus.RELEASED,
-          releasedAt: expect.any(Date),
+          releasedAt: expect.any(Date) as unknown,
         },
       });
 
@@ -134,7 +132,7 @@ describe('EscrowService', () => {
       tx.escrow.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.refund(tx as any, 'order-1'),
+        service.refund(tx as unknown as Prisma.TransactionClient, 'order-1'),
       ).rejects.toBeInstanceOf(NotFoundException);
 
       expect(tx.escrow.findUnique).toHaveBeenCalledWith({
@@ -154,7 +152,7 @@ describe('EscrowService', () => {
       });
 
       await expect(
-        service.refund(tx as any, 'order-1'),
+        service.refund(tx as unknown as Prisma.TransactionClient, 'order-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(tx.escrow.update).not.toHaveBeenCalled();
@@ -177,7 +175,7 @@ describe('EscrowService', () => {
       tx.escrow.update.mockResolvedValue(refundedEscrow);
 
       const result = await service.refund(
-        tx as any,
+        tx as unknown as Prisma.TransactionClient,
         'order-1',
       );
 
@@ -187,7 +185,7 @@ describe('EscrowService', () => {
         },
         data: {
           status: EscrowStatus.REFUNDED,
-          refundedAt: expect.any(Date),
+          refundedAt: expect.any(Date) as unknown,
         },
       });
 

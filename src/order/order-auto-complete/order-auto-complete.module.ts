@@ -4,7 +4,8 @@ import { OrderAutoCompleteProcessor } from './order-auto-complete.processor';
 import { PrismaModule } from 'src/prisma/prisma.module';
 
 @Module({
-  imports: [PrismaModule,
+  imports: [
+    PrismaModule,
     BullModule.registerQueue({
       name: 'ORDER_AUTO_COMPLETE',
     }),

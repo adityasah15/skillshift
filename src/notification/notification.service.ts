@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { create } from 'domain';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NotificationType } from 'generated/prisma/enums';
 import { InjectQueue } from '@nestjs/bullmq';

@@ -10,6 +10,6 @@ import { NotificationModule } from 'src/notification/notification.module';
 @Module({
   imports: [PrismaModule, AuthModule, RedisModule, NotificationModule],
   providers: [ChatService, ChatGateway],
-  controllers: [ChatController]
+  controllers: [ChatController],
 })
 export class ChatModule {}

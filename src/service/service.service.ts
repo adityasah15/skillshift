@@ -29,7 +29,7 @@ export class ServiceService {
     const cached = await this.redisService.get(key);
 
     if (cached) {
-      return JSON.parse(cached);
+      return JSON.parse(cached) as unknown;
     }
 
     const limit = serviceQueryDto.limit ?? 20;
@@ -83,7 +83,7 @@ export class ServiceService {
     const cached = await this.redisService.get(key);
 
     if (cached) {
-      return JSON.parse(cached);
+      return JSON.parse(cached) as unknown;
     }
     const service = await this.prismaService.service.findFirst({
       where: {

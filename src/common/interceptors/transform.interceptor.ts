@@ -8,12 +8,10 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 @Injectable()
-export class TransformInterceptor<T>
-  implements NestInterceptor<
-    T,
-    { data: T; meta: Record<string, unknown> } | T
-  >
-{
+export class TransformInterceptor<T> implements NestInterceptor<
+  T,
+  { data: T; meta: Record<string, unknown> } | T
+> {
   intercept(
     _context: ExecutionContext,
     next: CallHandler<T>,

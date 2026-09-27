@@ -199,7 +199,7 @@ describe('ServiceService', () => {
 
     expect(prisma.service.update).toHaveBeenCalledWith({
       where: { id: 'service-1' },
-      data: { deletedAt: expect.any(Date) },
+      data: { deletedAt: expect.any(Date) as unknown },
     });
     expect(redis.del).toHaveBeenCalledWith('service:service-1');
     expect(redis.delByPattern).toHaveBeenCalledWith('services:*');

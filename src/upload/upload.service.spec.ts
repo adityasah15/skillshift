@@ -95,7 +95,7 @@ describe('UploadService', () => {
           Key: 'avatars/user-1/portrait.png',
           ContentType: 'image/png',
           ContentLength: 100,
-        }),
+        }) as unknown,
       }),
       { expiresIn: 300 },
     );

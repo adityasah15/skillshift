@@ -26,7 +26,7 @@ async function bootstrap() {
     new LoggingInterceptor(),
     new TransformInterceptor(),
   );
-  
+
   app.useGlobalFilters(new GlobalExceptionFilter());
 
   const config = new DocumentBuilder()

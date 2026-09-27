@@ -17,7 +17,7 @@ export class SearchService {
     const cached = await this.redisService.get(key);
 
     if (cached) {
-      return JSON.parse(cached);
+      return JSON.parse(cached) as unknown;
     }
 
     const q = dto.q?.trim();

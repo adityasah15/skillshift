@@ -194,7 +194,7 @@ export class OrderService {
       'Order completed',
       'Your order has been completed and payment has been released.',
     );
-    
+
     return updatedOrder;
   }
 
@@ -240,7 +240,7 @@ export class OrderService {
       });
       return order;
     });
-    
+
     const recipientId =
       order.clientId === userId ? order.freelancerId : order.clientId;
 

@@ -1,7 +1,12 @@
-import { IsArray, IsOptional, IsString, IsUrl, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateProfileDto {
-  
   @IsOptional()
   @MinLength(1)
   @IsString()

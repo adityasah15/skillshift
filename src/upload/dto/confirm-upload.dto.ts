@@ -1,12 +1,7 @@
 import { IsIn, IsString } from 'class-validator';
 
 export class ConfirmUploadDto {
-  @IsIn([
-    'avatar',
-    'service',
-    'portfolio',
-    'delivery',
-  ])
+  @IsIn(['avatar', 'service', 'portfolio', 'delivery'])
   resource!: string;
 
   @IsString()

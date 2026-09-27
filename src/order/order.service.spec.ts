@@ -14,8 +14,12 @@ import {
   NotificationType,
   OrderStatus,
   ServiceStatus,
-  TransactionType,
 } from 'generated/prisma/enums';
+import { Prisma } from 'generated/prisma/client';
+
+type TransactionCallback = (
+  transaction: Prisma.TransactionClient,
+) => Promise<unknown>;
 
 describe('OrderService', () => {
   let service: OrderService;
@@ -168,21 +172,23 @@ describe('OrderService', () => {
         status: OrderStatus.IN_PROGRESS,
       };
 
-      prisma.$transaction.mockImplementation(async (callback) => {
-        const tx = {
-          wallet: {
-            update: jest.fn().mockResolvedValue({}),
-          },
-          order: {
-            create: jest.fn().mockResolvedValue(createdOrder),
-          },
-          transaction: {
-            create: jest.fn().mockResolvedValue({}),
-          },
-        };
+      prisma.$transaction.mockImplementation(
+        (callback: TransactionCallback) => {
+          const tx = {
+            wallet: {
+              update: jest.fn().mockResolvedValue({}),
+            },
+            order: {
+              create: jest.fn().mockResolvedValue(createdOrder),
+            },
+            transaction: {
+              create: jest.fn().mockResolvedValue({}),
+            },
+          };
 
-        return callback(tx);
-      });
+          return callback(tx as unknown as Prisma.TransactionClient);
+        },
+      );
 
       escrowService.hold.mockResolvedValue({});
       notificationService.enqueue.mockResolvedValue(undefined);
@@ -305,7 +311,7 @@ describe('OrderService', () => {
         data: {
           status: OrderStatus.DELIVERED,
           deliveryNote: 'Done',
-          autoCompleteAt: expect.any(Date),
+          autoCompleteAt: expect.any(Date) as unknown,
         },
       });
 
@@ -366,22 +372,24 @@ describe('OrderService', () => {
     it('should reject when freelancer wallet does not exist', async () => {
       prisma.order.findUnique.mockResolvedValue(order);
 
-      prisma.$transaction.mockImplementation(async (callback) => {
-        const tx = {
-          order: {
-            update: jest.fn().mockResolvedValue(order),
-          },
-          wallet: {
-            findUnique: jest.fn().mockResolvedValue(null),
-            update: jest.fn(),
-          },
-          transaction: {
-            create: jest.fn(),
-          },
-        };
+      prisma.$transaction.mockImplementation(
+        (callback: TransactionCallback) => {
+          const tx = {
+            order: {
+              update: jest.fn().mockResolvedValue(order),
+            },
+            wallet: {
+              findUnique: jest.fn().mockResolvedValue(null),
+              update: jest.fn(),
+            },
+            transaction: {
+              create: jest.fn(),
+            },
+          };
 
-        return callback(tx);
-      });
+          return callback(tx as unknown as Prisma.TransactionClient);
+        },
+      );
 
       escrowService.release.mockResolvedValue({});
 
@@ -404,22 +412,24 @@ describe('OrderService', () => {
         balance: 50,
       };
 
-      prisma.$transaction.mockImplementation(async (callback) => {
-        const tx = {
-          order: {
-            update: jest.fn().mockResolvedValue(completedOrder),
-          },
-          wallet: {
-            findUnique: jest.fn().mockResolvedValue(freelancerWallet),
-            update: jest.fn().mockResolvedValue({}),
-          },
-          transaction: {
-            create: jest.fn().mockResolvedValue({}),
-          },
-        };
+      prisma.$transaction.mockImplementation(
+        (callback: TransactionCallback) => {
+          const tx = {
+            order: {
+              update: jest.fn().mockResolvedValue(completedOrder),
+            },
+            wallet: {
+              findUnique: jest.fn().mockResolvedValue(freelancerWallet),
+              update: jest.fn().mockResolvedValue({}),
+            },
+            transaction: {
+              create: jest.fn().mockResolvedValue({}),
+            },
+          };
 
-        return callback(tx);
-      });
+          return callback(tx as unknown as Prisma.TransactionClient);
+        },
+      );
 
       escrowService.release.mockResolvedValue({});
       notificationService.enqueue.mockResolvedValue(undefined);
@@ -481,22 +491,24 @@ describe('OrderService', () => {
     it('should reject when client wallet does not exist', async () => {
       prisma.order.findUnique.mockResolvedValue(order);
 
-      prisma.$transaction.mockImplementation(async (callback) => {
-        const tx = {
-          order: {
-            update: jest.fn().mockResolvedValue(order),
-          },
-          wallet: {
-            findUnique: jest.fn().mockResolvedValue(null),
-            update: jest.fn(),
-          },
-          transaction: {
-            create: jest.fn(),
-          },
-        };
+      prisma.$transaction.mockImplementation(
+        (callback: TransactionCallback) => {
+          const tx = {
+            order: {
+              update: jest.fn().mockResolvedValue(order),
+            },
+            wallet: {
+              findUnique: jest.fn().mockResolvedValue(null),
+              update: jest.fn(),
+            },
+            transaction: {
+              create: jest.fn(),
+            },
+          };
 
-        return callback(tx);
-      });
+          return callback(tx as unknown as Prisma.TransactionClient);
+        },
+      );
 
       escrowService.refund.mockResolvedValue({});
 
@@ -519,22 +531,24 @@ describe('OrderService', () => {
         balance: 50,
       };
 
-      prisma.$transaction.mockImplementation(async (callback) => {
-        const tx = {
-          order: {
-            update: jest.fn().mockResolvedValue(cancelledOrder),
-          },
-          wallet: {
-            findUnique: jest.fn().mockResolvedValue(clientWallet),
-            update: jest.fn().mockResolvedValue({}),
-          },
-          transaction: {
-            create: jest.fn().mockResolvedValue({}),
-          },
-        };
+      prisma.$transaction.mockImplementation(
+        (callback: TransactionCallback) => {
+          const tx = {
+            order: {
+              update: jest.fn().mockResolvedValue(cancelledOrder),
+            },
+            wallet: {
+              findUnique: jest.fn().mockResolvedValue(clientWallet),
+              update: jest.fn().mockResolvedValue({}),
+            },
+            transaction: {
+              create: jest.fn().mockResolvedValue({}),
+            },
+          };
 
-        return callback(tx);
-      });
+          return callback(tx as unknown as Prisma.TransactionClient);
+        },
+      );
 
       escrowService.refund.mockResolvedValue({});
       notificationService.enqueue.mockResolvedValue(undefined);
@@ -564,26 +578,28 @@ describe('OrderService', () => {
         status: OrderStatus.CANCELLED,
       };
 
-      prisma.$transaction.mockImplementation(async (callback) => {
-        const tx = {
-          order: {
-            update: jest.fn().mockResolvedValue(cancelledOrder),
-          },
-          wallet: {
-            findUnique: jest.fn().mockResolvedValue({
-              id: 'wallet-1',
-              userId: 'client-1',
-              balance: 50,
-            }),
-            update: jest.fn().mockResolvedValue({}),
-          },
-          transaction: {
-            create: jest.fn().mockResolvedValue({}),
-          },
-        };
+      prisma.$transaction.mockImplementation(
+        (callback: TransactionCallback) => {
+          const tx = {
+            order: {
+              update: jest.fn().mockResolvedValue(cancelledOrder),
+            },
+            wallet: {
+              findUnique: jest.fn().mockResolvedValue({
+                id: 'wallet-1',
+                userId: 'client-1',
+                balance: 50,
+              }),
+              update: jest.fn().mockResolvedValue({}),
+            },
+            transaction: {
+              create: jest.fn().mockResolvedValue({}),
+            },
+          };
 
-        return callback(tx);
-      });
+          return callback(tx as unknown as Prisma.TransactionClient);
+        },
+      );
 
       escrowService.refund.mockResolvedValue({});
       notificationService.enqueue.mockResolvedValue(undefined);
