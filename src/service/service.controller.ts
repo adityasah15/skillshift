@@ -16,8 +16,9 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 import { Role } from 'generated/prisma/enums';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { ServiceQueryDto } from './dto/service-query.dto';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Services')
 @ApiBearerAuth()
 @Controller('services')
 export class ServiceController {
@@ -55,7 +56,7 @@ export class ServiceController {
       serviceId,
     );
   }
-  
+
   @Roles(Role.FREELANCER)
   @Delete(':id')
   async deleteService(

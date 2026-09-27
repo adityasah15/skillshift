@@ -1,8 +1,9 @@
 import { Controller, Get, Param, Query, Req } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
-import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Chat')
 @Controller('chat')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}

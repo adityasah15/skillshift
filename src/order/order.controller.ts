@@ -4,8 +4,9 @@ import { Role } from 'generated/prisma/enums';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Orders')
 @ApiBearerAuth()
 @Controller('orders')
 export class OrderController {

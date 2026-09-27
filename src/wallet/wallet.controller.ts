@@ -2,8 +2,9 @@ import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { DepositDto } from './dto/deposit.dto';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Wallet')
 @ApiBearerAuth()
 @Controller('wallet')
 export class WalletController {
@@ -23,7 +24,7 @@ export class WalletController {
   }
 
   @Get('transactions')
-  async getTransactions(@Req() req: { user: JwtPayload }){
+  async getTransactions(@Req() req: { user: JwtPayload }) {
     return this.walletService.getTransactions(req.user.sub);
   }
 }

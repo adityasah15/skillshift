@@ -1,24 +1,17 @@
-import {
-  Body,
-  Controller,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { UploadService } from './upload.service';
 import { GeneratePresignedUrlDto } from './dto/generate-presigned-url.dto';
 import { ConfirmUploadDto } from './dto/confirm-upload.dto';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Upload')
 @ApiBearerAuth()
 @Controller('upload')
 @UseGuards(JwtAuthGuard)
 export class UploadController {
-  constructor(
-    private readonly uploadService: UploadService,
-  ) {}
+  constructor(private readonly uploadService: UploadService) {}
 
   @Post('presigned')
   async generatePresignedUrl(
