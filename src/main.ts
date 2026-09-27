@@ -1,9 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import helmet from 'helmet';
+import compression from 'compression';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.use(helmet());
+  app.use(compression());
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -13,6 +21,21 @@ async function bootstrap() {
     }),
   );
 
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new TransformInterceptor(),
+  );
+
+  const config = new DocumentBuilder()
+    .setTitle('SkillShift API')
+    .setDescription('SkillShift freelance marketplace API')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+
+  SwaggerModule.setup('api/docs', app, document);
   await app.listen(3000);
 }
 bootstrap();

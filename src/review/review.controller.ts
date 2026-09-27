@@ -7,11 +7,13 @@ import {
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewService } from './review.service';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('reviews')
 export class ReviewController {
   constructor(private readonly reviewService: ReviewService) {}
 
+  @ApiBearerAuth()
   @Post()
   async create(
     @Req() req: { user: JwtPayload },

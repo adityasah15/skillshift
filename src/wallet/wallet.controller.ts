@@ -2,7 +2,9 @@ import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { DepositDto } from './dto/deposit.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller('wallet')
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}

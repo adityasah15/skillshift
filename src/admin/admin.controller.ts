@@ -2,7 +2,9 @@ import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'generated/prisma/client';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller('admin')
 export class AdminController {
   constructor(

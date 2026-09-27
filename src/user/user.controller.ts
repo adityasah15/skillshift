@@ -3,15 +3,19 @@ import { UserService } from './user.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { Public } from 'src/common/decorators/public.decorator';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @ApiBearerAuth()
   @Get('me')
   async getUser(@Req() req: { user: JwtPayload }) {
     return this.userService.findById(req.user.sub);
   }
+
+  @ApiBearerAuth()
   @Patch('me')
   async updateProfile(
     @Req() req: { user: JwtPayload },

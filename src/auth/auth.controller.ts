@@ -8,6 +8,7 @@ import { Public } from '../common/decorators/public.decorator';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('auth')
 export class AuthController {
@@ -34,6 +35,7 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @ApiBearerAuth()
   @Get('me')
   getMe(@Req() req: { user: JwtPayload }) {
     return req.user;
@@ -45,6 +47,7 @@ export class AuthController {
     return this.authService.refresh(refreshTokenDto.refreshToken);
   }
 
+  @ApiBearerAuth()
   @Post('logout')
   async logout(
     @Req() req: { user: JwtPayload },

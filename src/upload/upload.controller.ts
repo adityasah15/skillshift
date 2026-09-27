@@ -10,7 +10,9 @@ import { GeneratePresignedUrlDto } from './dto/generate-presigned-url.dto';
 import { ConfirmUploadDto } from './dto/confirm-upload.dto';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller('upload')
 @UseGuards(JwtAuthGuard)
 export class UploadController {

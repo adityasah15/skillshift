@@ -13,7 +13,9 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
 import { DisputeService } from './dispute.service';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller()
 export class DisputeController {
   constructor(private readonly disputeService: DisputeService) {}
