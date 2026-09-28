@@ -1419,3 +1419,13 @@ Phase 12 reached the 60%+ overall target while prioritizing meaningful business 
 ### Interview Takeaway
 
 Be able to explain why cross-cutting concerns such as logging, response transformation, exception handling, security headers, and compression belong at the application boundary rather than being duplicated throughout individual business modules.
+
+## Phase 12 — Polish + Quality
+
+- Learned how NestJS interceptors can implement cross-cutting concerns globally, such as request logging and consistent successful-response transformation.
+- Learned how a global exception filter can centralize API error handling and translate Prisma database errors into appropriate HTTP responses.
+- Learned how NestJS `Logger` can provide application-level request logging without introducing an external logging framework.
+- Learned how Swagger/OpenAPI can document a NestJS API and configure Bearer authentication for protected endpoints.
+- Learned the role of Helmet in adding HTTP security headers and compression in reducing HTTP response size.
+- Learned the importance of automated unit-test coverage for validating business logic and regression safety.
+- Achieved and verified the project's Phase 12 coverage target of 60%+ overall coverage.

@@ -8191,3 +8191,595 @@ Phase 13 remains:
 The Next.js frontend remains deferred.
 
 Phase 13 should begin by inspecting the current repository and comparing the existing Docker/GitHub Actions configuration against the Blueprint rather than assuming the infrastructure is missing.
+
+# Phase 13 — Docker + CI/CD + Deployment
+
+## Feature Status
+
+**Status:** Complete — implemented, deployed, and verified.
+
+Phase 13 productionized the SkillShift backend and established an automated deployment path from GitHub to Docker Hub and AWS EC2.
+
+---
+
+## Deployment Flow
+
+The final deployment flow is:
+
+```text
+Developer
+    │
+    │ git push main
+    ▼
+GitHub
+    │
+    ▼
+GitHub Actions
+    │
+    ├── npm ci
+    ├── Prisma generate
+    ├── ESLint
+    ├── Jest tests
+    ├── NestJS build
+    ├── Docker build
+    └── Docker Hub push
+            │
+            ▼
+        Docker Hub
+            │
+            ▼
+          AWS EC2
+            │
+            ├── PostgreSQL
+            ├── Redis
+            └── SkillShift API
+                    │
+                    ▼
+                  Nginx
+                    │
+                    ▼
+              HTTPS / DuckDNS
+```
+
+---
+
+## Docker
+
+A multi-stage production Dockerfile was implemented.
+
+The final image contains the compiled NestJS application and production dependencies rather than the complete development source tree.
+
+Prisma Client is generated during the build/CI process and is available inside the production image.
+
+An important deployment issue was discovered when the production API image initially did not contain:
+
+```text
+prisma/schema.prisma
+```
+
+Therefore:
+
+```bash
+docker compose exec api npx prisma migrate status
+```
+
+initially failed because the production container did not have access to the Prisma schema/migrations.
+
+The deployment configuration was subsequently corrected so Prisma could access the required migration information during the production migration step.
+
+Migration files remain part of the repository/deployment workflow and are not assumed to exist automatically inside the runtime image.
+
+---
+
+## Production Docker Compose
+
+`docker-compose.yml` was configured for EC2 deployment.
+
+Services:
+
+```text
+postgres
+redis
+api
+```
+
+### PostgreSQL
+
+Image:
+
+```text
+postgres:16-alpine
+```
+
+Persistent volume:
+
+```text
+postgres_data
+```
+
+This allows database state to survive API container recreation.
+
+### Redis
+
+Image:
+
+```text
+redis:7-alpine
+```
+
+Redis remains internal application infrastructure.
+
+### API
+
+The API uses the published Docker Hub image:
+
+```text
+adityasah15/skillshift-api:latest
+```
+
+The API exposes:
+
+```text
+3000:3000
+```
+
+Inside the Docker Compose network, the application connects to:
+
+```text
+postgres:5432
+redis:6379
+```
+
+rather than localhost.
+
+Production environment variables are supplied through the EC2 `.env`.
+
+---
+
+## Environment Configuration
+
+`.env.example` was created and committed.
+
+It documents configuration categories for:
+
+* PostgreSQL
+* Redis
+* JWT
+* AWS S3
+* SMTP/email
+
+Production secrets remain in the EC2 environment and are not committed.
+
+The production `.env` must remain ignored by Git.
+
+---
+
+## AWS EC2
+
+An Ubuntu AWS EC2 instance was provisioned for the deployment.
+
+The deployment host runs:
+
+```text
+SkillShift API
+PostgreSQL
+Redis
+Nginx
+```
+
+Docker and Docker Compose were installed and verified.
+
+Reported versions:
+
+```text
+Docker 29.1.3
+Docker Compose 2.40.3
+```
+
+Running containers were verified using:
+
+```bash
+docker compose ps
+```
+
+---
+
+## Production Prisma Migrations
+
+Production migration status was successfully checked using:
+
+```bash
+docker compose exec api npx prisma migrate status
+```
+
+The deployment detected:
+
+```text
+20260909093127_init
+20260916161732_add_service_search_trigger
+20260926140735_add_delivery_file
+```
+
+The migrations were deployed using:
+
+```bash
+prisma migrate deploy
+```
+
+This confirmed that the EC2 PostgreSQL database is aligned with the repository migrations.
+
+Production uses:
+
+```text
+prisma migrate deploy
+```
+
+rather than:
+
+```text
+prisma migrate dev
+```
+
+---
+
+## Nginx
+
+Nginx was installed directly on the EC2 host.
+
+It acts as the reverse proxy and public entry point.
+
+Request flow:
+
+```text
+Internet
+   ↓
+Nginx :80 / :443
+   ↓
+SkillShift API :3000
+```
+
+Configuration was validated using:
+
+```bash
+sudo nginx -t
+```
+
+Result:
+
+```text
+syntax is ok
+test is successful
+```
+
+Nginx was also verified as:
+
+```text
+active (running)
+```
+
+---
+
+## HTTP Verification
+
+Before HTTPS configuration, HTTP traffic through Nginx was tested.
+
+A request to the EC2 deployment returned:
+
+```text
+HTTP/1.1 401 Unauthorized
+```
+
+This was expected because the requested API route requires authentication.
+
+The result confirmed that Nginx successfully proxied the request to the NestJS application and the application returned its expected authentication response.
+
+The `401` was therefore not treated as a deployment failure.
+
+---
+
+## Domain
+
+A DuckDNS hostname was configured:
+
+```text
+skillshift-api.duckdns.org
+```
+
+It resolves to the EC2 deployment.
+
+This is a project/development hostname rather than a commercial production domain.
+
+---
+
+## HTTPS / SSL
+
+Let's Encrypt SSL was configured using Certbot.
+
+Certificate:
+
+```text
+skillshift-api.duckdns.org
+```
+
+Certbot configured automatic renewal.
+
+Certificate expiration at issuance was:
+
+```text
+2026-12-26
+```
+
+Renewal was explicitly tested using:
+
+```bash
+sudo certbot renew --dry-run
+```
+
+The simulated renewals succeeded.
+
+---
+
+## Live HTTPS Verification
+
+The live API was verified at:
+
+```text
+https://skillshift-api.duckdns.org
+```
+
+Swagger was verified at:
+
+```text
+https://skillshift-api.duckdns.org/api/docs
+```
+
+Both were successfully accessible over HTTPS.
+
+This completed the Blueprint requirements for:
+
+* live URL
+* HTTPS
+* Swagger accessibility
+
+---
+
+## S3 / IAM
+
+The existing upload module uses AWS S3 through:
+
+```text
+@aws-sdk/client-s3
+```
+
+The service reads:
+
+```text
+AWS_REGION
+AWS_S3_BUCKET
+```
+
+from configuration.
+
+The EC2 instance was assigned the IAM instance profile:
+
+```text
+SkillShiftEC2Role
+```
+
+The application therefore uses the EC2 IAM role instead of hard-coded AWS access keys.
+
+---
+
+## S3 Permissions
+
+The EC2 role was configured with required object-level permissions:
+
+```text
+s3:PutObject
+s3:GetObject
+s3:DeleteObject
+```
+
+against the SkillShift upload bucket and its objects.
+
+The role intentionally does not receive:
+
+```text
+s3:ListAllMyBuckets
+```
+
+A bucket-listing test returned:
+
+```text
+AccessDenied
+```
+
+This was expected and confirmed that the role remains restricted from enumerating unrelated buckets.
+
+`ListAllMyBuckets` was not added merely to make the test succeed because the application does not require that permission.
+
+---
+
+## IAM Role Verification
+
+The EC2 Instance Metadata Service was checked using IMDSv2.
+
+The instance returned the expected instance profile:
+
+```text
+SkillShiftEC2Role
+```
+
+This verified that the EC2 deployment is actually using the intended IAM role.
+
+---
+
+## GitHub Actions CI
+
+The GitHub Actions workflow performs:
+
+```text
+Checkout
+↓
+Node.js 20
+↓
+npm ci
+↓
+Prisma generate
+↓
+ESLint
+↓
+Jest tests
+↓
+NestJS build
+↓
+Docker build
+↓
+Docker Hub login
+↓
+Docker image push
+```
+
+The explicit Prisma generation step is required so the CI lint/build environment has the generated Prisma client types available.
+
+---
+
+## Docker Hub
+
+The application image is published to:
+
+```text
+adityasah15/skillshift-api
+```
+
+Current deployment tag:
+
+```text
+latest
+```
+
+GitHub repository secrets were configured for Docker Hub authentication.
+
+Docker image publishing was successfully verified.
+
+---
+
+## Automatic EC2 Deployment
+
+GitHub Actions was extended to deploy the newly published image to EC2.
+
+Deployment flow:
+
+```text
+push main
+   ↓
+CI checks
+   ↓
+Docker image build
+   ↓
+Docker Hub
+   ↓
+SSH to EC2
+   ↓
+docker compose pull
+   ↓
+docker compose up -d
+```
+
+An initial deployment attempt failed because GitHub Actions could not reach EC2 over SSH.
+
+The EC2 Security Group was corrected to permit the required deployment connection.
+
+The workflow was rerun successfully.
+
+Therefore the automatic deployment path was actually tested rather than only configured.
+
+---
+
+## CI/CD Verification
+
+The successful workflow verified:
+
+```text
+Prisma generate       ✅
+Lint                  ✅
+Tests                 ✅
+Build                 ✅
+Docker build          ✅
+Docker Hub push       ✅
+SSH deployment        ✅
+EC2 update            ✅
+```
+
+---
+
+## Security
+
+The following must never be committed:
+
+```text
+.env
+*.pem
+AWS credentials
+Docker Hub tokens
+JWT secrets
+SMTP passwords
+```
+
+An EC2 SSH private key was present as an untracked file during deployment setup and was handled through `.gitignore`.
+
+The key must remain untracked.
+
+Additional security properties:
+
+* EC2 uses an IAM role instead of static AWS credentials.
+* S3 permissions are restricted to required object operations.
+* PostgreSQL is not intentionally exposed publicly.
+* Redis is internal to the Docker Compose network.
+* Nginx is the public entry point.
+* NestJS listens internally on port 3000.
+
+---
+
+## Phase 13 Completion
+
+All Phase 13 Blueprint requirements were completed:
+
+```text
+Multi-stage Dockerfile             ✅
+Production docker-compose.yml      ✅
+.env.example                       ✅
+GitHub Actions pipeline            ✅
+AWS EC2                            ✅
+Nginx reverse proxy                ✅
+SSL / Certbot                      ✅
+S3 + IAM permissions               ✅
+main → CI → EC2 deployment         ✅
+Live URL                           ✅
+HTTPS                              ✅
+Swagger                            ✅
+```
+
+**Phase 13: COMPLETE.**
+
+---
+
+## Next Phase
+
+**Phase 14 — Documentation & Final Polish**
+
+Planned work:
+
+* README
+* architecture documentation
+* ER/database documentation
+* API documentation
+* setup instructions
+* deployment documentation
+* security documentation
+* Postman collection
+* final testing
+* project cleanup
+* final checkpoint
+
+Do not introduce new architectural features unless required by the Blueprint.

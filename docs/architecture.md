@@ -599,3 +599,205 @@ Order
 ```
 
 The backend remains responsible for authentication, authorization, validation, presigned URL generation, and upload confirmation.
+
+# Production Deployment Architecture
+
+## Overview
+
+SkillShift remains a **NestJS monolith** deployed as a Dockerized application on a single AWS EC2 instance.
+
+The production deployment adds Nginx as the public reverse proxy and uses Docker Compose for the application infrastructure.
+
+```text
+                         Internet
+                            │
+                            ▼
+                    DuckDNS hostname
+                            │
+                            ▼
+                     Nginx :443
+                  TLS termination
+                            │
+                            ▼
+                  NestJS API :3000
+                       │    │
+              ┌────────┘    └────────┐
+              ▼                       ▼
+        PostgreSQL                  Redis
+       persistent state       internal infrastructure
+              │
+              │
+              └──────────────┐
+                             ▼
+                            S3
+                     uploaded files
+```
+
+## Components
+
+### AWS EC2
+
+EC2 provides the deployment host for the SkillShift backend infrastructure.
+
+The instance runs:
+
+* SkillShift API
+* PostgreSQL
+* Redis
+* Nginx on the host
+
+The NestJS application itself runs inside a Docker container.
+
+### Docker
+
+Docker packages the SkillShift API as a production image.
+
+Docker Compose manages:
+
+```text
+postgres
+redis
+api
+```
+
+PostgreSQL uses a persistent Docker volume so database state is independent of the API container lifecycle.
+
+### Nginx
+
+Nginx is the public entry point.
+
+It:
+
+* terminates HTTPS
+* receives traffic on ports 80/443
+* reverse-proxies requests to the NestJS API on port 3000
+
+The NestJS application therefore does not need to be directly exposed as the public HTTPS endpoint.
+
+### PostgreSQL
+
+PostgreSQL remains the persistent source of truth for application state.
+
+The production database runs as a Docker container with persistent storage.
+
+Production migrations are applied using:
+
+```text
+prisma migrate deploy
+```
+
+### Redis
+
+Redis remains internal infrastructure for the existing SkillShift architecture.
+
+It is used for the application's existing caching, rate limiting, presence, and queue-related functionality.
+
+Redis is not intended to be a public endpoint.
+
+### AWS S3
+
+S3 stores uploaded files used by the Upload module.
+
+The application accesses S3 through the AWS SDK.
+
+The EC2 instance uses an IAM instance profile instead of hard-coded AWS credentials.
+
+### IAM
+
+The EC2 instance uses:
+
+```text
+SkillShiftEC2Role
+```
+
+The role receives only the S3 object operations required by the application:
+
+```text
+s3:PutObject
+s3:GetObject
+s3:DeleteObject
+```
+
+The application does not require permission to enumerate all AWS buckets.
+
+## CI/CD Architecture
+
+GitHub Actions performs CI validation and container publishing.
+
+```text
+Git push main
+     │
+     ▼
+GitHub Actions
+     │
+     ├── npm ci
+     ├── Prisma generate
+     ├── ESLint
+     ├── Jest
+     ├── NestJS build
+     ├── Docker build
+     └── Docker Hub push
+             │
+             ▼
+        Docker Hub
+             │
+             ▼
+        SSH → EC2
+             │
+             ├── docker compose pull
+             └── docker compose up -d
+```
+
+The EC2 host therefore pulls the published application image rather than building the production image locally.
+
+## HTTPS
+
+The project uses:
+
+```text
+DuckDNS
++
+Let's Encrypt
++
+Certbot
++
+Nginx
+```
+
+The current project hostname is:
+
+```text
+skillshift-api.duckdns.org
+```
+
+Live API:
+
+```text
+https://skillshift-api.duckdns.org
+```
+
+Swagger:
+
+```text
+https://skillshift-api.duckdns.org/api/docs
+```
+
+Certificate renewal was tested using Certbot's dry-run mechanism.
+
+## Architectural Boundaries
+
+Phase 13 does **not** introduce:
+
+* microservices
+* Kubernetes
+* AWS ECS/EKS
+* managed PostgreSQL
+* managed Redis
+* load balancing
+* autoscaling
+* multi-region deployment
+* infrastructure-as-code
+* CDN
+* WAF
+
+The deployment therefore remains intentionally simple and aligned with the project's NestJS monolith architecture and current Blueprint scope.

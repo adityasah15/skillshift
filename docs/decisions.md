@@ -343,3 +343,188 @@ Migration:
 ```
 
 **Reason:** Delivery files require structured application metadata and an explicit relationship with the corresponding Order.
+
+# Phase 13 — Deployment Decisions
+
+## Docker Hub as Container Registry
+
+Docker Hub is used as the container registry for the current SkillShift deployment.
+
+GitHub Actions builds the production Docker image and publishes it to:
+
+```text
+adityasah15/skillshift-api
+```
+
+The EC2 deployment then pulls the published image.
+
+This separates image creation from the runtime deployment host.
+
+---
+
+## Single AWS EC2 Deployment
+
+The SkillShift NestJS monolith is deployed to a single AWS EC2 instance.
+
+No microservices architecture was introduced.
+
+This keeps the deployment aligned with the existing application architecture while providing a realistic production-style deployment environment.
+
+---
+
+## Docker Compose
+
+Docker Compose is used on EC2 to manage:
+
+```text
+PostgreSQL
+Redis
+SkillShift API
+```
+
+PostgreSQL uses persistent storage so application container replacement does not remove database state.
+
+---
+
+## Nginx as Reverse Proxy
+
+Nginx is used as the public reverse proxy and HTTPS entry point.
+
+The deployment flow is:
+
+```text
+Internet
+   ↓
+Nginx :443
+   ↓
+NestJS API :3000
+```
+
+This keeps the application container behind a dedicated HTTP/TLS boundary.
+
+---
+
+## DuckDNS
+
+DuckDNS is used as the project's current hostname:
+
+```text
+skillshift-api.duckdns.org
+```
+
+It is treated as a free project/development hostname rather than a commercial production domain.
+
+---
+
+## Let's Encrypt + Certbot
+
+Let's Encrypt and Certbot provide HTTPS for the project hostname.
+
+Certbot automatic renewal is configured and renewal was verified using a dry-run.
+
+---
+
+## EC2 IAM Role
+
+The application uses an EC2 instance profile rather than hard-coded AWS credentials.
+
+The instance uses:
+
+```text
+SkillShiftEC2Role
+```
+
+This allows the application to obtain AWS credentials through the EC2 environment without storing long-lived AWS access keys in application configuration.
+
+---
+
+## S3 Least Privilege
+
+The EC2 role receives only the S3 object operations required by SkillShift:
+
+```text
+s3:PutObject
+s3:GetObject
+s3:DeleteObject
+```
+
+Bucket enumeration permissions such as:
+
+```text
+s3:ListAllMyBuckets
+```
+
+are intentionally not granted because the application does not require them.
+
+---
+
+## GitHub Actions CI/CD
+
+GitHub Actions is responsible for:
+
+1. installing dependencies
+2. generating Prisma Client
+3. linting
+4. running Jest tests
+5. building the NestJS application
+6. building the Docker image
+7. publishing the image to Docker Hub
+8. deploying the updated image to EC2
+
+The deployment is triggered by changes pushed to `main`.
+
+An initial SSH connectivity issue was resolved through the EC2 Security Group configuration, after which the complete automated deployment workflow succeeded.
+
+---
+
+## Production Prisma Migrations
+
+Production database migrations use:
+
+```text
+prisma migrate deploy
+```
+
+rather than:
+
+```text
+prisma migrate dev
+```
+
+This separates development migration workflows from production migration deployment.
+
+---
+
+## Security Boundary
+
+The deployment intentionally keeps:
+
+* PostgreSQL internal
+* Redis internal
+* application port 3000 behind Nginx
+* production secrets outside Git
+* AWS credentials supplied through IAM
+
+The public entry point is Nginx over HTTPS.
+
+---
+
+## Scope Boundary
+
+The Phase 13 deployment does not include:
+
+* Kubernetes
+* ECS/EKS
+* Terraform/IaC
+* multi-region infrastructure
+* load balancing
+* autoscaling
+* blue/green deployment
+* managed PostgreSQL
+* managed Redis
+* CDN
+* WAF
+* dedicated commercial domain
+* production observability platform
+
+These remain outside the completed Phase 13 scope.
