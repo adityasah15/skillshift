@@ -230,12 +230,12 @@ Once the server is running:
 * [x] Disputes
 * [x] Reviews
 * [x] Real-time chat
-* [ ] File uploads (S3 presigned)
-* [ ] Search
-* [ ] Admin module & analytics
-* [ ] Automated tests (unit + integration)
+* [x] File uploads (S3 presigned)
+* [x] Search
+* [x] Admin module & analytics
+* [x] Automated tests (unit + integration)
+* [x] CI/CD + production deployment (Docker → AWS EC2 + Nginx)
 * [ ] Next.js frontend
-* [ ] CI/CD + production deployment (Docker → AWS EC2 + Nginx)
 
 See `docs/` for the full implementation blueprint and engineering decisions.
 
