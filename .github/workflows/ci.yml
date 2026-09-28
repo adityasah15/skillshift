@@ -1,3 +1,4 @@
+```yaml
 name: CI
 
 on:
@@ -52,3 +53,17 @@ jobs:
           context: .
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/skillshift-api:latest
+
+      - name: Deploy to EC2
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/skillshift
+            docker compose pull api
+            docker compose up -d api
+            docker image prune -f
+```
