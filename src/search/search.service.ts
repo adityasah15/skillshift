@@ -1,8 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from 'generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RedisService } from 'src/redis/redis.service';
 import { SearchServicesDto } from './dto/search-services.dto';
+
+type SearchCursor = {
+  createdAt: string;
+  id: string;
+};
 
 @Injectable()
 export class SearchService {
@@ -10,6 +15,39 @@ export class SearchService {
     private readonly prisma: PrismaService,
     private readonly redisService: RedisService,
   ) {}
+
+  private encodeCursor(cursor: SearchCursor): string {
+    return Buffer.from(JSON.stringify(cursor)).toString('base64url');
+  }
+
+  private decodeCursor(cursor: string): SearchCursor {
+    try {
+      const decoded = JSON.parse(
+        Buffer.from(cursor, 'base64url').toString('utf8'),
+      ) as unknown;
+
+      if (
+        typeof decoded !== 'object' ||
+        decoded === null ||
+        typeof (decoded as SearchCursor).createdAt !== 'string' ||
+        typeof (decoded as SearchCursor).id !== 'string'
+      ) {
+        throw new Error('Invalid cursor shape');
+      }
+
+      const createdAt = new Date((decoded as SearchCursor).createdAt);
+      if (Number.isNaN(createdAt.getTime())) {
+        throw new Error('Invalid cursor timestamp');
+      }
+
+      return {
+        createdAt: createdAt.toISOString(),
+        id: (decoded as SearchCursor).id,
+      };
+    } catch {
+      throw new BadRequestException('Invalid search cursor');
+    }
+  }
 
   async searchServices(dto: SearchServicesDto) {
     const key = `search:services:${JSON.stringify(dto)}`;
@@ -23,6 +61,9 @@ export class SearchService {
     const q = dto.q?.trim();
     const skills = dto.skills?.filter(Boolean);
     const limit = dto.limit ?? 20;
+    const decodedCursor = dto.cursor
+      ? this.decodeCursor(dto.cursor)
+      : undefined;
 
     const searchCondition = q
       ? Prisma.sql`
@@ -51,9 +92,15 @@ export class SearchService {
         `
         : Prisma.empty;
 
-    const cursorCondition = dto.cursor
+    const cursorCondition = decodedCursor
       ? Prisma.sql`
-        AND "id" < ${dto.cursor}
+        AND (
+          "createdAt" < ${decodedCursor.createdAt}
+          OR (
+            "createdAt" = ${decodedCursor.createdAt}
+            AND "id" < ${decodedCursor.id}
+          )
+        )
       `
       : Prisma.empty;
 
@@ -98,8 +145,13 @@ export class SearchService {
       services.pop();
     }
 
-    const cursor =
-      services.length > 0 ? services[services.length - 1].id : null;
+    const lastService = services[services.length - 1];
+    const cursor = lastService
+      ? this.encodeCursor({
+          createdAt: lastService.createdAt.toISOString(),
+          id: lastService.id,
+        })
+      : null;
 
     const response = {
       data: services,
