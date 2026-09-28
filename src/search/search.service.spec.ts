@@ -63,8 +63,8 @@ describe('SearchService', () => {
     expect(response.meta.hasMore).toBe(true);
     expect(response.meta.cursor).toBeDefined();
 
-    const decoded = JSON.parse(
-      Buffer.from(response.meta.cursor!, 'base64url').toString('utf8'),
+    const decoded: unknown = JSON.parse(
+      Buffer.from(response.meta.cursor, 'base64url').toString('utf8'),
     );
 
     expect(decoded).toEqual({

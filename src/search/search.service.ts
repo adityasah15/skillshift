@@ -9,6 +9,26 @@ type SearchCursor = {
   id: string;
 };
 
+type SearchServiceRecord = {
+  id: string;
+  freelancerId: string;
+  title: string;
+  description: string;
+  price: number;
+  skills: string[];
+  imageUrls: string[];
+  status: string;
+  createdAt: Date;
+};
+
+type SearchResponse = {
+  data: SearchServiceRecord[];
+  meta: {
+    cursor: string | null;
+    hasMore: boolean;
+  };
+};
+
 @Injectable()
 export class SearchService {
   constructor(
@@ -22,9 +42,9 @@ export class SearchService {
 
   private decodeCursor(cursor: string): SearchCursor {
     try {
-      const decoded = JSON.parse(
+      const decoded: unknown = JSON.parse(
         Buffer.from(cursor, 'base64url').toString('utf8'),
-      ) as unknown;
+      );
 
       if (
         typeof decoded !== 'object' ||
@@ -36,6 +56,7 @@ export class SearchService {
       }
 
       const createdAt = new Date((decoded as SearchCursor).createdAt);
+
       if (Number.isNaN(createdAt.getTime())) {
         throw new Error('Invalid cursor timestamp');
       }
@@ -49,18 +70,19 @@ export class SearchService {
     }
   }
 
-  async searchServices(dto: SearchServicesDto) {
+  async searchServices(dto: SearchServicesDto): Promise<SearchResponse> {
     const key = `search:services:${JSON.stringify(dto)}`;
 
     const cached = await this.redisService.get(key);
 
     if (cached) {
-      return JSON.parse(cached) as unknown;
+      return JSON.parse(cached) as SearchResponse;
     }
 
     const q = dto.q?.trim();
     const skills = dto.skills?.filter(Boolean);
     const limit = dto.limit ?? 20;
+
     const decodedCursor = dto.cursor
       ? this.decodeCursor(dto.cursor)
       : undefined;
@@ -104,40 +126,28 @@ export class SearchService {
       `
       : Prisma.empty;
 
-    const services = await this.prisma.$queryRaw<
-      Array<{
-        id: string;
-        freelancerId: string;
-        title: string;
-        description: string;
-        price: number;
-        skills: string[];
-        imageUrls: string[];
-        status: string;
-        createdAt: Date;
-      }>
-    >`
-    SELECT
-      id,
-      "freelancerId",
-      title,
-      description,
-      price,
-      skills,
-      "imageUrls",
-      status,
-      "createdAt"
-    FROM "Service"
-    WHERE "deletedAt" IS NULL
-      AND "status" = 'ACTIVE'
-      ${searchCondition}
-      ${skillsCondition}
-      ${minPriceCondition}
-      ${maxPriceCondition}
-      ${cursorCondition}
-    ORDER BY "createdAt" DESC, "id" DESC
-    LIMIT ${limit + 1}
-  `;
+    const services = await this.prisma.$queryRaw<SearchServiceRecord[]>`
+      SELECT
+        id,
+        "freelancerId",
+        title,
+        description,
+        price,
+        skills,
+        "imageUrls",
+        status,
+        "createdAt"
+      FROM "Service"
+      WHERE "deletedAt" IS NULL
+        AND "status" = 'ACTIVE'
+        ${searchCondition}
+        ${skillsCondition}
+        ${minPriceCondition}
+        ${maxPriceCondition}
+        ${cursorCondition}
+      ORDER BY "createdAt" DESC, "id" DESC
+      LIMIT ${limit + 1}
+    `;
 
     const hasMore = services.length > limit;
 
@@ -146,6 +156,7 @@ export class SearchService {
     }
 
     const lastService = services[services.length - 1];
+
     const cursor = lastService
       ? this.encodeCursor({
           createdAt: lastService.createdAt.toISOString(),
@@ -153,7 +164,7 @@ export class SearchService {
         })
       : null;
 
-    const response = {
+    const response: SearchResponse = {
       data: services,
       meta: {
         cursor,
