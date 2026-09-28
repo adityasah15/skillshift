@@ -98,6 +98,59 @@ Verified:
 * Live API
 * Live Swagger
 
+### Post-Phase 13 Fixes
+
+#### Search Cursor Pagination
+
+**Status:** Implemented + tested.
+
+The Search module cursor pagination was corrected to mirror its existing ordering:
+
+```text
+ORDER BY "createdAt" DESC, "id" DESC
+```
+
+The cursor now contains both `createdAt` and `id`, with the next-page condition:
+
+```text
+"createdAt" < cursor.createdAt
+OR (
+  "createdAt" = cursor.createdAt
+  AND "id" < cursor.id
+)
+```
+
+This makes pagination deterministic when multiple services share the same `createdAt` value.
+
+Verified with:
+
+* first-page retrieval
+* composite cursor generation
+* subsequent-page retrieval
+* multiple consecutive pages
+* duplicate prevention
+* invalid cursor handling
+
+Final verification:
+
+* 32 test suites passed
+* 140 tests passed
+* `npm run build` passed
+* `npm run lint` passed with 0 errors
+* GitHub Actions passed
+
+#### EC2 SSH Access
+
+**Status:** Operational issue resolved.
+
+Local EC2 SSH access was restored after identifying that the local deployment PEM public key was missing from the EC2 user's `authorized_keys`.
+
+The matching public key was added, SSH permissions were corrected, and connection was successfully verified using the local PEM.
+
+The GitHub Actions deployment SSH key remains configured separately.
+
+Private PEM files remain excluded through `.gitignore` and must not be committed.
+
 ### Next
 
 **Phase 14 — Documentation & Final Polish**

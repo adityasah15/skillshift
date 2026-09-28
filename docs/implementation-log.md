@@ -8783,3 +8783,155 @@ Planned work:
 * final checkpoint
 
 Do not introduce new architectural features unless required by the Blueprint.
+
+# Post-Phase 13 Fixes
+
+## Search Cursor Pagination Consistency Fix
+
+### Status
+
+Implemented and tested.
+
+### Problem
+
+The Search module already ordered service results using:
+
+```sql
+ORDER BY "createdAt" DESC, "id" DESC
+```
+
+During Phase 10 testing, cursor pagination was identified as inconsistent with this composite ordering.
+
+The cursor logic needed to mirror both ordering fields to guarantee deterministic pagination.
+
+### Fix
+
+The cursor now contains:
+
+```text
+createdAt
+id
+```
+
+The next-page condition mirrors the descending ordering:
+
+```sql
+"createdAt" < cursor.createdAt
+OR (
+  "createdAt" = cursor.createdAt
+  AND "id" < cursor.id
+)
+```
+
+This ensures that records are neither skipped nor duplicated when moving between pages, including when multiple services have identical `createdAt` timestamps.
+
+### Testing
+
+Tests were added/updated for:
+
+* first-page retrieval
+* composite cursor generation
+* next-page retrieval using the cursor
+* multiple consecutive pages
+* duplicate prevention
+* invalid cursor handling
+
+Additional explicit TypeScript types were added in the Search service/response and test code to resolve ESLint unsafe-type errors.
+
+Final verification:
+
+```text
+32 test suites passed
+140 tests passed
+npm run build passed
+npm run lint passed with 0 errors
+GitHub Actions passed
+```
+
+### Classification
+
+This is an **implemented and tested technical fix** to the existing Search pagination implementation.
+
+It is not a new Search redesign or a new feature phase.
+
+---
+
+## EC2 SSH Access Fix
+
+### Status
+
+Operational issue resolved.
+
+### Problem
+
+Local SSH access to the production EC2 instance failed with:
+
+```text
+Permission denied (publickey)
+```
+
+The local deployment key:
+
+```text
+skillshift-key-v2.pem
+```
+
+was verified locally and its public-key fingerprint matched:
+
+```text
+SHA256:RZeAD4s0HKl7BdebLg67PBCYOmgoNhb2U2p2Ftev6BQ
+```
+
+Inspection of the EC2 user's SSH configuration showed that the matching local RSA public key was not present in:
+
+```text
+~/.ssh/authorized_keys
+```
+
+The existing GitHub Actions deployment key remained separately configured.
+
+### Resolution
+
+The matching local public key was added to the EC2 user's `authorized_keys`.
+
+SSH permissions were corrected.
+
+Connection was then successfully verified using:
+
+```bash
+ssh -o IdentitiesOnly=yes -i ./skillshift-key-v2.pem ubuntu@13.51.199.162
+```
+
+The connection successfully authenticated as:
+
+```text
+ubuntu
+```
+
+### Security Notes
+
+The private PEM remains local and must not be committed.
+
+The repository already excludes:
+
+```text
+*.pem
+```
+
+through `.gitignore`.
+
+The generated:
+
+```text
+skillshift-key-v2.pub
+```
+
+is not required in the repository and should remain untracked/removed.
+
+The GitHub Actions SSH deployment key remains in `authorized_keys`.
+
+### Classification
+
+This was an **operational SSH access issue**, not a new application or deployment architecture feature.
+
+No application architecture was changed as part of this fix.

@@ -1429,3 +1429,14 @@ Be able to explain why cross-cutting concerns such as logging, response transfor
 - Learned the role of Helmet in adding HTTP security headers and compression in reducing HTTP response size.
 - Learned the importance of automated unit-test coverage for validating business logic and regression safety.
 - Achieved and verified the project's Phase 12 coverage target of 60%+ overall coverage.
+
+## Post-Phase 13 — Search Pagination and EC2 SSH
+
+* Learned why cursor pagination must mirror the complete database ordering, not just one ordering field.
+* Learned how a composite cursor using `createdAt` and `id` provides deterministic pagination when multiple records share the same timestamp.
+* Learned how incorrect cursor conditions can cause skipped or duplicated records across consecutive pages.
+* Learned the role of TypeScript typing and ESLint checks in preventing unsafe data handling in pagination logic and tests.
+* Learned how EC2 SSH authentication depends on the client private key matching a public key present in the server user's `authorized_keys`.
+* Learned how SSH key fingerprints can be used to verify that the intended public/private key pair is being configured.
+* Learned the importance of SSH file and directory permissions for successful key-based authentication.
+* Reinforced that deployment private keys must remain outside version control and be protected through `.gitignore` and local secret handling.
