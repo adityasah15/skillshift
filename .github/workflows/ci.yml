@@ -1,4 +1,3 @@
-```yaml
 name: CI
 
 on:
@@ -66,4 +65,3 @@ jobs:
             docker compose pull api
             docker compose up -d api
             docker image prune -f
-```
