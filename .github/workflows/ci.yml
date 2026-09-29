@@ -10,6 +10,10 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -49,7 +53,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./backend
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/skillshift-api:latest
 
