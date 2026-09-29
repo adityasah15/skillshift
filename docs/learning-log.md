@@ -1440,3 +1440,12 @@ Be able to explain why cross-cutting concerns such as logging, response transfor
 * Learned how SSH key fingerprints can be used to verify that the intended public/private key pair is being configured.
 * Learned the importance of SSH file and directory permissions for successful key-based authentication.
 * Reinforced that deployment private keys must remain outside version control and be protected through `.gitignore` and local secret handling.
+
+## Repository Structure & Deployment Paths
+
+* Learned how separating the backend into a dedicated `backend/` directory affects package, Prisma, Docker, and test paths.
+* Learned that CI commands must execute from the correct working directory after a repository restructure.
+* Learned that Docker build context and Dockerfile location must be updated consistently when application files move directories.
+* Learned how Docker Compose build paths and GitHub Actions Docker build contexts need to remain aligned with the repository structure.
+* Reinforced that repository restructuring does not necessarily imply an application architecture change when the runtime architecture remains unchanged.
+* Learned the importance of verifying a large file move with Git rename detection to confirm that files were reorganized without unintended content changes.

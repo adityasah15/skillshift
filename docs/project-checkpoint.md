@@ -170,3 +170,53 @@ Planned areas:
 * Final checkpoint
 
 No new architectural features should be introduced unless required by the Blueprint.
+
+### Repository Structure Update
+
+**Status:** Implemented + verified.
+
+The NestJS backend was moved into a dedicated `backend/` directory.
+
+Backend-owned files now reside under `backend/`, including:
+
+* NestJS source
+* Prisma schema and migrations
+* tests
+* configuration
+* Dockerfile
+* `package.json` / `package-lock.json`
+
+Deployment and CI configuration was updated accordingly:
+
+* Docker Compose builds from `./backend`.
+* GitHub Actions runs Node/npm/Prisma/lint/tests/build from `backend/`.
+* Docker build/push uses `./backend` as the build context.
+* `.gitignore` excludes backend-generated files:
+
+  * `backend/dist/`
+  * `backend/node_modules/`
+  * `backend/generated/`
+
+### Verification
+
+* `npm ci` passed.
+* `npx prisma generate` passed.
+* `npm run lint` passed with 0 errors and 7 existing warnings.
+* `npm test -- --runInBand` passed: **32 suites / 140 tests**.
+* `npm run build` passed.
+* `docker build -t skillshift-api ./backend` passed.
+* `docker compose config` passed.
+* Git rename detection confirmed the backend files were moved without content changes.
+
+**Commit:** `3311d7a` — `chore: move backend into dedicated directory`
+
+### Architectural Impact
+
+No application architecture changed.
+
+SkillShift remains a NestJS monolith. The change only reorganized the repository and updated deployment/CI paths to match the new structure.
+
+### Deferred
+
+Documentation paths and references affected by the new `backend/` structure are being updated separately.
+

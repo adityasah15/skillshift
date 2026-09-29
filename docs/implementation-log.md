@@ -8935,3 +8935,116 @@ The GitHub Actions SSH deployment key remains in `authorized_keys`.
 This was an **operational SSH access issue**, not a new application or deployment architecture feature.
 
 No application architecture was changed as part of this fix.
+
+## Repository Structure — Backend Directory Migration
+
+### Status
+
+Implemented and verified.
+
+### Objective
+
+Move the NestJS backend into a dedicated `backend/` directory to establish a cleaner repository structure for the backend and deployment configuration.
+
+### Changes
+
+The following backend-owned content was moved under `backend/`:
+
+* NestJS source
+* Prisma schema
+* Prisma migrations
+* tests
+* backend configuration
+* Dockerfile
+* `package.json`
+* `package-lock.json`
+
+Deployment and CI configuration was updated to use the new location.
+
+### Docker
+
+Docker Compose was updated so the backend image builds from:
+
+```text
+./backend
+```
+
+The backend Docker build was verified successfully:
+
+```text
+docker build -t skillshift-api ./backend
+```
+
+### GitHub Actions
+
+The CI workflow was updated so backend-related commands execute from `backend/`, including:
+
+* npm installation
+* Prisma generation
+* linting
+* tests
+* build
+
+The Docker build/push workflow also uses:
+
+```text
+./backend
+```
+
+as its Docker build context.
+
+### Gitignore
+
+Backend-generated directories were explicitly covered:
+
+```text
+backend/dist/
+backend/node_modules/
+backend/generated/
+```
+
+### Verification
+
+The migration was verified with:
+
+```text
+npm ci                         PASS
+npx prisma generate            PASS
+npm run lint                   PASS
+npm test -- --runInBand       PASS
+npm run build                 PASS
+docker build ... ./backend    PASS
+docker compose config         PASS
+```
+
+Lint completed with:
+
+```text
+0 errors
+7 existing warnings
+```
+
+Automated tests completed with:
+
+```text
+32 test suites passed
+140 tests passed
+```
+
+Git rename detection confirmed that the backend files were moved without content changes.
+
+### Architectural Impact
+
+No application architecture was changed.
+
+The NestJS monolith remains the application's architecture. This change only establishes a dedicated repository directory for the backend and updates CI/deployment paths accordingly.
+
+### Git
+
+```text
+3311d7a — chore: move backend into dedicated directory
+```
+
+### Deferred
+
+Documentation references and path descriptions affected by the new `backend/` structure are updated separately.
