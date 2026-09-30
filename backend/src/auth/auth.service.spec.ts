@@ -284,6 +284,26 @@ describe('AuthService', () => {
       expect(jwtService.sign).not.toHaveBeenCalled();
     });
 
+    it('should reject disabled user', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: dto.email,
+        passwordHash: 'hash',
+        isEmailVerified: true,
+        deletedAt: new Date(),
+        role: Role.CLIENT,
+      });
+
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      await expect(service.login(dto)).rejects.toEqual(
+        new BadRequestException('Invalid email or password'),
+      );
+
+      expect(jwtService.sign).not.toHaveBeenCalled();
+      expect(prisma.refreshToken.create).not.toHaveBeenCalled();
+    });
+
     it('should login successfully', async () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
@@ -397,6 +417,31 @@ describe('AuthService', () => {
       await expect(service.refresh('token-id.secret')).rejects.toBeInstanceOf(
         UnauthorizedException,
       );
+    });
+
+    it('should reject refresh token for disabled user', async () => {
+      prisma.refreshToken.findUnique.mockResolvedValue({
+        id: 'token-id',
+        userId: 'user-1',
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 60_000),
+        tokenHash: 'hash',
+      });
+
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+        role: Role.CLIENT,
+        deletedAt: new Date(),
+      });
+
+      await expect(service.refresh('token-id.secret')).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+
+      expect(jwtService.sign).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
     it('should rotate refresh token successfully', async () => {

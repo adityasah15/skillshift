@@ -104,6 +104,9 @@ export class AuthService {
         existingUser.passwordHash,
       );
       if (match) {
+        if (existingUser.deletedAt) {
+          throw new BadRequestException('Invalid email or password');
+        }
         if (!existingUser.isEmailVerified) {
           throw new BadRequestException('Please verify your email first');
         }
@@ -157,7 +160,7 @@ export class AuthService {
     const user = await this.prismaService.user.findUnique({
       where: { id: matchedToken.userId },
     });
-    if (!user) {
+    if (!user || user.deletedAt) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
