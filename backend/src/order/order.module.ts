@@ -5,6 +5,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { EscrowModule } from 'src/escrow/escrow.module';
 import { OrderAutoCompleteModule } from './order-auto-complete/order-auto-complete.module';
 import { NotificationModule } from 'src/notification/notification.module';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { NotificationModule } from 'src/notification/notification.module';
     EscrowModule,
     OrderAutoCompleteModule,
     NotificationModule,
+    RedisModule,
   ],
   controllers: [OrderController],
   providers: [OrderService],

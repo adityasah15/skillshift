@@ -2,14 +2,21 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import {
   EscrowStatus,
+  NotificationType,
   OrderStatus,
   TransactionType,
 } from 'generated/prisma/enums';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { NotificationService } from 'src/notification/notification.service';
+import { RedisService } from 'src/redis/redis.service';
 
 @Processor('ORDER_AUTO_COMPLETE')
 export class OrderAutoCompleteProcessor extends WorkerHost {
-  constructor(private readonly prismaService: PrismaService) {
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly notificationService: NotificationService,
+    private readonly redisService: RedisService,
+  ) {
     super();
   }
 
@@ -29,7 +36,7 @@ export class OrderAutoCompleteProcessor extends WorkerHost {
     ) {
       return;
     }
-    await this.prismaService.$transaction(async (tx) => {
+    const completed = await this.prismaService.$transaction(async (tx) => {
       const updated = await tx.order.updateMany({
         where: {
           id: orderId,
@@ -41,7 +48,7 @@ export class OrderAutoCompleteProcessor extends WorkerHost {
       });
 
       if (updated.count === 0) {
-        return;
+        return false;
       }
 
       const escrow = await tx.escrow.updateMany({
@@ -80,6 +87,19 @@ export class OrderAutoCompleteProcessor extends WorkerHost {
           after: { status: OrderStatus.COMPLETED },
         },
       });
+      return true;
     });
+
+    if (!completed) {
+      return;
+    }
+
+    await this.redisService.del('admin:analytics:dashboard');
+    await this.notificationService.enqueue(
+      order.freelancerId,
+      NotificationType.ORDER_COMPLETED,
+      'Order completed',
+      'Your order has been completed and payment has been released.',
+    );
   }
 }

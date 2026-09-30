@@ -16,12 +16,14 @@ import {
   TransactionType,
 } from 'generated/prisma/enums';
 import { NotificationService } from 'src/notification/notification.service';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class DisputeService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly notificationService: NotificationService,
+    private readonly redisService: RedisService,
   ) {}
 
   async create(userId: string, createDisputeDto: CreateDisputeDto) {
@@ -72,6 +74,7 @@ export class DisputeService {
       });
       return dispute;
     });
+    await this.redisService.del('admin:analytics:dashboard');
     const admins = await this.prismaService.user.findMany({
       where: {
         role: Role.ADMIN,
@@ -257,6 +260,20 @@ export class DisputeService {
         data: {
           userId: adminId,
           orderId: dispute.orderId,
+          action: 'ORDER_STATUS_CHANGED',
+          before: { status: dispute.order.status },
+          after: {
+            status: isFreelancerResolution
+              ? OrderStatus.COMPLETED
+              : OrderStatus.REFUNDED,
+          },
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: adminId,
+          orderId: dispute.orderId,
           action: 'DISPUTE_RESOLVED',
           before: {
             status: dispute.status,
@@ -272,16 +289,16 @@ export class DisputeService {
       });
     });
 
-    const recipientId =
-      resolveDisputeDto.resolution === 'RESOLVED_FREELANCER'
-        ? dispute.order.freelancerId
-        : dispute.order.clientId;
-
-    await this.notificationService.enqueue(
-      recipientId,
-      NotificationType.DISPUTE_RESOLVED,
-      'Dispute resolved',
-      `The dispute for order ${dispute.orderId} has been resolved.`,
+    await this.redisService.del('admin:analytics:dashboard');
+    await Promise.all(
+      [dispute.order.clientId, dispute.order.freelancerId].map((recipientId) =>
+        this.notificationService.enqueue(
+          recipientId,
+          NotificationType.DISPUTE_RESOLVED,
+          'Dispute resolved',
+          `The dispute for order ${dispute.orderId} has been resolved.`,
+        ),
+      ),
     );
 
     return result;

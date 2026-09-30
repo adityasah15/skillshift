@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { DisputeService } from './dispute.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NotificationService } from 'src/notification/notification.service';
+import { RedisService } from 'src/redis/redis.service';
 import { Prisma } from 'generated/prisma/client';
 
 describe('DisputeService', () => {
@@ -11,11 +12,22 @@ describe('DisputeService', () => {
   const transactionMock = {
     dispute: {
       create: jest.fn(),
+      updateMany: jest.fn(),
+      findUnique: jest.fn(),
     },
     order: {
       update: jest.fn(),
     },
     auditLog: {
+      create: jest.fn(),
+    },
+    escrow: {
+      updateMany: jest.fn(),
+    },
+    wallet: {
+      update: jest.fn(),
+    },
+    transaction: {
       create: jest.fn(),
     },
   };
@@ -27,6 +39,12 @@ describe('DisputeService', () => {
     user: {
       findMany: jest.fn(),
     },
+    dispute: {
+      findUnique: jest.fn(),
+    },
+    escrow: {
+      findUnique: jest.fn(),
+    },
     $transaction: jest.fn(
       (callback: (transaction: Prisma.TransactionClient) => Promise<unknown>) =>
         callback(transactionMock as unknown as Prisma.TransactionClient),
@@ -35,6 +53,9 @@ describe('DisputeService', () => {
 
   const notificationMock = {
     enqueue: jest.fn(),
+  };
+  const redisMock = {
+    del: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -51,6 +72,7 @@ describe('DisputeService', () => {
           provide: NotificationService,
           useValue: notificationMock,
         },
+        { provide: RedisService, useValue: redisMock },
       ],
     }).compile();
 
@@ -153,12 +175,67 @@ describe('DisputeService', () => {
         after: { orderStatus: 'DISPUTED' },
       }) as unknown,
     });
+    expect(redisMock.del).toHaveBeenCalledWith('admin:analytics:dashboard');
     expect(notificationMock.enqueue).toHaveBeenCalledTimes(2);
     expect(notificationMock.enqueue).toHaveBeenCalledWith(
       'admin-1',
       'DISPUTE_OPENED',
       'New dispute opened',
       'A new dispute has been opened for order order-id.',
+    );
+  });
+
+  it('notifies both order participants and audits the order transition when resolved', async () => {
+    prismaMock.dispute.findUnique.mockResolvedValue({
+      id: 'dispute-id',
+      orderId: 'order-id',
+      status: 'OPEN',
+      order: {
+        clientId: 'client-1',
+        freelancerId: 'freelancer-1',
+        status: 'DISPUTED',
+      },
+    });
+    prismaMock.escrow.findUnique.mockResolvedValue({
+      status: 'HOLDING',
+      amount: 100,
+    });
+    transactionMock.dispute.updateMany.mockResolvedValue({ count: 1 });
+    transactionMock.escrow.updateMany.mockResolvedValue({ count: 1 });
+    transactionMock.wallet.update.mockResolvedValue({ id: 'wallet-1' });
+    transactionMock.transaction.create.mockResolvedValue({});
+    transactionMock.dispute.findUnique.mockResolvedValue({ id: 'dispute-id' });
+
+    await expect(
+      service.resolve(
+        'dispute-id',
+        { resolution: 'RESOLVED_FREELANCER', adminNote: 'Work completed' },
+        'admin-1',
+      ),
+    ).resolves.toEqual({ id: 'dispute-id' });
+
+    expect(transactionMock.auditLog.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'admin-1',
+        orderId: 'order-id',
+        action: 'ORDER_STATUS_CHANGED',
+        before: { status: 'DISPUTED' },
+        after: { status: 'COMPLETED' },
+      },
+    });
+    expect(redisMock.del).toHaveBeenCalledWith('admin:analytics:dashboard');
+    expect(notificationMock.enqueue).toHaveBeenCalledTimes(2);
+    expect(notificationMock.enqueue).toHaveBeenCalledWith(
+      'client-1',
+      'DISPUTE_RESOLVED',
+      'Dispute resolved',
+      'The dispute for order order-id has been resolved.',
+    );
+    expect(notificationMock.enqueue).toHaveBeenCalledWith(
+      'freelancer-1',
+      'DISPUTE_RESOLVED',
+      'Dispute resolved',
+      'The dispute for order order-id has been resolved.',
     );
   });
 });

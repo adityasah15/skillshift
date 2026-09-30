@@ -10,6 +10,7 @@ import { OrderService } from './order.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { EscrowService } from 'src/escrow/escrow.service';
 import { NotificationService } from 'src/notification/notification.service';
+import { RedisService } from 'src/redis/redis.service';
 import {
   NotificationType,
   OrderStatus,
@@ -56,6 +57,9 @@ describe('OrderService', () => {
   const notificationService = {
     enqueue: jest.fn(),
   };
+  const redisService = {
+    del: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -79,6 +83,7 @@ describe('OrderService', () => {
           provide: NotificationService,
           useValue: notificationService,
         },
+        { provide: RedisService, useValue: redisService },
       ],
     }).compile();
 
@@ -176,12 +181,15 @@ describe('OrderService', () => {
         (callback: TransactionCallback) => {
           const tx = {
             wallet: {
-              update: jest.fn().mockResolvedValue({}),
+              updateMany: jest.fn().mockResolvedValue({ count: 1 }),
             },
             order: {
               create: jest.fn().mockResolvedValue(createdOrder),
             },
             transaction: {
+              create: jest.fn().mockResolvedValue({}),
+            },
+            auditLog: {
               create: jest.fn().mockResolvedValue({}),
             },
           };
@@ -196,6 +204,11 @@ describe('OrderService', () => {
       const result = await service.create('client-1', dto);
 
       expect(result).toEqual(createdOrder);
+      expect(redisService.del).toHaveBeenCalledWith(
+        'admin:analytics:dashboard',
+      );
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
 
       expect(escrowService.hold).toHaveBeenCalledWith(
         expect.any(Object),
@@ -209,6 +222,46 @@ describe('OrderService', () => {
         'New order received',
         'You have received a new order.',
       );
+    });
+
+    it('should not create an order when the atomic debit finds insufficient funds', async () => {
+      prisma.service.findUnique.mockResolvedValue(serviceData);
+      prisma.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        userId: 'client-1',
+        balance: 500,
+      });
+
+      let orderCreate = jest.fn();
+      prisma.$transaction.mockImplementation(
+        (callback: TransactionCallback) => {
+          orderCreate = jest.fn();
+          const tx = {
+            wallet: {
+              updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+            },
+            order: {
+              create: orderCreate,
+            },
+            transaction: {
+              create: jest.fn(),
+            },
+            auditLog: {
+              create: jest.fn(),
+            },
+          };
+
+          return callback(tx);
+        },
+      );
+
+      await expect(service.create('client-1', dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+
+      expect(orderCreate).not.toHaveBeenCalled();
+      expect(escrowService.hold).not.toHaveBeenCalled();
+      expect(notificationService.enqueue).not.toHaveBeenCalled();
     });
   });
 
@@ -297,7 +350,21 @@ describe('OrderService', () => {
         autoCompleteAt: new Date(),
       };
 
-      prisma.order.update.mockResolvedValue(updatedOrder);
+      const auditLogCreate = jest.fn().mockResolvedValue({});
+      prisma.$transaction.mockImplementation(
+        (callback: TransactionCallback) => {
+          const tx = {
+            order: {
+              update: jest.fn().mockResolvedValue(updatedOrder),
+            },
+            auditLog: {
+              create: auditLogCreate,
+            },
+          };
+
+          return callback(tx);
+        },
+      );
 
       notificationService.enqueue.mockResolvedValue(undefined);
       autoCompleteQueue.add.mockResolvedValue({});
@@ -305,15 +372,21 @@ describe('OrderService', () => {
       const result = await service.deliver('freelancer-1', 'order-1', 'Done');
 
       expect(result).toEqual(updatedOrder);
+      expect(redisService.del).toHaveBeenCalledWith(
+        'admin:analytics:dashboard',
+      );
 
-      expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: 'order-1' },
+      expect(auditLogCreate).toHaveBeenCalledWith({
         data: {
-          status: OrderStatus.DELIVERED,
-          deliveryNote: 'Done',
-          autoCompleteAt: expect.any(Date) as unknown,
+          userId: 'freelancer-1',
+          orderId: 'order-1',
+          action: 'ORDER_STATUS_CHANGED',
+          before: { status: OrderStatus.IN_PROGRESS },
+          after: { status: OrderStatus.DELIVERED },
         },
       });
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
 
       expect(notificationService.enqueue).toHaveBeenCalledWith(
         'client-1',
@@ -378,6 +451,9 @@ describe('OrderService', () => {
             order: {
               update: jest.fn().mockResolvedValue(order),
             },
+            auditLog: {
+              create: jest.fn().mockResolvedValue({}),
+            },
             wallet: {
               findUnique: jest.fn().mockResolvedValue(null),
               update: jest.fn(),
@@ -411,12 +487,16 @@ describe('OrderService', () => {
         userId: 'freelancer-1',
         balance: 50,
       };
+      const auditLogCreate = jest.fn().mockResolvedValue({});
 
       prisma.$transaction.mockImplementation(
         (callback: TransactionCallback) => {
           const tx = {
             order: {
               update: jest.fn().mockResolvedValue(completedOrder),
+            },
+            auditLog: {
+              create: auditLogCreate,
             },
             wallet: {
               findUnique: jest.fn().mockResolvedValue(freelancerWallet),
@@ -437,6 +517,18 @@ describe('OrderService', () => {
       const result = await service.complete('client-1', 'order-1');
 
       expect(result).toEqual(completedOrder);
+      expect(redisService.del).toHaveBeenCalledWith(
+        'admin:analytics:dashboard',
+      );
+      expect(auditLogCreate).toHaveBeenCalledWith({
+        data: {
+          userId: 'client-1',
+          orderId: 'order-1',
+          action: 'ORDER_STATUS_CHANGED',
+          before: { status: OrderStatus.DELIVERED },
+          after: { status: OrderStatus.COMPLETED },
+        },
+      });
 
       expect(escrowService.release).toHaveBeenCalledWith(
         expect.any(Object),
@@ -497,6 +589,9 @@ describe('OrderService', () => {
             order: {
               update: jest.fn().mockResolvedValue(order),
             },
+            auditLog: {
+              create: jest.fn().mockResolvedValue({}),
+            },
             wallet: {
               findUnique: jest.fn().mockResolvedValue(null),
               update: jest.fn(),
@@ -530,12 +625,16 @@ describe('OrderService', () => {
         userId: 'client-1',
         balance: 50,
       };
+      const auditLogCreate = jest.fn().mockResolvedValue({});
 
       prisma.$transaction.mockImplementation(
         (callback: TransactionCallback) => {
           const tx = {
             order: {
               update: jest.fn().mockResolvedValue(cancelledOrder),
+            },
+            auditLog: {
+              create: auditLogCreate,
             },
             wallet: {
               findUnique: jest.fn().mockResolvedValue(clientWallet),
@@ -556,12 +655,31 @@ describe('OrderService', () => {
       const result = await service.cancel('client-1', 'order-1');
 
       expect(result).toEqual(cancelledOrder);
+      expect(redisService.del).toHaveBeenCalledWith(
+        'admin:analytics:dashboard',
+      );
+      expect(auditLogCreate).toHaveBeenCalledWith({
+        data: {
+          userId: 'client-1',
+          orderId: 'order-1',
+          action: 'ORDER_STATUS_CHANGED',
+          before: { status: OrderStatus.IN_PROGRESS },
+          after: { status: OrderStatus.CANCELLED },
+        },
+      });
 
       expect(escrowService.refund).toHaveBeenCalledWith(
         expect.any(Object),
         'order-1',
       );
 
+      expect(notificationService.enqueue).toHaveBeenCalledTimes(2);
+      expect(notificationService.enqueue).toHaveBeenCalledWith(
+        'client-1',
+        NotificationType.ORDER_CANCELLED,
+        'Order cancelled',
+        'An order you were involved in has been cancelled and the payment has been refunded.',
+      );
       expect(notificationService.enqueue).toHaveBeenCalledWith(
         'freelancer-1',
         NotificationType.ORDER_CANCELLED,
@@ -583,6 +701,9 @@ describe('OrderService', () => {
           const tx = {
             order: {
               update: jest.fn().mockResolvedValue(cancelledOrder),
+            },
+            auditLog: {
+              create: jest.fn().mockResolvedValue({}),
             },
             wallet: {
               findUnique: jest.fn().mockResolvedValue({
@@ -606,8 +727,15 @@ describe('OrderService', () => {
 
       await service.cancel('freelancer-1', 'order-1');
 
+      expect(notificationService.enqueue).toHaveBeenCalledTimes(2);
       expect(notificationService.enqueue).toHaveBeenCalledWith(
         'client-1',
+        NotificationType.ORDER_CANCELLED,
+        'Order cancelled',
+        'An order you were involved in has been cancelled and the payment has been refunded.',
+      );
+      expect(notificationService.enqueue).toHaveBeenCalledWith(
+        'freelancer-1',
         NotificationType.ORDER_CANCELLED,
         'Order cancelled',
         'An order you were involved in has been cancelled and the payment has been refunded.',

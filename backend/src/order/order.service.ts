@@ -16,6 +16,7 @@ import { EscrowService } from 'src/escrow/escrow.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { NotificationService } from 'src/notification/notification.service';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class OrderService {
@@ -25,6 +26,7 @@ export class OrderService {
     @InjectQueue('ORDER_AUTO_COMPLETE')
     private readonly autoCompleteQueue: Queue,
     private readonly notificationService: NotificationService,
+    private readonly redisService: RedisService,
   ) {}
 
   async create(clientId: string, createOrderDto: CreateOrderDto) {
@@ -50,10 +52,13 @@ export class OrderService {
       throw new BadRequestException('Insufficient balance');
     }
     const order = await this.prismaService.$transaction(async (tx) => {
-      await tx.wallet.update({
-        where: { userId: clientId },
+      const debit = await tx.wallet.updateMany({
+        where: { userId: clientId, balance: { gte: service.price } },
         data: { balance: { decrement: service.price } },
       });
+      if (debit.count !== 1) {
+        throw new BadRequestException('Insufficient balance');
+      }
       const order = await tx.order.create({
         data: {
           clientId,
@@ -63,6 +68,15 @@ export class OrderService {
           deliveryDays: service.deliveryDays,
           requirements: createOrderDto.requirements,
           status: OrderStatus.IN_PROGRESS,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          userId: clientId,
+          orderId: order.id,
+          action: 'ORDER_STATUS_CHANGED',
+          before: { status: null },
+          after: { status: OrderStatus.IN_PROGRESS },
         },
       });
       await tx.transaction.create({
@@ -78,6 +92,7 @@ export class OrderService {
       return order;
     });
 
+    await this.redisService.del('admin:analytics:dashboard');
     await this.notificationService.enqueue(
       order.freelancerId,
       NotificationType.ORDER_PLACED,
@@ -116,15 +131,28 @@ export class OrderService {
     if (order.status !== OrderStatus.IN_PROGRESS) {
       throw new BadRequestException('Order is not in progress');
     }
-    const updatedOrder = await this.prismaService.order.update({
-      where: { id: orderId },
-      data: {
-        status: OrderStatus.DELIVERED,
-        deliveryNote,
-        autoCompleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
+    const updatedOrder = await this.prismaService.$transaction(async (tx) => {
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: OrderStatus.DELIVERED,
+          deliveryNote,
+          autoCompleteAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          userId: freelancerId,
+          orderId,
+          action: 'ORDER_STATUS_CHANGED',
+          before: { status: OrderStatus.IN_PROGRESS },
+          after: { status: OrderStatus.DELIVERED },
+        },
+      });
+      return updatedOrder;
     });
 
+    await this.redisService.del('admin:analytics:dashboard');
     await this.notificationService.enqueue(
       order.clientId,
       NotificationType.ORDER_DELIVERED,
@@ -163,6 +191,15 @@ export class OrderService {
         where: { id: orderId },
         data: { status: OrderStatus.COMPLETED },
       });
+      await tx.auditLog.create({
+        data: {
+          userId: clientId,
+          orderId,
+          action: 'ORDER_STATUS_CHANGED',
+          before: { status: OrderStatus.DELIVERED },
+          after: { status: OrderStatus.COMPLETED },
+        },
+      });
       await this.escrowService.release(tx, order.id);
       const freelancerWallet = await tx.wallet.findUnique({
         where: { userId: order.freelancerId },
@@ -188,6 +225,7 @@ export class OrderService {
       return order;
     });
 
+    await this.redisService.del('admin:analytics:dashboard');
     await this.notificationService.enqueue(
       updatedOrder.freelancerId,
       NotificationType.ORDER_COMPLETED,
@@ -216,6 +254,15 @@ export class OrderService {
         where: { id: orderId },
         data: { status: OrderStatus.CANCELLED },
       });
+      await tx.auditLog.create({
+        data: {
+          userId,
+          orderId,
+          action: 'ORDER_STATUS_CHANGED',
+          before: { status: OrderStatus.IN_PROGRESS },
+          after: { status: OrderStatus.CANCELLED },
+        },
+      });
       await this.escrowService.refund(tx, order.id);
       const clientWallet = await tx.wallet.findUnique({
         where: { userId: order.clientId },
@@ -241,14 +288,16 @@ export class OrderService {
       return order;
     });
 
-    const recipientId =
-      order.clientId === userId ? order.freelancerId : order.clientId;
-
-    await this.notificationService.enqueue(
-      recipientId,
-      NotificationType.ORDER_CANCELLED,
-      'Order cancelled',
-      'An order you were involved in has been cancelled and the payment has been refunded.',
+    await this.redisService.del('admin:analytics:dashboard');
+    await Promise.all(
+      [order.clientId, order.freelancerId].map((recipientId) =>
+        this.notificationService.enqueue(
+          recipientId,
+          NotificationType.ORDER_CANCELLED,
+          'Order cancelled',
+          'An order you were involved in has been cancelled and the payment has been refunded.',
+        ),
+      ),
     );
 
     return updatedOrder;
