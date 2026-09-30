@@ -186,7 +186,7 @@ describe('OrderService', () => {
             },
           };
 
-          return callback(tx as unknown as Prisma.TransactionClient);
+          return callback(tx);
         },
       );
 
@@ -387,7 +387,7 @@ describe('OrderService', () => {
             },
           };
 
-          return callback(tx as unknown as Prisma.TransactionClient);
+          return callback(tx);
         },
       );
 
@@ -427,7 +427,7 @@ describe('OrderService', () => {
             },
           };
 
-          return callback(tx as unknown as Prisma.TransactionClient);
+          return callback(tx);
         },
       );
 
@@ -506,7 +506,7 @@ describe('OrderService', () => {
             },
           };
 
-          return callback(tx as unknown as Prisma.TransactionClient);
+          return callback(tx);
         },
       );
 
@@ -546,7 +546,7 @@ describe('OrderService', () => {
             },
           };
 
-          return callback(tx as unknown as Prisma.TransactionClient);
+          return callback(tx);
         },
       );
 
@@ -597,7 +597,7 @@ describe('OrderService', () => {
             },
           };
 
-          return callback(tx as unknown as Prisma.TransactionClient);
+          return callback(tx);
         },
       );
 

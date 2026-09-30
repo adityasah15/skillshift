@@ -16,6 +16,7 @@ describe('EscrowService', () => {
       update: jest.fn(),
     },
   };
+  const transactionClient = tx as unknown as Prisma.TransactionClient;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -44,11 +45,7 @@ describe('EscrowService', () => {
 
       tx.escrow.create.mockResolvedValue(escrow);
 
-      const result = await service.hold(
-        tx as unknown as Prisma.TransactionClient,
-        100,
-        'order-1',
-      );
+      const result = await service.hold(transactionClient, 100, 'order-1');
 
       expect(tx.escrow.create).toHaveBeenCalledWith({
         data: {
@@ -66,7 +63,7 @@ describe('EscrowService', () => {
       tx.escrow.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.release(tx as unknown as Prisma.TransactionClient, 'order-1'),
+        service.release(transactionClient, 'order-1'),
       ).rejects.toBeInstanceOf(NotFoundException);
 
       expect(tx.escrow.findUnique).toHaveBeenCalledWith({
@@ -86,7 +83,7 @@ describe('EscrowService', () => {
       });
 
       await expect(
-        service.release(tx as unknown as Prisma.TransactionClient, 'order-1'),
+        service.release(transactionClient, 'order-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(tx.escrow.update).not.toHaveBeenCalled();
@@ -108,10 +105,7 @@ describe('EscrowService', () => {
       tx.escrow.findUnique.mockResolvedValue(escrow);
       tx.escrow.update.mockResolvedValue(releasedEscrow);
 
-      const result = await service.release(
-        tx as unknown as Prisma.TransactionClient,
-        'order-1',
-      );
+      const result = await service.release(transactionClient, 'order-1');
 
       expect(tx.escrow.update).toHaveBeenCalledWith({
         where: {
@@ -132,7 +126,7 @@ describe('EscrowService', () => {
       tx.escrow.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.refund(tx as unknown as Prisma.TransactionClient, 'order-1'),
+        service.refund(transactionClient, 'order-1'),
       ).rejects.toBeInstanceOf(NotFoundException);
 
       expect(tx.escrow.findUnique).toHaveBeenCalledWith({
@@ -152,7 +146,7 @@ describe('EscrowService', () => {
       });
 
       await expect(
-        service.refund(tx as unknown as Prisma.TransactionClient, 'order-1'),
+        service.refund(transactionClient, 'order-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(tx.escrow.update).not.toHaveBeenCalled();
@@ -174,10 +168,7 @@ describe('EscrowService', () => {
       tx.escrow.findUnique.mockResolvedValue(escrow);
       tx.escrow.update.mockResolvedValue(refundedEscrow);
 
-      const result = await service.refund(
-        tx as unknown as Prisma.TransactionClient,
-        'order-1',
-      );
+      const result = await service.refund(transactionClient, 'order-1');
 
       expect(tx.escrow.update).toHaveBeenCalledWith({
         where: {
