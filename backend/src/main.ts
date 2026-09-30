@@ -7,9 +7,15 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import helmet from 'helmet';
 import compression from 'compression';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  });
+  app.use(cookieParser());
 
   app.use(helmet());
   app.use(compression());
