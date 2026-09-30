@@ -3,6 +3,7 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
+import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
 import { GlobalExceptionFilter } from './global-exception.filter';
 import { Prisma } from 'generated/prisma/client';
 
@@ -15,9 +16,7 @@ describe('GlobalExceptionFilter', () => {
   let request: {
     url: string;
   };
-  let host: {
-    switchToHttp: jest.Mock;
-  };
+  let host: ExecutionContextHost;
 
   beforeEach(() => {
     filter = new GlobalExceptionFilter();
@@ -31,12 +30,7 @@ describe('GlobalExceptionFilter', () => {
       url: '/test',
     };
 
-    host = {
-      switchToHttp: jest.fn().mockReturnValue({
-        getResponse: jest.fn().mockReturnValue(response),
-        getRequest: jest.fn().mockReturnValue(request),
-      }),
-    };
+    host = new ExecutionContextHost([request, response]);
   });
 
   it('should be defined', () => {
@@ -44,7 +38,7 @@ describe('GlobalExceptionFilter', () => {
   });
 
   it('should handle HttpException', () => {
-    filter.catch(new NotFoundException('Order not found'), host as any);
+    filter.catch(new NotFoundException('Order not found'), host);
 
     expect(response.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
     expect(response.json).toHaveBeenCalledWith(
@@ -61,7 +55,7 @@ describe('GlobalExceptionFilter', () => {
       new BadRequestException({
         message: ['email must be valid', 'password is required'],
       }),
-      host as any,
+      host,
     );
 
     expect(response.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
@@ -82,7 +76,7 @@ describe('GlobalExceptionFilter', () => {
       },
     );
 
-    filter.catch(error, host as any);
+    filter.catch(error, host);
 
     expect(response.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
     expect(response.json).toHaveBeenCalledWith(
@@ -99,7 +93,7 @@ describe('GlobalExceptionFilter', () => {
       clientVersion: '7.8.0',
     });
 
-    filter.catch(error, host as any);
+    filter.catch(error, host);
 
     expect(response.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
     expect(response.json).toHaveBeenCalledWith(
@@ -119,7 +113,7 @@ describe('GlobalExceptionFilter', () => {
       },
     );
 
-    filter.catch(error, host as any);
+    filter.catch(error, host);
 
     expect(response.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(response.json).toHaveBeenCalledWith(
@@ -131,7 +125,7 @@ describe('GlobalExceptionFilter', () => {
   });
 
   it('should return 500 for unknown exceptions', () => {
-    filter.catch(new Error('unexpected error'), host as any);
+    filter.catch(new Error('unexpected error'), host);
 
     expect(response.status).toHaveBeenCalledWith(
       HttpStatus.INTERNAL_SERVER_ERROR,
