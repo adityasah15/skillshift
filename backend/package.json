@@ -99,6 +99,14 @@
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 60,
+        "functions": 55,
+        "lines": 60,
+        "statements": 60
+      }
+    },
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
