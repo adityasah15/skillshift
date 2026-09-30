@@ -9,9 +9,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
 
-    ports:
-      - "5432:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -19,9 +16,6 @@ services:
     image: redis:7-alpine
     container_name: skillshift-redis
     restart: unless-stopped
-
-    ports:
-      - "6379:6379"
 
   api:
     build:

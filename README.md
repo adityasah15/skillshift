@@ -80,6 +80,7 @@ Modular monolith. PostgreSQL is the source of truth. Redis is used for caching a
 ```
 
 **Key decisions**
+
 - Single NestJS monolith (no microservices for this scope)
 - Business rules live in the service layer; controllers stay thin
 - Soft deletes on User and Service
@@ -90,24 +91,25 @@ Modular monolith. PostgreSQL is the source of truth. Redis is used for caching a
 
 ## Tech Stack
 
-| Layer              | Technology                                      |
-|--------------------|-------------------------------------------------|
-| Runtime            | Node.js + NestJS + TypeScript                   |
-| Database & ORM     | PostgreSQL + Prisma                             |
-| Cache & Queues     | Redis + BullMQ                                  |
-| Auth               | JWT (access) + rotating refresh tokens (hashed) |
-| File Storage       | AWS S3 (presigned URLs)                         |
-| Email              | Resend / Nodemailer (via BullMQ)                |
-| Real-time          | NestJS WebSocket Gateway (Socket.IO)            |
-| Search             | PostgreSQL full-text (`tsvector`)               |
-| Infrastructure     | Docker, Docker Compose, Nginx                   |
-| Frontend           | Next.js 14 App Router                           |
+| Layer          | Technology                                      |
+| -------------- | ----------------------------------------------- |
+| Runtime        | Node.js + NestJS + TypeScript                   |
+| Database & ORM | PostgreSQL + Prisma                             |
+| Cache & Queues | Redis + BullMQ                                  |
+| Auth           | JWT (access) + rotating refresh tokens (hashed) |
+| File Storage   | AWS S3 (presigned URLs)                         |
+| Email          | Resend / Nodemailer (via BullMQ)                |
+| Real-time      | NestJS WebSocket Gateway (Socket.IO)            |
+| Search         | PostgreSQL full-text (`tsvector`)               |
+| Infrastructure | Docker, Docker Compose, Nginx                   |
+| Frontend       | Next.js 14 App Router                           |
 
 ---
 
 ## Core Features (planned / in progress)
 
 ### Authentication & Security
+
 - Registration + email verification
 - JWT access tokens (short-lived)
 - Refresh-token rotation and revocation
@@ -116,24 +118,28 @@ Modular monolith. PostgreSQL is the source of truth. Redis is used for caching a
 - Role-based access control (CLIENT / FREELANCER / ADMIN)
 
 ### Marketplace
+
 - Freelancer profiles & service listings
 - Service discovery + full-text search
 - Order lifecycle with delivery workflow
 - Reviews & ratings
 
 ### Payments (simulated)
+
 - Wallet system
 - Escrow hold → release / refund
 - All money movements logged as transactions
 - Atomic financial operations via Prisma transactions
 
 ### Communication
+
 - Order-scoped conversations
 - Real-time messaging (WebSockets)
 - Persisted history + online status (Redis)
 - In-app + email notifications
 
 ### Platform
+
 - Admin moderation & dispute resolution
 - Audit logs for critical state changes
 - Rate limiting on sensitive endpoints
@@ -174,10 +180,12 @@ skillshift/
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 20+
 - Docker
 
 ### 1. Clone & install
+
 ```bash
 git clone https://github.com/adityasah15/skillshift.git
 cd skillshift
@@ -185,24 +193,30 @@ npm install
 ```
 
 ### 2. Start infrastructure
+
 ```bash
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis
 ```
-This brings up PostgreSQL and Redis.
+
+This development override binds PostgreSQL and Redis to loopback so host-run tools can reach them. The default Compose topology does not publish database or cache ports.
 
 ### 3. Environment
+
 ```bash
 cp .env.example .env
 ```
+
 Copy the example env and fill in the required values (database URL, Redis, JWT secrets, etc.).
 
 ### 4. Database
+
 ```bash
 npx prisma migrate dev
 npx prisma generate
 ```
 
 ### 5. Run the API
+
 ```bash
 npm run start:dev
 ```
@@ -218,24 +232,24 @@ Once the server is running:
 
 ## Implementation Status
 
-* [x] Project setup & Docker infrastructure
-* [x] Database schema (Prisma)
-* [x] Authentication (registration, verification, JWT, rotation, logout, password reset)
-* [x] User / Profile module
-* [x] Wallet
-* [x] Service marketplace
-* [x] Orders
-* [x] Escrow
-* [x] Notifications (BullMQ + email)
-* [x] Disputes
-* [x] Reviews
-* [x] Real-time chat
-* [x] File uploads (S3 presigned)
-* [x] Search
-* [x] Admin module & analytics
-* [x] Automated tests (unit + integration)
-* [x] CI/CD + production deployment (Docker → AWS EC2 + Nginx)
-* [ ] Next.js frontend
+- [x] Project setup & Docker infrastructure
+- [x] Database schema (Prisma)
+- [x] Authentication (registration, verification, JWT, rotation, logout, password reset)
+- [x] User / Profile module
+- [x] Wallet
+- [x] Service marketplace
+- [x] Orders
+- [x] Escrow
+- [x] Notifications (BullMQ + email)
+- [x] Disputes
+- [x] Reviews
+- [x] Real-time chat
+- [x] File uploads (S3 presigned)
+- [x] Search
+- [x] Admin module & analytics
+- [x] Automated tests (unit + integration)
+- [x] CI/CD + production deployment (Docker → AWS EC2 + Nginx)
+- [ ] Next.js frontend
 
 See `docs/` for the full implementation blueprint and engineering decisions.
 
