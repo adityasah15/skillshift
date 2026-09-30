@@ -129,7 +129,7 @@ describe('AuthService', () => {
             },
           };
 
-          return callback(tx as unknown as Prisma.TransactionClient);
+          return callback(tx);
         },
       );
 
@@ -428,7 +428,7 @@ describe('AuthService', () => {
             },
           };
 
-          return callback(tx as unknown as Prisma.TransactionClient);
+          return callback(tx);
         },
       );
 

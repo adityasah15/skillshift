@@ -1,15 +1,34 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { RegisterDto } from './dto/register.dto';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { Public } from '../common/decorators/public.decorator';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+const REFRESH_COOKIE_NAME = 'refreshToken';
+
+const REFRESH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'lax' as const,
+  path: '/auth',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
@@ -32,8 +51,19 @@ export class AuthController {
 
   @Public()
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const result = await this.authService.login(loginDto);
+    response.cookie(
+      REFRESH_COOKIE_NAME,
+      result.refreshToken,
+      REFRESH_COOKIE_OPTIONS,
+    );
+    return {
+      accessToken: result.accessToken,
+    };
   }
 
   @ApiBearerAuth()
@@ -44,17 +74,43 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
-  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
-    return this.authService.refresh(refreshTokenDto.refreshToken);
+  @HttpCode(HttpStatus.OK)
+  async refresh(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const refreshToken = request.cookies?.refreshToken as string | undefined;
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token is required');
+    }
+    const result = await this.authService.refresh(refreshToken);
+    response.cookie(
+      REFRESH_COOKIE_NAME,
+      result.refreshToken,
+      REFRESH_COOKIE_OPTIONS,
+    );
+    return {
+      accessToken: result.accessToken,
+    };
   }
-
   @ApiBearerAuth()
   @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
   async logout(
-    @Req() req: { user: JwtPayload },
-    @Body() refreshTokenDto: RefreshTokenDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
   ) {
-    return this.authService.logout(req.user.sub, refreshTokenDto.refreshToken);
+    const refreshToken = request.cookies?.refreshToken as string | undefined;
+    if (refreshToken) {
+      const user = request.user as JwtPayload & { id?: string };
+      await this.authService.logout(user.id ?? user.sub, refreshToken);
+    }
+    response.clearCookie(REFRESH_COOKIE_NAME, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax' as const,
+      path: '/auth',
+    });
   }
 
   @Public()
