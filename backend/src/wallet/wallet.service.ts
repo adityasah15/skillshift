@@ -22,8 +22,8 @@ export class WalletService {
 
   async deposit(userId: string, amount: number) {
     const wallet = await this.getWallet(userId);
-    await this.prismaService.$transaction(async (tx) => {
-      await tx.wallet.update({
+    return this.prismaService.$transaction(async (tx) => {
+      const updatedWallet = await tx.wallet.update({
         where: { id: wallet.id },
         data: {
           balance: {
@@ -39,10 +39,8 @@ export class WalletService {
           description: 'Wallet deposit',
         },
       });
+      return updatedWallet;
     });
-    return {
-      message: 'Amount deposit was successful',
-    };
   }
 
   async getTransactions(userId: string) {
