@@ -26,8 +26,11 @@ interface AuthenticatedSocket extends Socket {
 
 @WebSocketGateway({
   namespace: '/chat',
+  cors: { origin: process.env.FRONTEND_URL },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  private readonly presenceTtlSeconds = 30;
+
   @WebSocketServer()
   server!: Server;
 
@@ -40,17 +43,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
-      const token: unknown = client.handshake.auth?.token;
+      const authorization: unknown = client.handshake.auth?.token;
 
-      if (typeof token !== 'string' || token.length === 0) {
+      if (typeof authorization !== 'string') {
+        throw new WsException('Authentication required');
+      }
+      const match = /^Bearer\s+(\S+)$/i.exec(authorization.trim());
+      if (!match) {
         throw new WsException('Authentication required');
       }
 
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(match[1]);
 
       client.user = payload;
 
-      await this.redisService.incr(`chat:presence:${payload.sub}`);
+      const becameOnline = await this.redisService.trackPresence(
+        payload.sub,
+        client.id,
+        this.presenceTtlSeconds,
+      );
+      if (becameOnline) {
+        this.server.emit('user_online', { userId: payload.sub });
+      }
     } catch {
       client.disconnect();
     }
@@ -61,12 +75,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const key = `chat:presence:${client.user.sub}`;
+    const becameOffline = await this.redisService.removePresence(
+      client.user.sub,
+      client.id,
+    );
+    if (becameOffline) {
+      this.server.emit('user_offline', { userId: client.user.sub });
+    }
+  }
 
-    const count = await this.redisService.decr(key);
-
-    if (count <= 0) {
-      await this.redisService.del(key);
+  @SubscribeMessage('ping')
+  async handlePing(@ConnectedSocket() client: AuthenticatedSocket) {
+    const becameOnline = await this.redisService.trackPresence(
+      client.user.sub,
+      client.id,
+      this.presenceTtlSeconds,
+    );
+    if (becameOnline) {
+      this.server.emit('user_online', { userId: client.user.sub });
     }
   }
 
@@ -101,9 +127,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const key = `chat:rate:${client.user.sub}`;
 
-    const count = await this.redisService.incrWithTtl(key, 10);
+    const count = await this.redisService.incrWithTtl(key, 60);
 
-    if (count > 10) {
+    if (count > 30) {
       throw new WsException('Too many messages. Please slow down.');
     }
 
