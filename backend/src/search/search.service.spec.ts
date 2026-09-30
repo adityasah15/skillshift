@@ -62,6 +62,11 @@ describe('SearchService', () => {
     expect(response.data.map((item) => item.id)).toEqual(['service-1']);
     expect(response.meta.hasMore).toBe(true);
     expect(response.meta.cursor).toBeDefined();
+    expect(redis.set).toHaveBeenCalledWith(
+      expect.stringContaining('search:services:'),
+      expect.any(String),
+      120,
+    );
 
     const decoded: unknown = JSON.parse(
       Buffer.from(response.meta.cursor, 'base64url').toString('utf8'),

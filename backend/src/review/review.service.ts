@@ -7,6 +7,7 @@ import {
 import { NotificationType, OrderStatus } from 'generated/prisma/enums';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NotificationService } from 'src/notification/notification.service';
+import { RedisService } from 'src/redis/redis.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class ReviewService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly notificationService: NotificationService,
+    private readonly redisService: RedisService,
   ) {}
 
   async create(createReviewDto: CreateReviewDto, reviewerId: string) {
@@ -90,6 +92,7 @@ export class ReviewService {
       return review;
     });
 
+    await this.redisService.del(`profiles:freelancer:${revieweeId}`);
     await this.notificationService.enqueue(
       revieweeId,
       NotificationType.REVIEW_RECEIVED,

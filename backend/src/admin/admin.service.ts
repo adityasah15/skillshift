@@ -173,7 +173,7 @@ export class AdminService {
       throw new NotFoundException('Service not found');
     }
 
-    return this.prisma.service.update({
+    const moderatedService = await this.prisma.service.update({
       where: { id: serviceId },
       data: {
         status,
@@ -185,5 +185,9 @@ export class AdminService {
         deletedAt: true,
       },
     });
+    await this.redisService.del(`service:v2:${serviceId}`);
+    await this.redisService.delByPattern('services:*');
+    await this.redisService.delByPattern('search:services:*');
+    return moderatedService;
   }
 }

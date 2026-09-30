@@ -21,10 +21,11 @@ export class ServiceService {
       },
     });
     await this.redisService.delByPattern('services:*'); // Invalidate the cache for all services
+    await this.redisService.delByPattern('search:services:*');
     return service;
   }
   async findAll(serviceQueryDto: ServiceQueryDto) {
-    const key = `services:${JSON.stringify(serviceQueryDto)}`;
+    const key = `services:v2:${JSON.stringify(serviceQueryDto)}`;
 
     const cached = await this.redisService.get(key);
 
@@ -36,6 +37,7 @@ export class ServiceService {
     const services = await this.prismaService.service.findMany({
       where: {
         deletedAt: null,
+        status: ServiceStatus.ACTIVE,
         ...(serviceQueryDto.skills?.length && {
           skills: {
             hasEvery: serviceQueryDto.skills,
@@ -73,12 +75,12 @@ export class ServiceService {
         hasMore,
       },
     };
-    await this.redisService.set(key, JSON.stringify(response), 3600); // Cache for 1 hour
+    await this.redisService.set(key, JSON.stringify(response), 300);
     return response;
   }
 
   async findOne(serviceId: string) {
-    const key = `service:${serviceId}`;
+    const key = `service:v2:${serviceId}`;
 
     const cached = await this.redisService.get(key);
 
@@ -89,13 +91,14 @@ export class ServiceService {
       where: {
         id: serviceId,
         deletedAt: null,
+        status: ServiceStatus.ACTIVE,
       },
     });
 
     if (!service) {
       throw new NotFoundException('Service not found.');
     }
-    await this.redisService.set(key, JSON.stringify(service), 3600); // Cache for 1 hour
+    await this.redisService.set(key, JSON.stringify(service), 600);
 
     return service;
   }
@@ -120,8 +123,9 @@ export class ServiceService {
       data: updateServiceDto,
     });
     // Invalidate the cache for this service
-    await this.redisService.del(`service:${serviceId}`);
+    await this.redisService.del(`service:v2:${serviceId}`);
     await this.redisService.delByPattern('services:*'); // Invalidate the cache for all services
+    await this.redisService.delByPattern('search:services:*');
     return updatedService;
   }
 
@@ -141,8 +145,9 @@ export class ServiceService {
       data: { deletedAt: new Date() },
     });
     // Invalidate the cache for this service
-    await this.redisService.del(`service:${serviceId}`);
+    await this.redisService.del(`service:v2:${serviceId}`);
     await this.redisService.delByPattern('services:*'); // Invalidate the cache for all services
+    await this.redisService.delByPattern('search:services:*');
     return deletedService;
   }
 
@@ -161,8 +166,9 @@ export class ServiceService {
       data: { status: ServiceStatus.ACTIVE },
     });
     // Invalidate the cache for this service
-    await this.redisService.del(`service:${serviceId}`);
+    await this.redisService.del(`service:v2:${serviceId}`);
     await this.redisService.delByPattern('services:*'); // Invalidate the cache for all services
+    await this.redisService.delByPattern('search:services:*');
     return approvedService;
   }
 
@@ -181,8 +187,9 @@ export class ServiceService {
       data: { status: ServiceStatus.REJECTED },
     });
     // Invalidate the cache for this service
-    await this.redisService.del(`service:${serviceId}`);
+    await this.redisService.del(`service:v2:${serviceId}`);
     await this.redisService.delByPattern('services:*'); // Invalidate the cache for all services
+    await this.redisService.delByPattern('search:services:*');
     return rejectedService;
   }
 }

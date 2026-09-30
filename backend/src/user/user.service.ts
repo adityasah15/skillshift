@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { RedisService } from 'src/redis/redis.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly redisService: RedisService,
+  ) {}
 
   async findById(userId: string) {
     const user = await this.prismaService.user.findUnique({
@@ -37,13 +41,21 @@ export class UserService {
   }
 
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
-    return this.prismaService.profile.update({
+    const profile = await this.prismaService.profile.update({
       where: { userId: userId },
       data: updateProfileDto,
     });
+    await this.redisService.del(`profiles:freelancer:${userId}`);
+    return profile;
   }
 
   async getPublicProfile(userId: string) {
+    const cacheKey = `profiles:freelancer:${userId}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as unknown;
+    }
+
     const profile = await this.prismaService.profile.findUnique({
       where: { userId },
       select: {
@@ -61,6 +73,7 @@ export class UserService {
       throw new NotFoundException('Profile not found');
     }
 
+    await this.redisService.set(cacheKey, JSON.stringify(profile), 600);
     return profile;
   }
 }

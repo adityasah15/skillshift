@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ServiceService } from './service.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RedisService } from 'src/redis/redis.service';
+import { ServiceStatus } from 'generated/prisma/enums';
 
 describe('ServiceService', () => {
   let service: ServiceService;
@@ -61,6 +62,7 @@ describe('ServiceService', () => {
       data: { ...dto, freelancerId: 'user-1' },
     });
     expect(redis.delByPattern).toHaveBeenCalledWith('services:*');
+    expect(redis.delByPattern).toHaveBeenCalledWith('search:services:*');
   });
 
   it('returns cached service lists without querying the database', async () => {
@@ -97,6 +99,7 @@ describe('ServiceService', () => {
     expect(prisma.service.findMany).toHaveBeenCalledWith({
       where: {
         deletedAt: null,
+        status: ServiceStatus.ACTIVE,
         skills: { hasEvery: ['design'] },
         price: { gte: 10, lte: 500 },
       },
@@ -106,12 +109,12 @@ describe('ServiceService', () => {
       orderBy: { createdAt: 'desc' },
     });
     expect(redis.set).toHaveBeenCalledWith(
-      `services:${JSON.stringify(query)}`,
+      `services:v2:${JSON.stringify(query)}`,
       JSON.stringify({
         data: services.slice(0, 2),
         meta: { cursor: 'service-2', hasMore: true },
       }),
-      3600,
+      300,
     );
   });
 
@@ -124,7 +127,10 @@ describe('ServiceService', () => {
       meta: { cursor: null, hasMore: false },
     });
     expect(prisma.service.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 21 }),
+      expect.objectContaining({
+        where: { deletedAt: null, status: ServiceStatus.ACTIVE, price: {} },
+        take: 21,
+      }),
     );
   });
 
@@ -143,12 +149,16 @@ describe('ServiceService', () => {
 
     await expect(service.findOne('service-1')).resolves.toBe(found);
     expect(prisma.service.findFirst).toHaveBeenCalledWith({
-      where: { id: 'service-1', deletedAt: null },
+      where: {
+        id: 'service-1',
+        deletedAt: null,
+        status: ServiceStatus.ACTIVE,
+      },
     });
     expect(redis.set).toHaveBeenCalledWith(
-      'service:service-1',
+      'service:v2:service-1',
       JSON.stringify(found),
-      3600,
+      600,
     );
   });
 
@@ -174,8 +184,9 @@ describe('ServiceService', () => {
       where: { id: 'service-1' },
       data: { title: 'Updated title' },
     });
-    expect(redis.del).toHaveBeenCalledWith('service:service-1');
+    expect(redis.del).toHaveBeenCalledWith('service:v2:service-1');
     expect(redis.delByPattern).toHaveBeenCalledWith('services:*');
+    expect(redis.delByPattern).toHaveBeenCalledWith('search:services:*');
   });
 
   it('throws when updating a missing or unowned service', async () => {
@@ -201,8 +212,9 @@ describe('ServiceService', () => {
       where: { id: 'service-1' },
       data: { deletedAt: expect.any(Date) as unknown },
     });
-    expect(redis.del).toHaveBeenCalledWith('service:service-1');
+    expect(redis.del).toHaveBeenCalledWith('service:v2:service-1');
     expect(redis.delByPattern).toHaveBeenCalledWith('services:*');
+    expect(redis.delByPattern).toHaveBeenCalledWith('search:services:*');
   });
 
   it('throws when deleting a missing service', async () => {
@@ -223,8 +235,9 @@ describe('ServiceService', () => {
       where: { id: 'service-1' },
       data: { status: 'ACTIVE' },
     });
-    expect(redis.del).toHaveBeenCalledWith('service:service-1');
+    expect(redis.del).toHaveBeenCalledWith('service:v2:service-1');
     expect(redis.delByPattern).toHaveBeenCalledWith('services:*');
+    expect(redis.delByPattern).toHaveBeenCalledWith('search:services:*');
   });
 
   it('throws when approving a missing service', async () => {
@@ -245,8 +258,9 @@ describe('ServiceService', () => {
       where: { id: 'service-1' },
       data: { status: 'REJECTED' },
     });
-    expect(redis.del).toHaveBeenCalledWith('service:service-1');
+    expect(redis.del).toHaveBeenCalledWith('service:v2:service-1');
     expect(redis.delByPattern).toHaveBeenCalledWith('services:*');
+    expect(redis.delByPattern).toHaveBeenCalledWith('search:services:*');
   });
 
   it('throws when rejecting a missing service', async () => {
