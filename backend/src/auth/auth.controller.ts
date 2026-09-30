@@ -79,7 +79,8 @@ export class AuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const refreshToken = request.cookies?.refreshToken as string | undefined;
+    const cookies = request.cookies as { refreshToken?: string } | undefined;
+    const refreshToken = cookies?.refreshToken;
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token is required');
     }
@@ -100,7 +101,8 @@ export class AuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const refreshToken = request.cookies?.refreshToken as string | undefined;
+    const cookies = request.cookies as { refreshToken?: string } | undefined;
+    const refreshToken = cookies?.refreshToken;
     if (refreshToken) {
       const user = request.user as JwtPayload & { id?: string };
       await this.authService.logout(user.id ?? user.sub, refreshToken);
