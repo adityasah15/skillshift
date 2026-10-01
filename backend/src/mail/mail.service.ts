@@ -5,12 +5,30 @@ import nodemailer, { Transporter } from 'nodemailer';
 @Injectable()
 export class MailService {
   private transporter: Transporter;
+  private readonly appUrl: string;
 
   constructor(private readonly configService: ConfigService) {
+    const smtpHost = this.configService.get<string>('SMTP_HOST');
+    const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
+    if (!smtpHost) {
+      throw new Error('SMTP_HOST must be configured before starting the API.');
+    }
+    if (nodeEnv === 'production' && smtpHost.includes('ethereal.email')) {
+      throw new Error(
+        'Ethereal SMTP is for development only. Configure a real SMTP provider in production.',
+      );
+    }
+
+    this.appUrl = (
+      this.configService.get<string>('APP_URL') ??
+      this.configService.get<string>('FRONTEND_URL') ??
+      'http://localhost:3001'
+    ).replace(/\/$/, '');
+
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('SMTP_HOST'),
-      port: Number(this.configService.get<string>('SMTP_PORT')),
-      secure: false,
+      host: smtpHost,
+      port: Number(this.configService.get<string>('SMTP_PORT', '587')),
+      secure: this.configService.get<string>('SMTP_SECURE', 'false') === 'true',
       auth: {
         user: this.configService.get<string>('SMTP_USER'),
         pass: this.configService.get<string>('SMTP_PASS'),
@@ -19,7 +37,7 @@ export class MailService {
   }
 
   async sendVerificationEmail(email: string, token: string) {
-    const verificationUrl = `http://localhost:3000/auth/verify-email?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+    const verificationUrl = `${this.appUrl}/auth/verify-email?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
     await this.transporter.sendMail({
       from: this.configService.get<string>('MAIL_FROM'),
       to: email,
@@ -32,7 +50,7 @@ export class MailService {
   }
 
   async sendPasswordResetEmail(email: string, token: string) {
-    const forgotPasswordUrl = `http://localhost:3001/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
+    const forgotPasswordUrl = `${this.appUrl}/auth/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
     await this.transporter.sendMail({
       from: this.configService.get<string>('MAIL_FROM'),
       to: email,
