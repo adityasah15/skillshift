@@ -341,7 +341,7 @@ describe('Workflow API integration (Supertest)', () => {
       serviceId: 'service-1',
       price: 100,
       deliveryDays: 3,
-      status: OrderStatus.IN_PROGRESS,
+      status: OrderStatus.DELIVERED,
     };
 
     const opened = await request(app.getHttpServer())

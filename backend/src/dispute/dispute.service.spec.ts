@@ -116,10 +116,10 @@ describe('DisputeService', () => {
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
-  it('should reject disputes for orders that are not active or delivered', async () => {
+  it('should reject disputes before delivery', async () => {
     prismaMock.order.findUnique.mockResolvedValue({
       clientId: 'user-id',
-      status: 'COMPLETED',
+      status: 'IN_PROGRESS',
     });
 
     await expect(
@@ -127,9 +127,7 @@ describe('DisputeService', () => {
         orderId: 'order-id',
         reason: 'Test dispute',
       }),
-    ).rejects.toThrow(
-      'You can only create a dispute for orders that are in progress or delivered',
-    );
+    ).rejects.toThrow('You can only create a dispute after delivery');
 
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
@@ -137,7 +135,7 @@ describe('DisputeService', () => {
   it('should open a dispute transactionally and notify administrators', async () => {
     const order = {
       clientId: 'user-id',
-      status: 'IN_PROGRESS',
+      status: 'DELIVERED',
     };
     const dispute = { id: 'dispute-id', orderId: 'order-id' };
     prismaMock.order.findUnique.mockResolvedValue(order);
@@ -171,7 +169,7 @@ describe('DisputeService', () => {
         action: 'DISPUTE_OPENED',
         userId: 'user-id',
         orderId: 'order-id',
-        before: { orderStatus: 'IN_PROGRESS' },
+        before: { orderStatus: 'DELIVERED' },
         after: { orderStatus: 'DISPUTED' },
       }) as unknown,
     });

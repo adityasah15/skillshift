@@ -38,12 +38,9 @@ export class DisputeService {
         'You are not authorized to create a dispute for this order',
       );
     }
-    if (
-      order.status !== OrderStatus.IN_PROGRESS &&
-      order.status !== OrderStatus.DELIVERED
-    ) {
+    if (order.status !== OrderStatus.DELIVERED) {
       throw new BadRequestException(
-        'You can only create a dispute for orders that are in progress or delivered',
+        'You can only create a dispute after delivery',
       );
     }
     const dispute = await this.prismaService.$transaction(async (tx) => {
