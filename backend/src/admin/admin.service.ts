@@ -14,6 +14,54 @@ export class AdminService {
     private readonly redisService: RedisService,
   ) {}
 
+  async listUsers() {
+    return this.prisma.user.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        profile: { select: { displayName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
+
+  async listServices() {
+    return this.prisma.service.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        status: true,
+        createdAt: true,
+        freelancer: { select: { email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
+
+  async listOrders() {
+    return this.prisma.order.findMany({
+      select: {
+        id: true,
+        status: true,
+        price: true,
+        createdAt: true,
+        service: { select: { title: true } },
+        client: { select: { email: true } },
+        freelancer: { select: { email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
+
   async getAnalytics() {
     const cacheKey = 'admin:analytics:dashboard';
 

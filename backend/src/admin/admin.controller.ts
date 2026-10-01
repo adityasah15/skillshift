@@ -16,6 +16,24 @@ export class AdminController {
     return this.adminService.getAnalytics();
   }
 
+  @Get('users')
+  @Roles(Role.ADMIN)
+  async listUsers() {
+    return this.adminService.listUsers();
+  }
+
+  @Get('services')
+  @Roles(Role.ADMIN)
+  async listServices() {
+    return this.adminService.listServices();
+  }
+
+  @Get('orders')
+  @Roles(Role.ADMIN)
+  async listOrders() {
+    return this.adminService.listOrders();
+  }
+
   @Patch('users/:id/:action')
   @Roles(Role.ADMIN)
   async manageUser(

@@ -7,10 +7,13 @@ import { RedisService } from 'src/redis/redis.service';
 describe('AdminService', () => {
   let service: AdminService;
   const prisma = {
+    user: { findMany: jest.fn() },
     service: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
       update: jest.fn(),
     },
+    order: { findMany: jest.fn() },
   };
   const redis = {
     del: jest.fn(),
@@ -39,6 +42,68 @@ describe('AdminService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('admin lists', () => {
+    it('returns bounded non-deleted users with intentional fields', async () => {
+      prisma.user.findMany.mockResolvedValue([]);
+
+      await service.listUsers();
+
+      expect(prisma.user.findMany).toHaveBeenCalledWith({
+        where: { deletedAt: null },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          profile: { select: { displayName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      });
+    });
+
+    it('returns bounded non-deleted services with selected admin fields', async () => {
+      prisma.service.findMany.mockResolvedValue([]);
+
+      await service.listServices();
+
+      expect(prisma.service.findMany).toHaveBeenCalledWith({
+        where: { deletedAt: null },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          price: true,
+          status: true,
+          createdAt: true,
+          freelancer: { select: { email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      });
+    });
+
+    it('returns bounded orders with only admin-list fields', async () => {
+      prisma.order.findMany.mockResolvedValue([]);
+
+      await service.listOrders();
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith({
+        select: {
+          id: true,
+          status: true,
+          price: true,
+          createdAt: true,
+          service: { select: { title: true } },
+          client: { select: { email: true } },
+          freelancer: { select: { email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      });
+    });
   });
 
   describe('moderateService', () => {
