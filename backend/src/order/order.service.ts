@@ -118,6 +118,30 @@ export class OrderService {
     return order;
   }
 
+  async listForUser(userId: string) {
+    const orders = await this.prismaService.order.findMany({
+      where: {
+        OR: [{ clientId: userId }, { freelancerId: userId }],
+      },
+      include: {
+        service: {
+          select: { title: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return orders.map((order) => ({
+      id: order.id,
+      status: order.status,
+      price: order.price,
+      createdAt: order.createdAt,
+      serviceTitle: order.service.title,
+      roleLabel:
+        order.clientId === userId ? 'Client order' : 'Freelancer order',
+    }));
+  }
+
   async deliver(freelancerId: string, orderId: string, deliveryNote: string) {
     const order = await this.prismaService.order.findUnique({
       where: { id: orderId },

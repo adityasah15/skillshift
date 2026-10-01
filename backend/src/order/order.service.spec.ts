@@ -35,6 +35,7 @@ describe('OrderService', () => {
     },
     order: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
     },
@@ -88,6 +89,59 @@ describe('OrderService', () => {
     }).compile();
 
     service = module.get<OrderService>(OrderService);
+  });
+
+  describe('listForUser', () => {
+    it('returns client and freelancer orders with role labels', async () => {
+      const createdAt = new Date('2026-09-01T00:00:00.000Z');
+      const orders = [
+        {
+          id: 'order-client',
+          clientId: 'user-1',
+          freelancerId: 'freelancer-1',
+          status: OrderStatus.IN_PROGRESS,
+          price: 100,
+          createdAt,
+          service: { title: 'Logo design' },
+        },
+        {
+          id: 'order-freelancer',
+          clientId: 'client-2',
+          freelancerId: 'user-1',
+          status: OrderStatus.DELIVERED,
+          price: 200,
+          createdAt,
+          service: { title: 'Website build' },
+        },
+      ];
+      prisma.order.findMany.mockResolvedValue(orders);
+
+      await expect(service.listForUser('user-1')).resolves.toEqual([
+        {
+          id: 'order-client',
+          status: OrderStatus.IN_PROGRESS,
+          price: 100,
+          createdAt,
+          serviceTitle: 'Logo design',
+          roleLabel: 'Client order',
+        },
+        {
+          id: 'order-freelancer',
+          status: OrderStatus.DELIVERED,
+          price: 200,
+          createdAt,
+          serviceTitle: 'Website build',
+          roleLabel: 'Freelancer order',
+        },
+      ]);
+      expect(prisma.order.findMany).toHaveBeenCalledWith({
+        where: {
+          OR: [{ clientId: 'user-1' }, { freelancerId: 'user-1' }],
+        },
+        include: { service: { select: { title: true } } },
+        orderBy: { createdAt: 'desc' },
+      });
+    });
   });
 
   describe('create', () => {

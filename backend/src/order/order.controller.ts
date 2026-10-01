@@ -21,6 +21,11 @@ export class OrderController {
     return this.orderService.create(req.user.sub, createOrderDto);
   }
 
+  @Get()
+  async list(@Req() req: { user: JwtPayload }) {
+    return this.orderService.listForUser(req.user.sub);
+  }
+
   @Get(':id')
   async findOne(
     @Req() req: { user: JwtPayload },
