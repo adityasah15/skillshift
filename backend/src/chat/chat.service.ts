@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { OrderStatus } from 'generated/prisma/enums';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -12,15 +13,12 @@ export class ChatService {
   async saveMessage(orderId: string, senderId: string, content: string) {
     const order = await this.assertOrderParticipant(orderId, senderId);
 
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
-    const isParticipant =
-      order.clientId === senderId || order.freelancerId === senderId;
-
-    if (!isParticipant) {
-      throw new ForbiddenException('You are not a participant in this order');
+    if (
+      [OrderStatus.COMPLETED, OrderStatus.CANCELLED, OrderStatus.REFUNDED].includes(
+        order.status,
+      )
+    ) {
+      throw new ForbiddenException('Chat is read-only for this order');
     }
 
     const conversation = await this.prisma.conversation.upsert({
@@ -109,6 +107,7 @@ export class ChatService {
         id: true,
         clientId: true,
         freelancerId: true,
+        status: true,
       },
     });
 

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class SendMessageEventDto {
   @IsUUID()
@@ -7,5 +7,6 @@ export class SendMessageEventDto {
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(2000)
   content!: string;
 }
