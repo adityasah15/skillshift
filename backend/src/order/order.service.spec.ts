@@ -275,6 +275,7 @@ describe('OrderService', () => {
         NotificationType.ORDER_PLACED,
         'New order received',
         'You have received a new order.',
+        'order-1',
       );
     });
 
@@ -447,6 +448,7 @@ describe('OrderService', () => {
         NotificationType.ORDER_DELIVERED,
         'Order delivered',
         'Your order has been delivered.',
+        'order-1',
       );
 
       expect(autoCompleteQueue.add).toHaveBeenCalledWith(
@@ -594,6 +596,7 @@ describe('OrderService', () => {
         NotificationType.ORDER_COMPLETED,
         'Order completed',
         'Your order has been completed and payment has been released.',
+        'order-1',
       );
     });
   });
@@ -733,12 +736,14 @@ describe('OrderService', () => {
         NotificationType.ORDER_CANCELLED,
         'Order cancelled',
         'An order you were involved in has been cancelled and the payment has been refunded.',
+        'order-1',
       );
       expect(notificationService.enqueue).toHaveBeenCalledWith(
         'freelancer-1',
         NotificationType.ORDER_CANCELLED,
         'Order cancelled',
         'An order you were involved in has been cancelled and the payment has been refunded.',
+        'order-1',
       );
     });
 
@@ -787,12 +792,14 @@ describe('OrderService', () => {
         NotificationType.ORDER_CANCELLED,
         'Order cancelled',
         'An order you were involved in has been cancelled and the payment has been refunded.',
+        'order-1',
       );
       expect(notificationService.enqueue).toHaveBeenCalledWith(
         'freelancer-1',
         NotificationType.ORDER_CANCELLED,
         'Order cancelled',
         'An order you were involved in has been cancelled and the payment has been refunded.',
+        'order-1',
       );
     });
   });

@@ -11,6 +11,7 @@ type EmailJobData =
       type: NotificationType;
       title: string;
       body: string;
+      orderId?: string;
     }
   | { email: string; token: string };
 
@@ -30,7 +31,7 @@ export class EmailProcessor extends WorkerHost {
         throw new Error('Invalid notification job data');
       }
 
-      const { userId, type, title, body } = job.data;
+      const { userId, type, title, body, orderId } = job.data;
       const user = await this.prismaService.user.findUnique({
         where: { id: userId },
       });
@@ -38,7 +39,7 @@ export class EmailProcessor extends WorkerHost {
         throw new Error(`User with ID ${userId} not found`);
       }
       await this.mailService.sendNotificationEmail(user.email, title, body);
-      await this.notificationService.create(userId, type, title, body);
+      await this.notificationService.create(userId, type, title, body, orderId);
       return;
     }
 

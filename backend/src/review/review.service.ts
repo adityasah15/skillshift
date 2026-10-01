@@ -118,6 +118,7 @@ export class ReviewService {
       NotificationType.REVIEW_RECEIVED,
       'New review received',
       `You received a new review for order ${order.id}.`,
+      order.id,
     );
 
     return result;

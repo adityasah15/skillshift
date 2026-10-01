@@ -4,6 +4,7 @@ import { NotificationService } from './notification.service';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { EmailProcessor } from './processors/email.processor';
 import { MailModule } from 'src/mail/mail.module';
+import { NotificationController } from './notification.controller';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { MailModule } from 'src/mail/mail.module';
     PrismaModule,
     MailModule,
   ],
+  controllers: [NotificationController],
   providers: [NotificationService, EmailProcessor],
   exports: [NotificationService],
 })

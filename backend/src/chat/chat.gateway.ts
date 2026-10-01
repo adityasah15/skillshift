@@ -149,6 +149,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       NotificationType.MESSAGE_RECEIVED,
       'New message',
       'You received a new message',
+      data.orderId,
     );
 
     this.server.to(`order-${data.orderId}`).emit('new_message', message);

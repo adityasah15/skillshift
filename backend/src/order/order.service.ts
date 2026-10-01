@@ -98,6 +98,7 @@ export class OrderService {
       NotificationType.ORDER_PLACED,
       'New order received',
       'You have received a new order.',
+      order.id,
     );
 
     return order;
@@ -182,6 +183,7 @@ export class OrderService {
       NotificationType.ORDER_DELIVERED,
       'Order delivered',
       'Your order has been delivered.',
+      order.id,
     );
 
     await this.autoCompleteQueue.add(
@@ -255,6 +257,7 @@ export class OrderService {
       NotificationType.ORDER_COMPLETED,
       'Order completed',
       'Your order has been completed and payment has been released.',
+      updatedOrder.id,
     );
 
     return updatedOrder;
@@ -320,6 +323,7 @@ export class OrderService {
           NotificationType.ORDER_CANCELLED,
           'Order cancelled',
           'An order you were involved in has been cancelled and the payment has been refunded.',
+          order.id,
         ),
       ),
     );

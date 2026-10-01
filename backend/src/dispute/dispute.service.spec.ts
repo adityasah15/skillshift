@@ -180,6 +180,7 @@ describe('DisputeService', () => {
       'DISPUTE_OPENED',
       'New dispute opened',
       'A new dispute has been opened for order order-id.',
+      'order-id',
     );
   });
 
@@ -228,12 +229,14 @@ describe('DisputeService', () => {
       'DISPUTE_RESOLVED',
       'Dispute resolved',
       'The dispute for order order-id has been resolved.',
+      'order-id',
     );
     expect(notificationMock.enqueue).toHaveBeenCalledWith(
       'freelancer-1',
       'DISPUTE_RESOLVED',
       'Dispute resolved',
       'The dispute for order order-id has been resolved.',
+      'order-id',
     );
   });
 });

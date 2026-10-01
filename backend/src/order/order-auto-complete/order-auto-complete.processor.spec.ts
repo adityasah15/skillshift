@@ -75,6 +75,7 @@ describe('OrderAutoCompleteProcessor', () => {
       'ORDER_COMPLETED',
       'Order completed',
       'Your order has been completed and payment has been released.',
+      'order-1',
     );
     expect(redisService.del).toHaveBeenCalledWith('admin:analytics:dashboard');
   });

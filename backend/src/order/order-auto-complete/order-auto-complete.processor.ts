@@ -100,6 +100,7 @@ export class OrderAutoCompleteProcessor extends WorkerHost {
       NotificationType.ORDER_COMPLETED,
       'Order completed',
       'Your order has been completed and payment has been released.',
+      order.id,
     );
   }
 }

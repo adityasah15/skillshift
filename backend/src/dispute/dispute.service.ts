@@ -88,6 +88,7 @@ export class DisputeService {
           NotificationType.DISPUTE_OPENED,
           'New dispute opened',
           `A new dispute has been opened for order ${createDisputeDto.orderId}.`,
+          createDisputeDto.orderId,
         ),
       ),
     );
@@ -294,6 +295,7 @@ export class DisputeService {
           NotificationType.DISPUTE_RESOLVED,
           'Dispute resolved',
           `The dispute for order ${dispute.orderId} has been resolved.`,
+          dispute.orderId,
         ),
       ),
     );

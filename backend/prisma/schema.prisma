@@ -195,6 +195,7 @@ model Order {
   conversation  Conversation?
   auditLogs     AuditLog[]
   deliveryFiles DeliveryFile[]
+  notifications Notification[]
 }
 
 model Escrow {
@@ -265,10 +266,12 @@ model Notification {
   type      NotificationType
   title     String
   body      String
+  orderId   String?
   isRead    Boolean          @default(false)
   createdAt DateTime         @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user  User   @relation(fields: [userId], references: [id])
+  order Order? @relation(fields: [orderId], references: [id])
 }
 
 model AuditLog {
