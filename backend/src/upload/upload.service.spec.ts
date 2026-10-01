@@ -295,11 +295,11 @@ describe('UploadService', () => {
       expect(getSignedUrl).toHaveBeenCalledWith(
         expect.any(S3Client),
         expect.objectContaining({
-          input: expect.objectContaining({
+          input: {
             Bucket: 'test-value',
             Key: 'deliveries/order-1/final.pdf',
-          }),
-        }) as unknown,
+          },
+        }),
         { expiresIn: 300 },
       );
     },

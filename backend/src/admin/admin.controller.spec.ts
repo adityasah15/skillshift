@@ -26,16 +26,20 @@ describe('AdminController', () => {
   });
 
   it('requires the admin role for every route', () => {
-    const handlers = [
-      AdminController.prototype.getAnalytics,
-      AdminController.prototype.listUsers,
-      AdminController.prototype.listServices,
-      AdminController.prototype.listOrders,
-      AdminController.prototype.manageUser,
-      AdminController.prototype.moderateService,
-    ];
+    const handlerNames = [
+      'getAnalytics',
+      'listUsers',
+      'listServices',
+      'listOrders',
+      'manageUser',
+      'moderateService',
+    ] as const;
 
-    for (const handler of handlers) {
+    for (const name of handlerNames) {
+      const handler = (AdminController.prototype as Record<string, unknown>)[
+        name
+      ] as (...args: unknown[]) => unknown;
+
       expect(Reflect.getMetadata(ROLES_KEY, handler)).toEqual([Role.ADMIN]);
     }
   });

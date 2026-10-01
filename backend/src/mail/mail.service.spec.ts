@@ -36,7 +36,9 @@ describe('MailService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string, fallback?: string) => values[key] ?? fallback),
+            get: jest.fn(
+              (key: string, fallback?: string) => values[key] ?? fallback,
+            ),
           },
         },
       ],
@@ -100,23 +102,32 @@ describe('MailService', () => {
   });
 
   it('uses the configured frontend paths and encodes email link parameters', async () => {
-    await service.sendVerificationEmail('person+tag@example.com', 'verify token');
-    await service.sendPasswordResetEmail('person+tag@example.com', 'reset token');
+    await service.sendVerificationEmail(
+      'person+tag@example.com',
+      'verify token',
+    );
+    await service.sendPasswordResetEmail(
+      'person+tag@example.com',
+      'reset token',
+    );
+
+    const verificationHtml: unknown = expect.stringContaining(
+      'http://localhost:3001/auth/verify-email?email=person%2Btag%40example.com&token=verify%20token',
+    );
+    const resetHtml: unknown = expect.stringContaining(
+      'http://localhost:3001/auth/reset-password?token=reset%20token&email=person%2Btag%40example.com',
+    );
 
     expect(sendMail).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        html: expect.stringContaining(
-          'http://localhost:3001/auth/verify-email?email=person%2Btag%40example.com&token=verify%20token',
-        ),
+        html: verificationHtml,
       }),
     );
     expect(sendMail).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
-        html: expect.stringContaining(
-          'http://localhost:3001/auth/reset-password?token=reset%20token&email=person%2Btag%40example.com',
-        ),
+        html: resetHtml,
       }),
     );
   });

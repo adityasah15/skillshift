@@ -14,9 +14,7 @@ describe('WalletController', () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [WalletController],
-      providers: [
-        { provide: WalletService, useValue: walletService },
-      ],
+      providers: [{ provide: WalletService, useValue: walletService }],
     }).compile();
 
     controller = module.get<WalletController>(WalletController);
@@ -32,15 +30,24 @@ describe('WalletController', () => {
       { amount: 100 },
     );
 
-    expect(Reflect.getMetadata(ROLES_KEY, WalletController.prototype.withdraw)).toEqual([
+    const withdrawHandler = (
+      WalletController.prototype as Record<string, unknown>
+    ).withdraw as (...args: unknown[]) => unknown;
+
+    expect(Reflect.getMetadata(ROLES_KEY, withdrawHandler)).toEqual([
       Role.FREELANCER,
     ]);
     expect(walletService.withdraw).toHaveBeenCalledWith('freelancer-1', 100);
   });
 
-  it.each([0, -1, 1.5])('rejects invalid withdrawal amount %s', async (amount) => {
-    const errors = await validate(Object.assign(new WithdrawDto(), { amount }));
+  it.each([0, -1, 1.5])(
+    'rejects invalid withdrawal amount %s',
+    async (amount) => {
+      const errors = await validate(
+        Object.assign(new WithdrawDto(), { amount }),
+      );
 
-    expect(errors.map((error) => error.property)).toContain('amount');
-  });
+      expect(errors.map((error) => error.property)).toContain('amount');
+    },
+  );
 });
