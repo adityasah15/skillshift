@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Prisma } from 'generated/prisma/client';
 import { TransactionType } from 'generated/prisma/enums';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -15,6 +15,7 @@ describe('WalletService', () => {
   const prisma = {
     wallet: {
       findUnique: jest.fn(),
+      updateMany: jest.fn(),
     },
     transaction: {
       findMany: jest.fn(),
@@ -83,6 +84,75 @@ describe('WalletService', () => {
         amount: 100,
         description: 'Wallet deposit',
       },
+    });
+  });
+
+  describe('withdraw', () => {
+    it('conditionally debits and records a simulated withdrawal atomically', async () => {
+      const wallet = { id: 'wallet-1', userId: 'user-1', balance: 500 };
+      const updatedWallet = { ...wallet, balance: 400 };
+      const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+      const findUnique = jest.fn().mockResolvedValue(updatedWallet);
+      const transactionCreate = jest.fn().mockResolvedValue({});
+      prisma.wallet.findUnique.mockResolvedValue(wallet);
+      prisma.$transaction.mockImplementation((callback: TransactionCallback) =>
+        callback({
+          wallet: { updateMany, findUnique },
+          transaction: { create: transactionCreate },
+        } as unknown as Prisma.TransactionClient),
+      );
+
+      await expect(service.withdraw('user-1', 100)).resolves.toBe(updatedWallet);
+
+      expect(updateMany).toHaveBeenCalledWith({
+        where: { id: 'wallet-1', balance: { gte: 100 } },
+        data: { balance: { decrement: 100 } },
+      });
+      expect(transactionCreate).toHaveBeenCalledWith({
+        data: {
+          walletId: 'wallet-1',
+          type: TransactionType.WITHDRAWAL,
+          amount: 100,
+          description: 'Simulated wallet withdrawal',
+        },
+      });
+      expect(findUnique).toHaveBeenCalledWith({ where: { id: 'wallet-1' } });
+    });
+
+    it('rejects an amount greater than the current balance before a transaction', async () => {
+      prisma.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        userId: 'user-1',
+        balance: 50,
+      });
+
+      await expect(service.withdraw('user-1', 100)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects a conditional debit failure without creating a ledger entry', async () => {
+      const transactionCreate = jest.fn();
+      prisma.wallet.findUnique.mockResolvedValue({
+        id: 'wallet-1',
+        userId: 'user-1',
+        balance: 100,
+      });
+      prisma.$transaction.mockImplementation((callback: TransactionCallback) =>
+        callback({
+          wallet: {
+            updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+            findUnique: jest.fn(),
+          },
+          transaction: { create: transactionCreate },
+        } as unknown as Prisma.TransactionClient),
+      );
+
+      await expect(service.withdraw('user-1', 100)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(transactionCreate).not.toHaveBeenCalled();
     });
   });
 

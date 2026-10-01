@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { TransactionType } from 'generated/prisma/enums';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -53,5 +57,37 @@ export class WalletService {
     });
 
     return transactions;
+  }
+
+  async withdraw(userId: string, amount: number) {
+    const wallet = await this.getWallet(userId);
+    if (wallet.balance < amount) {
+      throw new BadRequestException('Insufficient wallet balance.');
+    }
+
+    return this.prismaService.$transaction(async (tx) => {
+      const debit = await tx.wallet.updateMany({
+        where: { id: wallet.id, balance: { gte: amount } },
+        data: {
+          balance: {
+            decrement: amount,
+          },
+        },
+      });
+      if (debit.count !== 1) {
+        throw new BadRequestException('Insufficient wallet balance.');
+      }
+
+      await tx.transaction.create({
+        data: {
+          walletId: wallet.id,
+          type: TransactionType.WITHDRAWAL,
+          amount,
+          description: 'Simulated wallet withdrawal',
+        },
+      });
+
+      return tx.wallet.findUnique({ where: { id: wallet.id } });
+    });
   }
 }

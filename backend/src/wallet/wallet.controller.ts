@@ -3,6 +3,9 @@ import { WalletService } from './wallet.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { DepositDto } from './dto/deposit.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'generated/prisma/enums';
+import { WithdrawDto } from './dto/withdraw.dto';
 
 @ApiTags('Wallet')
 @ApiBearerAuth()
@@ -21,6 +24,15 @@ export class WalletController {
     @Body() depositDto: DepositDto,
   ) {
     return this.walletService.deposit(req.user.sub, depositDto.amount);
+  }
+
+  @Roles(Role.FREELANCER)
+  @Post('withdraw')
+  async withdraw(
+    @Req() req: { user: JwtPayload },
+    @Body() withdrawDto: WithdrawDto,
+  ) {
+    return this.walletService.withdraw(req.user.sub, withdrawDto.amount);
   }
 
   @Get('transactions')
