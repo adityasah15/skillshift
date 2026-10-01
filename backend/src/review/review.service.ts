@@ -18,6 +18,26 @@ export class ReviewService {
     private readonly redisService: RedisService,
   ) {}
 
+  async listForService(serviceId: string) {
+    return this.prismaService.review.findMany({
+      where: { serviceId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+        reviewer: {
+          select: {
+            profile: {
+              select: { displayName: true, avatarUrl: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
   async create(createReviewDto: CreateReviewDto, reviewerId: string) {
     const order = await this.prismaService.order.findUnique({
       where: {

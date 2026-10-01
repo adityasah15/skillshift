@@ -79,6 +79,13 @@ export class ServiceService {
     return response;
   }
 
+  async findMine(userId: string) {
+    return this.prismaService.service.findMany({
+      where: { freelancerId: userId, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findOne(serviceId: string) {
     const key = `service:v2:${serviceId}`;
 

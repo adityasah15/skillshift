@@ -76,6 +76,17 @@ describe('ServiceService', () => {
     expect(prisma.service.findMany).not.toHaveBeenCalled();
   });
 
+  it("returns only the current freelancer's non-deleted services", async () => {
+    const services = [{ id: 'service-1', freelancerId: 'user-1' }];
+    prisma.service.findMany.mockResolvedValue(services);
+
+    await expect(service.findMine('user-1')).resolves.toBe(services);
+    expect(prisma.service.findMany).toHaveBeenCalledWith({
+      where: { freelancerId: 'user-1', deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+  });
+
   it('filters and paginates service lists before caching the response', async () => {
     const services = [
       { id: 'service-1' },

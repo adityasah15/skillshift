@@ -17,6 +17,7 @@ import { Role } from 'generated/prisma/enums';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { ServiceQueryDto } from './dto/service-query.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Public } from 'src/common/decorators/public.decorator';
 
 @ApiTags('Services')
 @ApiBearerAuth()
@@ -34,11 +35,19 @@ export class ServiceController {
   }
 
   @Get()
+  @Public()
   async findAll(@Query() query: ServiceQueryDto) {
     return this.serviceService.findAll(query);
   }
 
+  @Roles(Role.FREELANCER)
+  @Get('mine')
+  async findMine(@Req() req: { user: JwtPayload }) {
+    return this.serviceService.findMine(req.user.sub);
+  }
+
   @Get(':id')
+  @Public()
   async findOne(@Param('id') serviceId: string) {
     return this.serviceService.findOne(serviceId);
   }

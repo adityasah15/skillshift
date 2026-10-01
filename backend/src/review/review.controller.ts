@@ -1,13 +1,20 @@
-import { Body, Controller, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewService } from './review.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Public } from 'src/common/decorators/public.decorator';
 
 @ApiTags('Reviews')
 @Controller('reviews')
 export class ReviewController {
   constructor(private readonly reviewService: ReviewService) {}
+
+  @Public()
+  @Get('services/:serviceId')
+  async listForService(@Param('serviceId') serviceId: string) {
+    return this.reviewService.listForService(serviceId);
+  }
 
   @ApiBearerAuth()
   @Post()

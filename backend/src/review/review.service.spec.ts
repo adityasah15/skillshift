@@ -14,7 +14,7 @@ describe('ReviewService', () => {
   let service: ReviewService;
   const prisma = {
     order: { findUnique: jest.fn() },
-    review: { findUnique: jest.fn() },
+    review: { findUnique: jest.fn(), findMany: jest.fn() },
     $transaction: jest.fn(),
   };
   const notificationService = { enqueue: jest.fn() };
@@ -36,6 +36,40 @@ describe('ReviewService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('lists service reviews with only public reviewer fields', async () => {
+    const reviews = [
+      {
+        id: 'review-1',
+        rating: 5,
+        comment: 'Excellent',
+        createdAt: new Date('2026-09-01T00:00:00.000Z'),
+        reviewer: {
+          profile: { displayName: 'Alex', avatarUrl: null },
+        },
+      },
+    ];
+    prisma.review.findMany.mockResolvedValue(reviews);
+
+    await expect(service.listForService('service-1')).resolves.toBe(reviews);
+    expect(prisma.review.findMany).toHaveBeenCalledWith({
+      where: { serviceId: 'service-1' },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+        reviewer: {
+          select: {
+            profile: {
+              select: { displayName: true, avatarUrl: true },
+            },
+          },
+        },
+      },
+    });
   });
 
   it('invalidates the public freelancer profile after a new rating', async () => {
