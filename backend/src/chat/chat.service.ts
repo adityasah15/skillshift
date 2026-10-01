@@ -14,9 +14,9 @@ export class ChatService {
     const order = await this.assertOrderParticipant(orderId, senderId);
 
     if (
-      [OrderStatus.COMPLETED, OrderStatus.CANCELLED, OrderStatus.REFUNDED].includes(
-        order.status,
-      )
+      order.status === OrderStatus.COMPLETED ||
+      order.status === OrderStatus.CANCELLED ||
+      order.status === OrderStatus.REFUNDED
     ) {
       throw new ForbiddenException('Chat is read-only for this order');
     }
