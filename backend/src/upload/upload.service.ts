@@ -6,12 +6,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { PrismaService } from '../prisma/prisma.service';
+import { Role } from 'generated/prisma/enums';
 
 @Injectable()
 export class UploadService {
@@ -208,6 +210,33 @@ export class UploadService {
 
       throw new BadRequestException('Uploaded file could not be verified');
     }
+  }
+
+  async getDownloadUrl(key: string | undefined, userId: string, role: Role) {
+    if (!key?.trim()) {
+      throw new BadRequestException('Delivery file key is required');
+    }
+
+    const file = await this.prisma.deliveryFile.findFirst({
+      where: { key },
+      include: { order: true },
+    });
+    if (!file) {
+      throw new NotFoundException('Delivery file not found');
+    }
+    const isParticipant =
+      file.order.clientId === userId || file.order.freelancerId === userId;
+    if (role !== Role.ADMIN && !isParticipant) {
+      throw new ForbiddenException('You cannot access this delivery file');
+    }
+
+    const bucket = this.configService.getOrThrow<string>('AWS_S3_BUCKET');
+    const url = await getSignedUrl(
+      this.s3,
+      new GetObjectCommand({ Bucket: bucket, Key: file.key }),
+      { expiresIn: 300 },
+    );
+    return { url, expiresIn: 300 };
   }
 
   private async authorizeUpload(

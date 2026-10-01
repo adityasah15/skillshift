@@ -107,6 +107,7 @@ export class OrderService {
   async findOne(userId: string, orderId: string) {
     const order = await this.prismaService.order.findUnique({
       where: { id: orderId },
+      include: { deliveryFiles: true },
     });
 
     if (!order) {

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Role } from 'generated/prisma/enums';
 
 jest.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: jest.fn(),
@@ -34,6 +35,7 @@ describe('UploadService', () => {
     },
     deliveryFile: {
       create: jest.fn(),
+      findFirst: jest.fn(),
     },
   };
 
@@ -226,6 +228,82 @@ describe('UploadService', () => {
       },
     });
   });
+
+  it('rejects a download request for an unregistered delivery file', async () => {
+    prisma.deliveryFile.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.getDownloadUrl(
+        'deliveries/order-1/final.pdf',
+        'client-1',
+        Role.CLIENT,
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(getSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it('rejects a missing delivery file key before querying', async () => {
+    await expect(
+      service.getDownloadUrl(undefined, 'client-1', Role.CLIENT),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.deliveryFile.findFirst).not.toHaveBeenCalled();
+    expect(getSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it('rejects download access for a non-participant', async () => {
+    prisma.deliveryFile.findFirst.mockResolvedValue({
+      key: 'deliveries/order-1/final.pdf',
+      order: { clientId: 'client-1', freelancerId: 'freelancer-1' },
+    });
+
+    await expect(
+      service.getDownloadUrl(
+        'deliveries/order-1/final.pdf',
+        'other-user',
+        Role.CLIENT,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(getSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['client-1', Role.CLIENT],
+    ['freelancer-1', Role.FREELANCER],
+    ['admin-1', Role.ADMIN],
+  ])(
+    'signs a delivery download for authorized user %s',
+    async (userId, role) => {
+      prisma.deliveryFile.findFirst.mockResolvedValue({
+        key: 'deliveries/order-1/final.pdf',
+        order: { clientId: 'client-1', freelancerId: 'freelancer-1' },
+      });
+      jest
+        .mocked(getSignedUrl)
+        .mockResolvedValue('https://signed.example/file');
+
+      await expect(
+        service.getDownloadUrl('deliveries/order-1/final.pdf', userId, role),
+      ).resolves.toEqual({
+        url: 'https://signed.example/file',
+        expiresIn: 300,
+      });
+
+      expect(prisma.deliveryFile.findFirst).toHaveBeenCalledWith({
+        where: { key: 'deliveries/order-1/final.pdf' },
+        include: { order: true },
+      });
+      expect(getSignedUrl).toHaveBeenCalledWith(
+        expect.any(S3Client),
+        expect.objectContaining({
+          input: expect.objectContaining({
+            Bucket: 'test-value',
+            Key: 'deliveries/order-1/final.pdf',
+          }),
+        }) as unknown,
+        { expiresIn: 300 },
+      );
+    },
+  );
 
   it('rejects a key that does not belong to the requested resource', async () => {
     await expect(

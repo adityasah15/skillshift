@@ -349,6 +349,10 @@ describe('OrderService', () => {
       await expect(service.findOne('client-1', 'order-1')).resolves.toEqual(
         order,
       );
+      expect(prisma.order.findUnique).toHaveBeenCalledWith({
+        where: { id: 'order-1' },
+        include: { deliveryFiles: true },
+      });
     });
 
     it('should return order for freelancer', async () => {

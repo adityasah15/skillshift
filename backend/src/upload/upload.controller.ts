@@ -1,4 +1,12 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { UploadService } from './upload.service';
 import { GeneratePresignedUrlDto } from './dto/generate-presigned-url.dto';
 import { ConfirmUploadDto } from './dto/confirm-upload.dto';
@@ -39,5 +47,13 @@ export class UploadController {
       req.user.sub,
       dto.key,
     );
+  }
+
+  @Get('download-url')
+  async getDownloadUrl(
+    @Query('key') key: string,
+    @Req() req: { user: JwtPayload },
+  ) {
+    return this.uploadService.getDownloadUrl(key, req.user.sub, req.user.role);
   }
 }
