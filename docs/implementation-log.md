@@ -1102,7 +1102,7 @@ src/prisma/
 Initial generated service:
 
 ```typescript
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
 @Injectable()
 export class PrismaService {}
@@ -1181,7 +1181,7 @@ models.ts
 The import used by the service was:
 
 ```typescript
-import { PrismaClient } from 'generated/prisma/client';
+import { PrismaClient } from "generated/prisma/client";
 ```
 
 TypeScript verification:
@@ -1209,7 +1209,7 @@ The generated module initially registered the provider.
 We added:
 
 ```typescript
-exports: [PrismaService]
+exports: [PrismaService];
 ```
 
 So the module conceptually became:
@@ -1510,7 +1510,7 @@ The NestJS application was a different process and had not yet been configured t
 ```typescript
 ConfigModule.forRoot({
   isGlobal: true,
-})
+});
 ```
 
 Conceptually:
@@ -1821,9 +1821,11 @@ This log intentionally preserves failed attempts because debugging history is pa
 # Implementation Log — Prisma ↔ PostgreSQL Connectivity Verification
 
 ## Date
+
 2026-09-10
 
 ## Milestone
+
 Verified that the SkillShift NestJS application can successfully communicate with the PostgreSQL database through Prisma.
 
 ---
@@ -1848,15 +1850,15 @@ The temporary query selected was:
 
 ```sql
 SELECT NOW()
-````
+```
 
 This was intentionally chosen because:
 
-* It does not require any existing application data.
-* It does not modify the database.
-* It directly verifies that PostgreSQL can execute a query.
-* PostgreSQL returns a timestamp, making the result easy to recognize.
-* It avoids prematurely building a real feature just to test connectivity.
+- It does not require any existing application data.
+- It does not modify the database.
+- It directly verifies that PostgreSQL can execute a query.
+- PostgreSQL returns a timestamp, making the result easy to recognize.
+- It avoids prematurely building a real feature just to test connectivity.
 
 This was treated as a temporary smoke test.
 
@@ -1889,17 +1891,17 @@ Because `PrismaService` extends `PrismaClient`, it inherits Prisma's query metho
 Examples include:
 
 ```typescript
-this.user.findMany()
-this.user.findUnique()
-this.user.create()
-this.user.update()
+this.user.findMany();
+this.user.findUnique();
+this.user.create();
+this.user.update();
 ```
 
 For raw SQL, Prisma provides methods such as:
 
 ```typescript
-this.$queryRaw
-this.$executeRaw
+this.$queryRaw;
+this.$executeRaw;
 ```
 
 `$queryRaw` is appropriate when the SQL query is expected to return rows.
@@ -1965,7 +1967,7 @@ The use of `await` is necessary because database operations are asynchronous.
 The `$queryRaw` call uses a tagged template literal:
 
 ```typescript
-this.$queryRaw`SELECT NOW()`
+this.$queryRaw`SELECT NOW()`;
 ```
 
 ---
@@ -2154,9 +2156,9 @@ It was created only to verify database connectivity.
 
 After the successful test, the following temporary code was removed:
 
-* `testDatabase()` from `PrismaService`
-* `/test-db` route from `AppController`
-* The temporary controller call to `PrismaService.testDatabase()`
+- `testDatabase()` from `PrismaService`
+- `/test-db` route from `AppController`
+- The temporary controller call to `PrismaService.testDatabase()`
 
 `AppController` was restored to its original responsibility:
 
@@ -2169,10 +2171,10 @@ getHello(): string {
 
 `PrismaService` was restored to its intended permanent implementation containing only:
 
-* PostgreSQL adapter initialization
-* Prisma client initialization
-* `$connect()` during module initialization
-* `$disconnect()` during module destruction
+- PostgreSQL adapter initialization
+- Prisma client initialization
+- `$connect()` during module initialization
+- `$disconnect()` during module destruction
 
 ---
 
@@ -2190,12 +2192,12 @@ The NestJS development server also started successfully.
 
 Therefore:
 
-* TypeScript compilation passed.
-* NestJS startup passed.
-* Prisma initialization passed.
-* PostgreSQL connectivity had already been verified through the real query.
-* Temporary test code was removed.
-* The application was left in a clean state.
+- TypeScript compilation passed.
+- NestJS startup passed.
+- Prisma initialization passed.
+- PostgreSQL connectivity had already been verified through the real query.
+- Temporary test code was removed.
+- The application was left in a clean state.
 
 ---
 
@@ -2235,15 +2237,15 @@ This avoids discovering database connectivity problems later while simultaneousl
 
 SkillShift now has:
 
-* PostgreSQL running through Docker
-* Redis running through Docker
-* Prisma schema and initial migration
-* Prisma PostgreSQL adapter
-* `PrismaService`
-* `PrismaModule`
-* Global configuration loading through `ConfigModule`
-* Successful real PostgreSQL query verification
-* Clean NestJS startup after removing the temporary test
+- PostgreSQL running through Docker
+- Redis running through Docker
+- Prisma schema and initial migration
+- Prisma PostgreSQL adapter
+- `PrismaService`
+- `PrismaModule`
+- Global configuration loading through `ConfigModule`
+- Successful real PostgreSQL query verification
+- Clean NestJS startup after removing the temporary test
 
 The database integration is therefore considered **verified**.
 
@@ -2253,9 +2255,11 @@ The next development step can focus on building actual SkillShift functionality 
 # Authentication Module & User Registration
 
 ## Date
+
 2026-09-10
 
 ## Milestone
+
 Created the initial Auth module and implemented the first real SkillShift feature: user registration.
 
 ---
@@ -2275,7 +2279,7 @@ src/auth/
 ├── auth.service.spec.ts
 └── dto/
     └── register.dto.ts
-````
+```
 
 The module, controller, and service were generated using the Nest CLI:
 
@@ -2358,9 +2362,9 @@ Validation decorators were added using `class-validator`.
 
 The intended validation rules are:
 
-* Email must be a valid email address.
-* Password must be a string.
-* Password must contain at least 8 characters.
+- Email must be a valid email address.
+- Password must be a string.
+- Password must contain at least 8 characters.
 
 The DTO uses the TypeScript definite-assignment operator:
 
@@ -2471,7 +2475,7 @@ const existingUser = await this.prismaService.user.findUnique({
 If a matching user exists:
 
 ```typescript
-throw new ConflictException('Email already registered');
+throw new ConflictException("Email already registered");
 ```
 
 This returns HTTP `409 Conflict`.
@@ -2886,13 +2890,13 @@ POST /auth/register
 
 The system can now:
 
-* Validate registration input.
-* Detect duplicate emails.
-* Hash passwords using bcrypt.
-* Create User, Profile, and Wallet atomically.
-* Return a safe response.
-* Reject invalid DTO input.
-* Communicate successfully with PostgreSQL.
+- Validate registration input.
+- Detect duplicate emails.
+- Hash passwords using bcrypt.
+- Create User, Profile, and Wallet atomically.
+- Return a safe response.
+- Reject invalid DTO input.
+- Communicate successfully with PostgreSQL.
 
 The next Auth functionality can build on this foundation.
 
@@ -2937,8 +2941,9 @@ The raw verification token is kept only in application memory and is not stored 
 Relevant implementation:
 
 ```typescript
-const verificationToken = randomBytes(32).toString('hex');
+const verificationToken = randomBytes(32).toString("hex");
 const verificationTokenHash = await bcrypt.hash(verificationToken, 12);
+```
 ````
 
 The hashed token is stored when creating the user:
@@ -2989,12 +2994,12 @@ Configured a Nodemailer transporter using the SMTP settings:
 
 ```typescript
 this.transporter = nodemailer.createTransport({
-  host: this.configService.get<string>('SMTP_HOST'),
-  port: Number(this.configService.get<string>('SMTP_PORT')),
+  host: this.configService.get<string>("SMTP_HOST"),
+  port: Number(this.configService.get<string>("SMTP_PORT")),
   secure: false,
   auth: {
-    user: this.configService.get<string>('SMTP_USER'),
-    pass: this.configService.get<string>('SMTP_PASS'),
+    user: this.configService.get<string>("SMTP_USER"),
+    pass: this.configService.get<string>("SMTP_PASS"),
   },
 });
 ```
@@ -3026,10 +3031,7 @@ The raw token is appropriate to include in the verification email because it is 
 After the database transaction successfully creates the User, Profile, and Wallet, registration sends the verification email:
 
 ```typescript
-await this.mailService.sendVerificationEmail(
-  result.email,
-  verificationToken,
-);
+await this.mailService.sendVerificationEmail(result.email, verificationToken);
 ```
 
 The raw verification token is not included in the registration API response.
@@ -3081,17 +3083,15 @@ GET /auth/verify-email?email=user@example.com&token=<token>
 6. Reject the request if the token does not match.
 7. If valid, update the user:
 
-   * `isEmailVerified = true`
-   * `emailVerifyTokenHash = null`
+   - `isEmailVerified = true`
+   - `emailVerifyTokenHash = null`
+
 8. Return a success message.
 
 The token comparison uses:
 
 ```typescript
-const match = await bcrypt.compare(
-  token,
-  user.emailVerifyTokenHash,
-);
+const match = await bcrypt.compare(token, user.emailVerifyTokenHash);
 ```
 
 The database update uses:
@@ -3198,11 +3198,11 @@ Registered a test user and confirmed that the verification email appeared in the
 
 The email contained the expected:
 
-* Subject
-* Verification message
-* Verification link
-* Email query parameter
-* Verification token query parameter
+- Subject
+- Verification message
+- Verification link
+- Email query parameter
+- Verification token query parameter
 
 #### Verification test
 
@@ -3305,20 +3305,18 @@ Email verification is implemented and tested end-to-end.
 
 Completed:
 
-* Verification token generation
-* Secure token hashing
-* Verification token persistence
-* Nodemailer setup
-* SMTP configuration through `ConfigService`
-* Verification email delivery
-* Verification endpoint
-* Token validation
-* Single-use token behavior
-* Database state update
-* End-to-end Ethereal testing
-* TypeScript compilation verification
-
-
+- Verification token generation
+- Secure token hashing
+- Verification token persistence
+- Nodemailer setup
+- SMTP configuration through `ConfigService`
+- Verification email delivery
+- Verification endpoint
+- Token validation
+- Single-use token behavior
+- Database state update
+- End-to-end Ethereal testing
+- TypeScript compilation verification
 
 # **Login, JWT Authentication & Refresh Tokens**
 
@@ -3332,21 +3330,21 @@ Extended the SkillShift Auth module from registration/email verification into a 
 
 Implemented:
 
-* Login
-* Password verification
-* Email-verification enforcement
-* JWT access tokens
-* JWT Passport strategy
-* Typed JWT payload
-* Protected `/auth/me`
-* Global JWT authentication guard
-* `@Public()` decorator
-* Refresh tokens
-* Refresh-token hashing
-* Refresh-token expiry
-* Refresh-token rotation
-* Refresh-token revocation
-* Atomic refresh-token rotation
+- Login
+- Password verification
+- Email-verification enforcement
+- JWT access tokens
+- JWT Passport strategy
+- Typed JWT payload
+- Protected `/auth/me`
+- Global JWT authentication guard
+- `@Public()` decorator
+- Refresh tokens
+- Refresh-token hashing
+- Refresh-token expiry
+- Refresh-token rotation
+- Refresh-token revocation
+- Atomic refresh-token rotation
 
 ---
 
@@ -3367,14 +3365,14 @@ password
 
 Validation rules:
 
-* Email must be valid.
-* Password must be a string.
-* Password must contain at least 8 characters.
+- Email must be valid.
+- Password must be a string.
+- Password must contain at least 8 characters.
 
 Implementation:
 
 ```typescript
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsString, MinLength } from "class-validator";
 
 export class LoginDto {
   @IsEmail()
@@ -3469,7 +3467,7 @@ After successful password verification:
 
 ```typescript
 if (!existingUser.isEmailVerified) {
-  throw new BadRequestException('Please verify your email first');
+  throw new BadRequestException("Please verify your email first");
 }
 ```
 
@@ -3548,12 +3546,12 @@ The JWT module is configured asynchronously:
 JwtModule.registerAsync({
   inject: [ConfigService],
   useFactory: (configService: ConfigService) => ({
-    secret: configService.get<string>('JWT_SECRET'),
+    secret: configService.get<string>("JWT_SECRET"),
     signOptions: {
-      expiresIn: configService.get<string>('JWT_EXPIRES_IN'),
+      expiresIn: configService.get<string>("JWT_EXPIRES_IN"),
     },
   }),
-})
+});
 ```
 
 The access token is therefore intentionally short-lived.
@@ -3575,7 +3573,7 @@ src/auth/types/jwt-payload.ts
 The payload contains:
 
 ```typescript
-import { Role } from 'generated/prisma/enums';
+import { Role } from "generated/prisma/enums";
 
 export class JwtPayload {
   sub!: string;
@@ -3617,13 +3615,13 @@ Authorization: Bearer <token>
 using:
 
 ```typescript
-ExtractJwt.fromAuthHeaderAsBearerToken()
+ExtractJwt.fromAuthHeaderAsBearerToken();
 ```
 
 The JWT secret is loaded through:
 
 ```typescript
-configService.getOrThrow<string>('JWT_SECRET')
+configService.getOrThrow<string>("JWT_SECRET");
 ```
 
 Using `getOrThrow()` ensures that a missing JWT secret is treated as a configuration error instead of allowing an undefined value.
@@ -3704,7 +3702,7 @@ src/auth/guards/jwt-auth/
 The guard extends:
 
 ```typescript
-AuthGuard('jwt')
+AuthGuard("jwt");
 ```
 
 The basic guard allows Passport to perform JWT authentication.
@@ -3722,10 +3720,10 @@ Created a `@Public()` decorator using route metadata.
 The guard checks:
 
 ```typescript
-const isPublic = this.reflector.getAllAndOverride<boolean>(
-  IS_PUBLIC_KEY,
-  [context.getHandler(), context.getClass()],
-);
+const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+  context.getHandler(),
+  context.getClass(),
+]);
 ```
 
 If the route is public:
@@ -3796,7 +3794,7 @@ TS2554: Expected 1 arguments, but got 0.
 The generated test was attempting:
 
 ```typescript
-new JwtAuthGuard()
+new JwtAuthGuard();
 ```
 
 but the guard now required a `Reflector`.
@@ -3905,7 +3903,7 @@ This allows one user to have multiple refresh-token records representing differe
 During login, a cryptographically random refresh token is generated:
 
 ```typescript
-const refreshToken = randomBytes(32).toString('hex');
+const refreshToken = randomBytes(32).toString("hex");
 ```
 
 The raw token is returned to the client.
@@ -3961,9 +3959,7 @@ Refresh tokens are given a seven-day lifetime.
 The database record stores:
 
 ```typescript
-expiresAt: new Date(
-  Date.now() + 7 * 24 * 60 * 60 * 1000,
-)
+expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 ```
 
 Therefore:
@@ -4019,10 +4015,7 @@ The supplied raw token is compared against the stored bcrypt hashes:
 
 ```typescript
 for (const token of tokens) {
-  const match = await bcrypt.compare(
-    refreshToken,
-    token.tokenHash,
-  );
+  const match = await bcrypt.compare(refreshToken, token.tokenHash);
 
   if (match) {
     matchedToken = token;
@@ -4045,7 +4038,7 @@ After finding the matching database record, the service checks:
 
 ```typescript
 if (matchedToken.expiresAt <= new Date()) {
-  throw new UnauthorizedException('Refresh token expired');
+  throw new UnauthorizedException("Refresh token expired");
 }
 ```
 
@@ -4090,12 +4083,9 @@ const accessToken = this.jwtService.sign({
 A new refresh token is also generated:
 
 ```typescript
-const newRefreshToken = randomBytes(32).toString('hex');
+const newRefreshToken = randomBytes(32).toString("hex");
 
-const newRefreshTokenHash = await bcrypt.hash(
-  newRefreshToken,
-  12,
-);
+const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, 12);
 ```
 
 The response contains:
@@ -4138,7 +4128,7 @@ The old refresh token is therefore no longer reusable after rotation.
 The old token is revoked by setting:
 
 ```typescript
-revokedAt: new Date()
+revokedAt: new Date();
 ```
 
 The record is not deleted.
@@ -4173,9 +4163,7 @@ await this.prismaService.$transaction(async (tx) => {
     data: {
       userId: user.id,
       tokenHash: newRefreshTokenHash,
-      expiresAt: new Date(
-        Date.now() + 7 * 24 * 60 * 60 * 1000,
-      ),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   });
 });
@@ -4540,7 +4528,7 @@ The `tokenId` corresponds directly to the `RefreshToken.id` stored in PostgreSQL
 
 ```typescript
 const tokenId = randomUUID();
-const secret = randomBytes(32).toString('hex');
+const secret = randomBytes(32).toString("hex");
 
 const refreshToken = `${tokenId}.${secret}`;
 
@@ -4561,33 +4549,29 @@ This means the raw secret is never stored.
 The token is split into its two components:
 
 ```typescript
-const [tokenId, secret] = refreshToken.split('.');
+const [tokenId, secret] = refreshToken.split(".");
 ```
 
 Malformed tokens are rejected:
 
 ```typescript
 if (!tokenId || !secret) {
-  throw new UnauthorizedException('Invalid refresh token');
+  throw new UnauthorizedException("Invalid refresh token");
 }
 ```
 
 The refresh-token record can then be located directly:
 
 ```typescript
-const matchedToken =
-  await this.prismaService.refreshToken.findUnique({
-    where: { id: tokenId },
-  });
+const matchedToken = await this.prismaService.refreshToken.findUnique({
+  where: { id: tokenId },
+});
 ```
 
 The server then verifies the secret:
 
 ```typescript
-const match = await bcrypt.compare(
-  secret,
-  matchedToken.tokenHash,
-);
+const match = await bcrypt.compare(secret, matchedToken.tokenHash);
 ```
 
 Therefore the new flow is:
@@ -4616,18 +4600,17 @@ The newly generated refresh token also follows the same format:
 
 ```typescript
 const newTokenId = randomUUID();
-const newSecret = randomBytes(32).toString('hex');
+const newSecret = randomBytes(32).toString("hex");
 
 const newRefreshToken = `${newTokenId}.${newSecret}`;
 
-const newRefreshTokenHash =
-  await bcrypt.hash(newSecret, 12);
+const newRefreshTokenHash = await bcrypt.hash(newSecret, 12);
 ```
 
 The new database record explicitly uses:
 
 ```typescript
-id: newTokenId
+id: newTokenId;
 ```
 
 This ensures the token returned to the client can always be directly mapped to its database record.
@@ -4680,8 +4663,7 @@ async logout(
 The refresh token is first parsed:
 
 ```typescript
-const [tokenId, secret] =
-  refreshToken.split('.');
+const [tokenId, secret] = refreshToken.split(".");
 ```
 
 The token must contain both components.
@@ -4689,10 +4671,9 @@ The token must contain both components.
 The database record is then found using the token ID:
 
 ```typescript
-const matchedToken =
-  await this.prismaService.refreshToken.findUnique({
-    where: { id: tokenId },
-  });
+const matchedToken = await this.prismaService.refreshToken.findUnique({
+  where: { id: tokenId },
+});
 ```
 
 Revoked or nonexistent tokens are rejected.
@@ -4701,9 +4682,7 @@ The service also verifies that the refresh-token session belongs to the authenti
 
 ```typescript
 if (matchedToken.userId !== userId) {
-  throw new UnauthorizedException(
-    'Invalid refresh token',
-  );
+  throw new UnauthorizedException("Invalid refresh token");
 }
 ```
 
@@ -4838,16 +4817,16 @@ Completed the remaining core authentication functionality by implementing the pa
 
 The Auth module now supports:
 
-* User registration
-* Email verification
-* Login with JWT access tokens
-* Refresh-token sessions with rotation
-* Logout
-* Forgot-password flow
-* Password reset with expiring, single-use tokens
-* Session invalidation after password reset
-* Global JWT authentication with `@Public()` exceptions
-* Basic authentication hardening and TypeScript cleanup
+- User registration
+- Email verification
+- Login with JWT access tokens
+- Refresh-token sessions with rotation
+- Logout
+- Forgot-password flow
+- Password reset with expiring, single-use tokens
+- Session invalidation after password reset
+- Global JWT authentication with `@Public()` exceptions
+- Basic authentication hardening and TypeScript cleanup
 
 ---
 
@@ -4879,7 +4858,7 @@ src/auth/dto/forgot-password.dto.ts
 The DTO accepts only the user's email address:
 
 ```typescript
-import { IsEmail } from 'class-validator';
+import { IsEmail } from "class-validator";
 
 export class ForgotPasswordDto {
   @IsEmail()
@@ -4918,7 +4897,7 @@ The controller returns the result of the service call directly.
 When a matching account exists, the service generates a cryptographically random reset token:
 
 ```typescript
-const resetToken = randomBytes(32).toString('hex');
+const resetToken = randomBytes(32).toString("hex");
 ```
 
 The raw token is never stored in the database.
@@ -5003,7 +4982,7 @@ src/auth/dto/reset-password.dto.ts
 The DTO contains:
 
 ```typescript
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsString, MinLength } from "class-validator";
 
 export class ResetPasswordDto {
   @IsEmail()
@@ -5052,10 +5031,10 @@ The service first finds the user by email.
 
 The reset request is rejected if:
 
-* The user does not exist.
-* No reset token hash exists.
-* No reset expiry exists.
-* The reset token has expired.
+- The user does not exist.
+- No reset token hash exists.
+- No reset expiry exists.
+- The reset token has expired.
 
 The validation logic is:
 
@@ -5066,7 +5045,7 @@ if (
   !user.passwordResetExpiresAt ||
   user.passwordResetExpiresAt <= new Date()
 ) {
-  throw new BadRequestException('Reset token is invalid or expired.');
+  throw new BadRequestException("Reset token is invalid or expired.");
 }
 ```
 
@@ -5088,9 +5067,7 @@ const match = await bcrypt.compare(
 If the comparison fails:
 
 ```typescript
-throw new BadRequestException(
-  'Reset token is invalid or expired.',
-);
+throw new BadRequestException("Reset token is invalid or expired.");
 ```
 
 The raw reset token is therefore never compared directly against a plaintext value stored in the database.
@@ -5102,10 +5079,7 @@ The raw reset token is therefore never compared directly against a plaintext val
 After successful token validation, the new password is hashed using bcrypt:
 
 ```typescript
-const newPasswordHash = await bcrypt.hash(
-  resetPasswordDto.newPassword,
-  12,
-);
+const newPasswordHash = await bcrypt.hash(resetPasswordDto.newPassword, 12);
 ```
 
 The plaintext password is never stored.
@@ -5196,19 +5170,19 @@ Completed the User & Profile module according to the SkillShift Implementation B
 
 The User module now supports:
 
-* Viewing the authenticated user's profile
+- Viewing the authenticated user's profile
 
-* Updating the authenticated user's profile
+- Updating the authenticated user's profile
 
-* Viewing another user's public profile
+- Viewing another user's public profile
 
-* Public profile access without authentication
+- Public profile access without authentication
 
-* Profile field validation
+- Profile field validation
 
-* Proper handling of nonexistent users/profiles
+- Proper handling of nonexistent users/profiles
 
-* Reusable authentication infrastructure through the shared `common` directory
+- Reusable authentication infrastructure through the shared `common` directory
 
 **---**
 
@@ -5280,13 +5254,13 @@ The endpoint retrieves the currently authenticated user's information using the 
 The controller obtains the authenticated user from:
 
 ```typescript
-req.user.sub
+req.user.sub;
 ```
 
 and passes the ID to:
 
 ```typescript
-UserService.findById()
+UserService.findById();
 ```
 
 The endpoint is protected by the global JWT authentication guard.
@@ -5636,29 +5610,29 @@ The User & Profile module is considered complete according to the SkillShift Imp
 
 Implemented:
 
-* `UserService.findById()`
+- `UserService.findById()`
 
-* `UserService.updateProfile()`
+- `UserService.updateProfile()`
 
-* `UserService.getPublicProfile()`
+- `UserService.getPublicProfile()`
 
-* `GET /users/me`
+- `GET /users/me`
 
-* `PATCH /users/me`
+- `PATCH /users/me`
 
-* `GET /users/:id`
+- `GET /users/:id`
 
-* `UpdateProfileDto`
+- `UpdateProfileDto`
 
-* Public profile access using `@Public()`
+- Public profile access using `@Public()`
 
-* Profile validation
+- Profile validation
 
-* Missing-profile error handling
+- Missing-profile error handling
 
-* Postman endpoint testing
+- Postman endpoint testing
 
-* TypeScript verification
+- TypeScript verification
 
 No additional User/Profile functionality was added beyond the defined Phase 2 scope.
 
@@ -5690,15 +5664,15 @@ Wallet was implemented as the first financial module of SkillShift.
 
 The Blueprint defines three wallet operations:
 
-* `getBalance`
-* `deposit`
-* `getTransactions`
+- `getBalance`
+- `deposit`
+- `getTransactions`
 
 with the following endpoints:
 
-* `GET /wallet`
-* `POST /wallet/deposit`
-* `GET /wallet/transactions`
+- `GET /wallet`
+- `POST /wallet/deposit`
+- `GET /wallet/transactions`
 
 The Wallet module was implemented according to this design.
 
@@ -5741,15 +5715,15 @@ Transactions are returned newest-first.
 
 ## Files Created
 
-* `src/wallet/wallet.module.ts`
-* `src/wallet/wallet.controller.ts`
-* `src/wallet/wallet.service.ts`
-* `src/wallet/dto/deposit.dto.ts`
-* Wallet service specification file generated by Nest CLI
+- `src/wallet/wallet.module.ts`
+- `src/wallet/wallet.controller.ts`
+- `src/wallet/wallet.service.ts`
+- `src/wallet/dto/deposit.dto.ts`
+- Wallet service specification file generated by Nest CLI
 
 ## Files Modified
 
-* `src/app.module.ts`
+- `src/app.module.ts`
 
 ## Database
 
@@ -5757,8 +5731,8 @@ No database schema changes were required.
 
 The existing:
 
-* `Wallet`
-* `Transaction`
+- `Wallet`
+- `Transaction`
 
 models were used.
 
@@ -5784,8 +5758,8 @@ The deposit operation updates the wallet balance and creates its transaction rec
 
 A successful deposit therefore produces both:
 
-* the updated wallet balance
-* the corresponding `DEPOSIT` transaction
+- the updated wallet balance
+- the corresponding `DEPOSIT` transaction
 
 as one atomic operation.
 
@@ -5813,14 +5787,14 @@ Manual API testing was completed through Postman with **11 tests passed**.
 
 The following areas were verified:
 
-* Wallet retrieval
-* Wallet deposits
-* Balance updates after deposits
-* Transaction history
-* New-account wallet verification
-* Invalid input handling
-* Authentication requirements
-* Multi-account data isolation
+- Wallet retrieval
+- Wallet deposits
+- Balance updates after deposits
+- Transaction history
+- New-account wallet verification
+- Invalid input handling
+- Authentication requirements
+- Multi-account data isolation
 
 Three separate accounts were used to verify wallet and transaction isolation. Each account could access only its own wallet and transaction information.
 
@@ -5840,11 +5814,11 @@ Automated testing is therefore **not considered completed** for the Wallet modul
 
 ### Current Wallet Testing Status
 
-* Manual Postman testing: **Completed — 11 tests passed**
-* Build verification: **Passed**
-* Multi-account isolation: **Verified**
-* Wallet functionality issues: **None found**
-* Automated unit testing: **Paused/deferred**
+- Manual Postman testing: **Completed — 11 tests passed**
+- Build verification: **Passed**
+- Multi-account isolation: **Verified**
+- Wallet functionality issues: **None found**
+- Automated unit testing: **Paused/deferred**
 
 **Next testing task:** Resume `wallet.service.spec.ts` automated unit testing.
 
@@ -5852,17 +5826,15 @@ Automated testing is therefore **not considered completed** for the Wallet modul
 
 The following cross-cutting work remains deferred:
 
-* final global `ValidationPipe` configuration
-* `GlobalExceptionFilter`
-* consistent API response/error shape
-* `@GetUser()` decorator
-* meaningful AuthService unit tests
-* broader automated testing
-* security hardening
+- final global `ValidationPipe` configuration
+- `GlobalExceptionFilter`
+- consistent API response/error shape
+- `@GetUser()` decorator
+- meaningful AuthService unit tests
+- broader automated testing
+- security hardening
 
 These items were not part of the Wallet implementation itself.
-
-
 
 ## Next Step
 
@@ -5885,11 +5857,11 @@ The Service Listings module was implemented according to the Phase 4 requirement
 
 Implemented:
 
-* `POST /services`
-* `GET /services`
-* `GET /services/:id`
-* `PATCH /services/:id`
-* `DELETE /services/:id`
+- `POST /services`
+- `GET /services`
+- `GET /services/:id`
+- `PATCH /services/:id`
+- `DELETE /services/:id`
 
 Services belong to freelancers.
 
@@ -5905,12 +5877,12 @@ Update and delete operations verify that the authenticated freelancer owns the s
 
 The implementation:
 
-* defaults `limit` to 20
-* caps the maximum limit at 50
-* fetches `limit + 1` records to determine whether another page exists
-* removes the extra record when necessary
-* returns the last returned service ID as the next cursor
-* uses `skip: 1` when continuing from a cursor
+- defaults `limit` to 20
+- caps the maximum limit at 50
+- fetches `limit + 1` records to determine whether another page exists
+- removes the extra record when necessary
+- returns the last returned service ID as the next cursor
+- uses `skip: 1` when continuing from a cursor
 
 Services are ordered by `createdAt` descending.
 
@@ -5930,9 +5902,9 @@ Offset pagination was not introduced.
 
 The service-list endpoint supports:
 
-* skills
-* minimum price
-* maximum price
+- skills
+- minimum price
+- maximum price
 
 Only services with `deletedAt = null` are returned from the normal service listing.
 
@@ -5962,8 +5934,8 @@ This preserves service records that may later be referenced by historical domain
 
 Implemented:
 
-* `PATCH /services/:id/approve`
-* `PATCH /services/:id/reject`
+- `PATCH /services/:id/approve`
+- `PATCH /services/:id/reject`
 
 Approval changes the service status to `ACTIVE`.
 
@@ -6011,11 +5983,11 @@ The issue was fixed by invalidating service-list cache entries after mutations.
 
 The following operations now invalidate:
 
-* create
-* update
-* delete
-* approve
-* reject
+- create
+- update
+- delete
+- approve
+- reject
 
 Individual service cache entries are also invalidated where applicable.
 
@@ -6049,18 +6021,18 @@ Phase 4 also introduced the PostgreSQL infrastructure required for future full-t
 
 Added:
 
-* `searchVector` (`tsvector`)
-* GIN index
-* `update_service_search_vector()` function
-* `service_search_vector_trigger`
+- `searchVector` (`tsvector`)
+- GIN index
+- `update_service_search_vector()` function
+- `service_search_vector_trigger`
 
 The trigger automatically populates the search vector when Service records are inserted or updated.
 
 The search vector combines:
 
-* title — weight A
-* description — weight B
-* skills — weight C
+- title — weight A
+- description — weight B
+- skills — weight C
 
 The actual SearchModule and `GET /search/services` endpoint were not implemented because they belong to Phase 10.
 
@@ -6094,23 +6066,23 @@ passed successfully.
 
 Phase 4 manual testing covered:
 
-* Service creation
-* Service listing
-* Individual service retrieval
-* Service update
-* Service deletion
-* Authentication
-* RBAC
-* Freelancer ownership
-* Admin approval
-* Admin rejection
-* Cursor pagination
-* Skills filtering
-* Price filtering
-* Validation boundaries
-* Redis caching
-* Redis cache invalidation
-* Deleted-service behavior
+- Service creation
+- Service listing
+- Individual service retrieval
+- Service update
+- Service deletion
+- Authentication
+- RBAC
+- Freelancer ownership
+- Admin approval
+- Admin rejection
+- Cursor pagination
+- Skills filtering
+- Price filtering
+- Validation boundaries
+- Redis caching
+- Redis cache invalidation
+- Deleted-service behavior
 
 The Service module was manually verified through Postman.
 
@@ -6118,9 +6090,9 @@ The Service module was manually verified through Postman.
 
 After discovering the stale list-cache issue, regression testing verified cache invalidation for:
 
-* create
-* update
-* delete
+- create
+- update
+- delete
 
 The cache invalidation fix passed these regression tests.
 
@@ -6364,11 +6336,11 @@ The temporary testing endpoint was removed after verification.
 
 The test confirmed:
 
-* `DELIVERED → COMPLETED`
-* Escrow `HOLDING → RELEASED`
-* Freelancer wallet credited
-* `ESCROW_RELEASE` transaction created
-* System AuditLog created with `userId = null`
+- `DELIVERED → COMPLETED`
+- Escrow `HOLDING → RELEASED`
+- Freelancer wallet credited
+- `ESCROW_RELEASE` transaction created
+- System AuditLog created with `userId = null`
 
 ---
 
@@ -6378,11 +6350,11 @@ Manual testing covered both client and freelancer JWT authorization paths.
 
 Verified cases included:
 
-* freelancer delivery authorization
-* client completion authorization
-* client/freelancer cancellation paths
-* protected Order endpoints
-* prevention of unauthorized operations
+- freelancer delivery authorization
+- client completion authorization
+- client/freelancer cancellation paths
+- protected Order endpoints
+- prevention of unauthorized operations
 
 ---
 
@@ -6390,11 +6362,11 @@ Verified cases included:
 
 The following negative cases were verified:
 
-* insufficient client wallet balance
-* inactive service
-* deleted service
-* client ordering their own service
-* unauthorized Order operations
+- insufficient client wallet balance
+- inactive service
+- deleted service
+- client ordering their own service
+- unauthorized Order operations
 
 ---
 
@@ -6404,8 +6376,8 @@ During Phase 5, the previously identified registration role gap was fixed.
 
 Public registration now supports:
 
-* `CLIENT`
-* `FREELANCER`
+- `CLIENT`
+- `FREELANCER`
 
 `ADMIN` registration is rejected.
 
@@ -6419,18 +6391,18 @@ Order and Escrow functionality was manually tested using Postman with PostgreSQL
 
 The tested flows included:
 
-* order creation
-* escrow hold
-* wallet deduction
-* delivery
-* completion
-* escrow release
-* freelancer payout
-* cancellation
-* escrow refund
-* authorization
-* invalid business conditions
-* automatic completion
+- order creation
+- escrow hold
+- wallet deduction
+- delivery
+- completion
+- escrow release
+- freelancer payout
+- cancellation
+- escrow refund
+- authorization
+- invalid business conditions
+- automatic completion
 
 Manual verification passed.
 
@@ -6507,9 +6479,9 @@ Implemented `EmailProcessor` to process notification-related BullMQ jobs.
 
 The processor handles:
 
-* `notification`
-* `verification-email`
-* `password-reset`
+- `notification`
+- `verification-email`
+- `password-reset`
 
 Email processing uses the existing mail infrastructure and email templates.
 
@@ -6608,10 +6580,10 @@ Redis was used to inspect the failed job.
 
 The test verified:
 
-* `atm = 3`
-* `ats = 3`
-* three stack traces were recorded
-* final failure reason matched the expected nonexistent-user error
+- `atm = 3`
+- `ats = 3`
+- three stack traces were recorded
+- final failure reason matched the expected nonexistent-user error
 
 This verified that the configured retry behavior was actually being applied rather than merely existing in configuration.
 
@@ -6623,9 +6595,9 @@ Actual emails were tested using Ethereal.
 
 Verified:
 
-* verification email delivery
-* password-reset email delivery
-* order notification email delivery
+- verification email delivery
+- password-reset email delivery
+- order notification email delivery
 
 Email delivery was confirmed successfully.
 
@@ -6655,11 +6627,11 @@ The Blueprint contains notification types whose corresponding application featur
 
 The following remain intentionally deferred:
 
-* `DISPUTE_OPENED`
-* `DISPUTE_RESOLVED`
-* `MESSAGE_RECEIVED`
-* `PAYMENT_RECEIVED`
-* `REVIEW_RECEIVED`
+- `DISPUTE_OPENED`
+- `DISPUTE_RESOLVED`
+- `MESSAGE_RECEIVED`
+- `PAYMENT_RECEIVED`
+- `REVIEW_RECEIVED`
 
 No placeholder wiring was added.
 
@@ -6701,7 +6673,6 @@ The Blueprint-required queue retry configuration is implemented and verified.
 
 Proceed to Phase 7 — Dispute Module.
 
-
 # 2026-09-21 — Phase 7: Dispute Module
 
 ## Session
@@ -6717,9 +6688,9 @@ Phase 7 implemented the dispute workflow connecting clients, Orders, Escrow, Wal
 
 Implemented `DisputeModule` with:
 
-* dispute creation
-* admin dispute listing
-* admin dispute resolution
+- dispute creation
+- admin dispute listing
+- admin dispute resolution
 
 Controller endpoints:
 
@@ -6747,9 +6718,9 @@ The creation flow validates:
 
 The dispute creation transaction then:
 
-* creates the Dispute with status `OPEN`
-* changes the Order status to `DISPUTED`
-* creates a `DISPUTE_OPENED` AuditLog
+- creates the Dispute with status `OPEN`
+- changes the Order status to `DISPUTED`
+- creates a `DISPUTE_OPENED` AuditLog
 
 These database changes occur inside one Prisma transaction.
 
@@ -6781,9 +6752,9 @@ The endpoint is protected with the existing `ADMIN` role authorization.
 
 The dispute listing includes:
 
-* Order information
-* Client information
-* dispute data
+- Order information
+- Client information
+- dispute data
 
 Disputes are ordered newest-first.
 
@@ -6804,10 +6775,10 @@ RESOLVED_CLIENT
 
 Before resolution, the service verifies:
 
-* the Dispute exists
-* the Dispute is still `OPEN` or `UNDER_REVIEW`
-* the associated Escrow exists
-* Escrow is currently `HOLDING`
+- the Dispute exists
+- the Dispute is still `OPEN` or `UNDER_REVIEW`
+- the associated Escrow exists
+- Escrow is currently `HOLDING`
 
 ---
 
@@ -6817,12 +6788,12 @@ Dispute resolution uses one Prisma transaction for the complete financial/state 
 
 The transaction updates:
 
-* Dispute
-* Order
-* Escrow
-* Wallet
-* Transaction
-* AuditLog
+- Dispute
+- Order
+- Escrow
+- Wallet
+- Transaction
+- AuditLog
 
 This prevents partial financial resolution.
 
@@ -6906,8 +6877,8 @@ Resolution uses conditional state updates.
 
 The Dispute update only succeeds while the Dispute remains:
 
-* `OPEN`
-* or `UNDER_REVIEW`
+- `OPEN`
+- or `UNDER_REVIEW`
 
 Escrow is similarly updated only while it remains `HOLDING`.
 
@@ -6957,22 +6928,22 @@ Manual testing was completed successfully.
 
 Verified:
 
-* Client can open a dispute
-* Freelancer cannot open a dispute
-* Non-admin cannot resolve a dispute
-* Admin can resolve for freelancer
-* Admin can resolve for client
-* Invalid resolution is rejected
-* Already-resolved dispute is rejected
-* Nonexistent Order is rejected
-* Nonexistent Dispute is rejected
-* Order state changes
-* Escrow state changes
-* Wallet balance changes
-* Transaction creation
-* AuditLog creation
-* `DISPUTE_OPENED` notifications
-* `DISPUTE_RESOLVED` notifications
+- Client can open a dispute
+- Freelancer cannot open a dispute
+- Non-admin cannot resolve a dispute
+- Admin can resolve for freelancer
+- Admin can resolve for client
+- Invalid resolution is rejected
+- Already-resolved dispute is rejected
+- Nonexistent Order is rejected
+- Nonexistent Dispute is rejected
+- Order state changes
+- Escrow state changes
+- Wallet balance changes
+- Transaction creation
+- AuditLog creation
+- `DISPUTE_OPENED` notifications
+- `DISPUTE_RESOLVED` notifications
 
 PostgreSQL was used to verify financial and audit side effects.
 
@@ -6986,10 +6957,10 @@ Automated tests were not added during this phase and remain deferred to the dedi
 
 The following remain outside Phase 7:
 
-* Admin UI
-* Real-time WebSocket notifications
-* Notification-group abstraction
-* Additional dispute workflow states beyond the current Blueprint/schema
+- Admin UI
+- Real-time WebSocket notifications
+- Notification-group abstraction
+- Additional dispute workflow states beyond the current Blueprint/schema
 
 ---
 
@@ -7008,7 +6979,6 @@ Automated testing remains deferred.
 ## Next Step
 
 Proceed to the next Blueprint phase after Disputes.
-
 
 # 2026-09-22 — Supplemental Feature: Reviews/Ratings
 
@@ -7082,9 +7052,9 @@ comment?
 
 The client does not provide:
 
-* `reviewerId`
-* `revieweeId`
-* `serviceId`
+- `reviewerId`
+- `revieweeId`
+- `serviceId`
 
 These values are derived from the Order and authenticated user.
 
@@ -7152,17 +7122,17 @@ Exact final repository state should remain the source of truth for any additiona
 
 Manual testing successfully verified:
 
-* Valid Review on a `COMPLETED` Order
-* Duplicate Review rejection
-* Rating `0` rejection
-* Rating `6` rejection
-* Rating `3.5` rejection
-* Freelancer attempting to Review rejection
-* Review on an `IN_PROGRESS` Order rejection
-* Review persistence
-* Freelancer Profile rating update
-* Freelancer `totalReviews` update
-* `REVIEW_RECEIVED` notification creation
+- Valid Review on a `COMPLETED` Order
+- Duplicate Review rejection
+- Rating `0` rejection
+- Rating `6` rejection
+- Rating `3.5` rejection
+- Freelancer attempting to Review rejection
+- Review on an `IN_PROGRESS` Order rejection
+- Review persistence
+- Freelancer Profile rating update
+- Freelancer `totalReviews` update
+- `REVIEW_RECEIVED` notification creation
 
 Successful database state included:
 
@@ -7176,11 +7146,11 @@ Notification recipient = reviewed freelancer
 
 The following were **not separately tested in the manual pass**:
 
-* Non-existent Order
-* Invalid comment type
-* Optional comment omission
-* Second-review aggregation
-* Automated tests
+- Non-existent Order
+- Invalid comment type
+- Optional comment omission
+- Second-review aggregation
+- Automated tests
 
 These should not be marked as tested until they are actually verified.
 
@@ -7190,17 +7160,17 @@ These should not be marked as tested until they are actually verified.
 
 The Blueprint explicitly provides:
 
-* Review model
-* `orderId @unique`
-* `serviceId`
-* `reviewerId`
-* `revieweeId`
-* rating/comment
-* `Profile.rating`
-* `Profile.totalReviews`
-* `REVIEW_RECEIVED`
-* completed-order requirement
-* no-existing-review requirement
+- Review model
+- `orderId @unique`
+- `serviceId`
+- `reviewerId`
+- `revieweeId`
+- rating/comment
+- `Profile.rating`
+- `Profile.totalReviews`
+- `REVIEW_RECEIVED`
+- completed-order requirement
+- no-existing-review requirement
 
 The Blueprint does not provide a dedicated numbered Reviews implementation phase.
 
@@ -7244,13 +7214,13 @@ The Chat gateway provides authenticated real-time communication for Order partic
 
 Implemented behavior:
 
-* Socket JWT authentication
-* Authenticated socket connections
-* Order-specific rooms
-* Participant authorization before joining an Order room
-* Message sending
-* `new_message` broadcast
-* Safe socket disconnect handling
+- Socket JWT authentication
+- Authenticated socket connections
+- Order-specific rooms
+- Participant authorization before joining an Order room
+- Message sending
+- `new_message` broadcast
+- Safe socket disconnect handling
 
 The authenticated user's identity is derived from the JWT rather than being supplied by the client.
 
@@ -7262,10 +7232,10 @@ Messages are persisted through the existing Chat service/database flow.
 
 A successful message records:
 
-* conversation/order association
-* sender
-* message content
-* timestamp
+- conversation/order association
+- sender
+- message content
+- timestamp
 
 The WebSocket layer therefore provides real-time delivery while PostgreSQL remains the persistent source of truth.
 
@@ -7281,9 +7251,9 @@ GET /chat/:orderId/messages
 
 The endpoint:
 
-* verifies Order participation
-* returns message history
-* supports cursor-based pagination
+- verifies Order participation
+- returns message history
+- supports cursor-based pagination
 
 Cursor pagination was manually verified by requesting an initial page and then using the returned cursor to retrieve the next page.
 
@@ -7495,10 +7465,10 @@ S3 therefore handles the file transfer while the SkillShift backend controls aut
 
 The Upload module supports:
 
-* avatar
-* portfolio
-* service images
-* delivery files
+- avatar
+- portfolio
+- service images
+- delivery files
 
 The implementation uses the resource type to determine the relevant ownership and persistence behavior.
 
@@ -7512,9 +7482,9 @@ Ownership checks are performed for protected resources.
 
 The implementation also validates:
 
-* filename/key information
-* file type
-* file size
+- filename/key information
+- file type
+- file size
 
 Manual testing verified rejection of invalid file types and files larger than 5 MB.
 
@@ -7684,10 +7654,10 @@ The Phase 4 database infrastructure is therefore reused rather than introducing 
 
 The Search API supports:
 
-* full-text query
-* skills filtering
-* minimum price filtering
-* maximum price filtering
+- full-text query
+- skills filtering
+- minimum price filtering
+- maximum price filtering
 
 Only services satisfying the required visibility conditions are returned:
 
@@ -7848,11 +7818,11 @@ PATCH /admin/services/:id/moderate
 
 The analytics endpoint provides:
 
-* total orders grouped by status
-* released escrow revenue
-* top freelancers by rating
-* dispute rate
-* new users per day for the last 30 days
+- total orders grouped by status
+- released escrow revenue
+- top freelancers by rating
+- dispute rate
+- new users per day for the last 30 days
 
 Analytics responses use Redis caching.
 
@@ -7997,11 +7967,11 @@ Added a global `LoggingInterceptor`.
 
 It records:
 
-* request method
-* request URL
-* response status code
-* request duration
-* authenticated user ID where available
+- request method
+- request URL
+- response status code
+- request duration
+- authenticated user ID where available
 
 NestJS's built-in `Logger` is used rather than introducing an external logging framework.
 
@@ -8069,15 +8039,15 @@ Swagger remains part of the existing application rather than being deployed as a
 
 Relevant controllers and services were reviewed for:
 
-* ownership enforcement
-* authorization
-* business-rule validation
-* consistent error handling
+- ownership enforcement
+- authorization
+- business-rule validation
+- consistent error handling
 
 The review also resulted in improvements to relevant service logic, including changes involving:
 
-* `EscrowService`
-* `DisputeService`
+- `EscrowService`
+- `DisputeService`
 
 ---
 
@@ -8171,12 +8141,12 @@ The existing NestJS monolith architecture was retained.
 
 Phase 12 uses:
 
-* NestJS built-in `Logger`
-* global interceptors for cross-cutting request/response behavior
-* a global exception filter for consistent error handling
-* Prisma error translation at the global exception boundary
-* Swagger within the existing NestJS application
-* globally applied Helmet and compression
+- NestJS built-in `Logger`
+- global interceptors for cross-cutting request/response behavior
+- a global exception filter for consistent error handling
+- Prisma error translation at the global exception boundary
+- Swagger within the existing NestJS application
+- globally applied Helmet and compression
 
 No microservices or unrelated infrastructure were introduced.
 
@@ -8342,11 +8312,11 @@ Production environment variables are supplied through the EC2 `.env`.
 
 It documents configuration categories for:
 
-* PostgreSQL
-* Redis
-* JWT
-* AWS S3
-* SMTP/email
+- PostgreSQL
+- Redis
+- JWT
+- AWS S3
+- SMTP/email
 
 Production secrets remain in the EC2 environment and are not committed.
 
@@ -8537,9 +8507,9 @@ Both were successfully accessible over HTTPS.
 
 This completed the Blueprint requirements for:
 
-* live URL
-* HTTPS
-* Swagger accessibility
+- live URL
+- HTTPS
+- Swagger accessibility
 
 ---
 
@@ -8732,12 +8702,12 @@ The key must remain untracked.
 
 Additional security properties:
 
-* EC2 uses an IAM role instead of static AWS credentials.
-* S3 permissions are restricted to required object operations.
-* PostgreSQL is not intentionally exposed publicly.
-* Redis is internal to the Docker Compose network.
-* Nginx is the public entry point.
-* NestJS listens internally on port 3000.
+- EC2 uses an IAM role instead of static AWS credentials.
+- S3 permissions are restricted to required object operations.
+- PostgreSQL is not intentionally exposed publicly.
+- Redis is internal to the Docker Compose network.
+- Nginx is the public entry point.
+- NestJS listens internally on port 3000.
 
 ---
 
@@ -8770,17 +8740,17 @@ Swagger                            ✅
 
 Planned work:
 
-* README
-* architecture documentation
-* ER/database documentation
-* API documentation
-* setup instructions
-* deployment documentation
-* security documentation
-* Postman collection
-* final testing
-* project cleanup
-* final checkpoint
+- README
+- architecture documentation
+- ER/database documentation
+- API documentation
+- setup instructions
+- deployment documentation
+- security documentation
+- Postman collection
+- final testing
+- project cleanup
+- final checkpoint
 
 Do not introduce new architectural features unless required by the Blueprint.
 
@@ -8829,12 +8799,12 @@ This ensures that records are neither skipped nor duplicated when moving between
 
 Tests were added/updated for:
 
-* first-page retrieval
-* composite cursor generation
-* next-page retrieval using the cursor
-* multiple consecutive pages
-* duplicate prevention
-* invalid cursor handling
+- first-page retrieval
+- composite cursor generation
+- next-page retrieval using the cursor
+- multiple consecutive pages
+- duplicate prevention
+- invalid cursor handling
 
 Additional explicit TypeScript types were added in the Search service/response and test code to resolve ESLint unsafe-type errors.
 
@@ -8950,14 +8920,14 @@ Move the NestJS backend into a dedicated `backend/` directory to establish a cle
 
 The following backend-owned content was moved under `backend/`:
 
-* NestJS source
-* Prisma schema
-* Prisma migrations
-* tests
-* backend configuration
-* Dockerfile
-* `package.json`
-* `package-lock.json`
+- NestJS source
+- Prisma schema
+- Prisma migrations
+- tests
+- backend configuration
+- Dockerfile
+- `package.json`
+- `package-lock.json`
 
 Deployment and CI configuration was updated to use the new location.
 
@@ -8979,11 +8949,11 @@ docker build -t skillshift-api ./backend
 
 The CI workflow was updated so backend-related commands execute from `backend/`, including:
 
-* npm installation
-* Prisma generation
-* linting
-* tests
-* build
+- npm installation
+- Prisma generation
+- linting
+- tests
+- build
 
 The Docker build/push workflow also uses:
 
@@ -9048,3 +9018,34 @@ The NestJS monolith remains the application's architecture. This change only est
 ### Deferred
 
 Documentation references and path descriptions affected by the new `backend/` structure are updated separately.
+
+---
+
+# 12. Blueprint Completion Pass
+
+The latest implementation pass aligned the working application with the
+blueprint's main end-to-end workflows while preserving the existing
+`frontend/src` structure.
+
+## Verified changes
+
+- Public service browse, service detail, and search routes are accessible to logged-out visitors.
+- Auth recovery, email verification, education, escrow, terms, and privacy routes were added.
+- Navigation responds to the signed-in role, exposes freelancer/admin destinations, supports logout, and shows unread notification count.
+- Service detail pages display public reviews; freelancers have a `/services/mine` management view.
+- Delivery files use the existing presigned S3 flow and have participant/admin-only download URLs.
+- Wallet transactions display signed money direction and state labels.
+- Disputes open only after delivery, matching the documented order state machine.
+- Chat enforces a 2,000-character message limit and becomes read-only after terminal order states.
+- Admin users, services, orders, and disputes have queue routes backed by authenticated admin APIs.
+- Notifications persist optional order links and expose unread counts.
+- Mail delivery uses configurable SMTP, rejects Ethereal in production, and builds links from `APP_URL`.
+
+## Verification
+
+```text
+backend npm run build                         PASS
+backend npm test -- --runInBand               PASS (34 suites, 172 tests)
+frontend npm run build                        PASS (27 routes)
+notification order-link migration             APPLIED locally
+```

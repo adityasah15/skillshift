@@ -59,7 +59,6 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 
-skillshift-blueprint.pdf
 skillshift-blueprint.md
-
+skillshift-frontend-blueprint.md
 *.pem

@@ -33,17 +33,26 @@ PostgreSQL is the persistent source of truth.
 
 Redis is used according to the Blueprint for caching, rate limiting, presence, and BullMQ-backed background processing.
 
-AWS S3 will be used later for file storage.
+AWS S3 is used for presigned file uploads.
 
 ## Current Modules
 
 Implemented backend modules currently include:
 
-* Auth
-* User/Profile
-* Wallet
-
-Additional modules are planned according to the Blueprint.
+- Auth
+- User/Profile
+- Wallet
+- Service
+- Search
+- Order
+- Escrow
+- Notification
+- Dispute
+- Review
+- Chat
+- Upload
+- Admin
+- Prisma and Redis infrastructure modules
 
 ## Wallet Architecture
 
@@ -79,6 +88,8 @@ Wallet balance and transaction data are stored in PostgreSQL and are not Redis-c
 
 The Blueprint requires wallet balance to remain fresh because it represents financial state.
 
+Wallet balances, service prices, order prices, escrow amounts, and transaction amounts are stored as integers in minor units (for example, 123 represents 1.23 units of a currency with two decimal places). API clients must convert displayed amounts to minor units. The currency code is not currently stored or configured, and fractional minor units are unsupported.
+
 ### Atomic Deposit
 
 A wallet deposit changes both the wallet balance and transaction history.
@@ -98,9 +109,9 @@ POST /wallet/deposit
 
 Both operations succeed or fail together.
 
-## Future Financial Architecture
+## Order and Escrow Flow
 
-The Wallet module will later interact with the Order and Escrow modules.
+Order creation conditionally debits the client wallet inside the same database transaction that creates the order, ledger entry, audit event, and escrow hold. The conditional balance predicate prevents concurrent requests from overdrawing the wallet.
 
 The planned flow is:
 
@@ -116,14 +127,13 @@ Client Wallet
      └── ESCROW_REFUND ───► Client Wallet
 ```
 
-These multi-step financial operations will also use Prisma transactions.
+Completion releases escrow to the freelancer; cancellation or client-favoring dispute resolution refunds the client. These financial state changes use Prisma transactions.
 
 ## Design Principle
 
 Financial state remains in PostgreSQL.
 
 Redis is not used as the source of truth for wallet balances or financial transactions.
-
 
 # Phase 4 — Service Listings Architecture
 
@@ -177,19 +187,19 @@ This separates authentication from resource authorization.
 
 ## Service List Caching
 
-The service list uses Redis keys based on the query:
+The service list uses versioned Redis keys based on the query:
 
 ```text
-services:{query}
+services:v2:{query}
 ```
 
 The individual service endpoint uses:
 
 ```text
-service:{serviceId}
+service:v2:{serviceId}
 ```
 
-The list response is cached for one hour.
+Only ACTIVE, non-deleted services are returned by public list and detail reads. Versioned keys avoid reusing pre-moderation cache entries. List responses are cached for 5 minutes and detail responses for 10 minutes.
 
 ---
 
@@ -203,24 +213,25 @@ Create
 invalidate services:*
 
 Update
-   ↓
-invalidate service:{id}
+     ↓
+invalidate service:v2:{id}
 invalidate services:*
 
 Delete
-   ↓
-invalidate service:{id}
+     ↓
+invalidate service:v2:{id}
 invalidate services:*
 
 Approve
-   ↓
-invalidate service:{id}
+     ↓
+invalidate service:v2:{id}
 invalidate services:*
 
 Reject
-   ↓
-invalidate service:{id}
+     ↓
+invalidate service:v2:{id}
 invalidate services:*
+invalidate search:services:*
 ```
 
 A Redis `SCAN`-based helper performs pattern invalidation.
@@ -237,6 +248,12 @@ delByPattern("services:*")
         ▼
       DEL
 ```
+
+## Related Cache Policies
+
+- Search results use `search:services:{query}` with a 2-minute TTL. Service mutations and moderation invalidate `search:services:*`.
+- Public freelancer profiles use `profiles:freelancer:{userId}` with a 10-minute TTL. Profile edits and new reviews invalidate the profile key.
+- Admin analytics uses `admin:analytics:dashboard` with a 1-minute TTL. Successful order and dispute state changes delete the cached dashboard.
 
 `SCAN` is used instead of `KEYS` so pattern-based invalidation does not depend on a blocking full-keyspace lookup.
 
@@ -641,10 +658,10 @@ EC2 provides the deployment host for the SkillShift backend infrastructure.
 
 The instance runs:
 
-* SkillShift API
-* PostgreSQL
-* Redis
-* Nginx on the host
+- SkillShift API
+- PostgreSQL
+- Redis
+- Nginx on the host
 
 The NestJS application itself runs inside a Docker container.
 
@@ -668,9 +685,9 @@ Nginx is the public entry point.
 
 It:
 
-* terminates HTTPS
-* receives traffic on ports 80/443
-* reverse-proxies requests to the NestJS API on port 3000
+- terminates HTTPS
+- receives traffic on ports 80/443
+- reverse-proxies requests to the NestJS API on port 3000
 
 The NestJS application therefore does not need to be directly exposed as the public HTTPS endpoint.
 
@@ -788,16 +805,16 @@ Certificate renewal was tested using Certbot's dry-run mechanism.
 
 Phase 13 does **not** introduce:
 
-* microservices
-* Kubernetes
-* AWS ECS/EKS
-* managed PostgreSQL
-* managed Redis
-* load balancing
-* autoscaling
-* multi-region deployment
-* infrastructure-as-code
-* CDN
-* WAF
+- microservices
+- Kubernetes
+- AWS ECS/EKS
+- managed PostgreSQL
+- managed Redis
+- load balancing
+- autoscaling
+- multi-region deployment
+- infrastructure-as-code
+- CDN
+- WAF
 
 The deployment therefore remains intentionally simple and aligned with the project's NestJS monolith architecture and current Blueprint scope.
