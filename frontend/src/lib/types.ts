@@ -58,6 +58,34 @@ export interface AccessTokenPayload {
   accessToken: string;
 }
 
+export interface Order {
+  id: string;
+  status: string;
+  price: number;
+  serviceId: string;
+}
+
+export interface ServiceReview {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  reviewer: {
+    profile: { displayName: string; avatarUrl: string | null } | null;
+  } | null;
+}
+
+export interface PublicProfile {
+  id: string;
+  displayName: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  skills: string[];
+  portfolioUrls: string[];
+  rating: number;
+  totalReviews: number;
+}
+
 export interface ApiErrorBody {
   statusCode: number;
   message: string | string[];
