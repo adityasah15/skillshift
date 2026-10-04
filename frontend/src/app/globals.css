@@ -1,19 +1,40 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* Surfaces */
+  --color-bg: #f7f8fb;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f0f2f7;
+  --color-surface-strong: #e7eaf2;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Text */
+  --color-text: #141824;
+  --color-text-muted: #667085;
+  --color-text-subtle: #98a2b3;
 
-* {
-  box-sizing: border-box;
+  /* Brand */
+  --color-primary: #3f4fe0;
+  --color-primary-hover: #3342c5;
+  --color-primary-soft: #eef0ff;
+  --color-accent: #7357ff;
+  --color-accent-soft: #f1edff;
+
+  /* Semantic */
+  --color-success: #16875d;
+  --color-success-soft: #eaf8f2;
+  --color-warning: #b76a1f;
+  --color-warning-soft: #fff5e7;
+  --color-danger: #c94242;
+  --color-danger-soft: #fff0f0;
+  --color-info: #2478d4;
+  --color-info-soft: #edf5ff;
+
+  /* Structure */
+  --color-border: #e4e7ec;
+  --color-border-strong: #d0d5dd;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 html {
@@ -21,8 +42,67 @@ html {
 }
 
 body {
-  margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Visible focus for keyboard users */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--color-primary-soft);
+}
+
+/* Subtle card lift + image scale */
+.lift {
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+}
+.lift img,
+.lift .zoom {
+  transition: transform 200ms ease;
+}
+.lift:hover img,
+.lift:hover .zoom {
+  transform: scale(1.025);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-soft) 25%,
+    var(--color-surface-strong) 50%,
+    var(--color-surface-soft) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
