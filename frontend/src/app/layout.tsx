@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,8 +15,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SkillShift",
-  description: "A freelance marketplace connecting clients with skilled freelancers.",
+  title: {
+    default: "SkillShift — Find the right skills",
+    template: "%s · SkillShift",
+  },
+  description:
+    "SkillShift connects clients with skilled freelancers for quality, project-based work with protected payments.",
 };
 
 export default function RootLayout({
@@ -27,7 +33,11 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body>{children}</body>
+      <body className="flex min-h-screen flex-col">
+        <Navbar />
+        <div className="flex-1">{children}</div>
+        <Footer />
+      </body>
     </html>
   );
 }
