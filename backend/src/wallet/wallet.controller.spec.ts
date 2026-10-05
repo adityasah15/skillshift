@@ -24,7 +24,7 @@ describe('WalletController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('restricts withdrawals to freelancers and uses the authenticated user', async () => {
+  it('restricts withdrawals to freelancers and clients and uses the authenticated user', async () => {
     await controller.withdraw(
       { user: { sub: 'freelancer-1', role: Role.FREELANCER } } as never,
       { amount: 100 },
@@ -36,6 +36,7 @@ describe('WalletController', () => {
 
     expect(Reflect.getMetadata(ROLES_KEY, withdrawHandler)).toEqual([
       Role.FREELANCER,
+      Role.CLIENT,
     ]);
     expect(walletService.withdraw).toHaveBeenCalledWith('freelancer-1', 100);
   });

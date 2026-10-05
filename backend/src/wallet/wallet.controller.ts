@@ -26,7 +26,7 @@ export class WalletController {
     return this.walletService.deposit(req.user.sub, depositDto.amount);
   }
 
-  @Roles(Role.FREELANCER)
+  @Roles(Role.FREELANCER, Role.CLIENT)
   @Post('withdraw')
   async withdraw(
     @Req() req: { user: JwtPayload },

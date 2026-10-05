@@ -104,6 +104,23 @@ export interface OrderListItem {
   roleLabel: string;
 }
 
+export type TransactionType =
+  | "DEPOSIT"
+  | "ESCROW_HOLD"
+  | "ESCROW_RELEASE"
+  | "ESCROW_REFUND"
+  | "WITHDRAWAL";
+
+export interface Transaction {
+  id: string;
+  walletId: string;
+  type: TransactionType;
+  amount: number;
+  description: string;
+  orderId: string | null;
+  createdAt: string;
+}
+
 export interface ServiceReview {
   id: string;
   rating: number;
