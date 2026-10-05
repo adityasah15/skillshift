@@ -98,7 +98,7 @@ Modular monolith. PostgreSQL is the source of truth. Redis is used for caching a
 | Cache & Queues | Redis + BullMQ                                  |
 | Auth           | JWT (access) + rotating refresh tokens (hashed) |
 | File Storage   | AWS S3 (presigned URLs)                         |
-| Email          | Resend / Nodemailer (via BullMQ)                |
+| Email          | Gmail SMTP via Nodemailer (BullMQ queue)        |
 | Real-time      | NestJS WebSocket Gateway (Socket.IO)            |
 | Search         | PostgreSQL full-text (`tsvector`)               |
 | Infrastructure | Docker, Docker Compose, Nginx                   |
@@ -207,6 +207,10 @@ cp .env.example .env
 ```
 
 Copy the example env and fill in the required values (database URL, Redis, JWT secrets, etc.).
+
+- SMTP is required in production: `MailService` (`backend/src/mail/mail.service.ts`) throws on startup if `SMTP_HOST` is missing or contains `ethereal.email` while `NODE_ENV=production`.
+- On EC2 this surfaces as a container crash loop and Nginx `502` on `/api/docs`.
+- This repo uses Gmail SMTP (no custom domain): dedicated Gmail account + 2FA + App Password (spaces stripped) in `SMTP_USER` / `SMTP_PASS`, matching `MAIL_FROM`.
 
 ### 4. Database
 
