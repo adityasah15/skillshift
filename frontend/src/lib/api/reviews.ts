@@ -9,4 +9,11 @@ export const reviewsApi = {
       { method: "GET", auth: false },
     );
   },
+  /** After COMPLETED. Whitelist: only orderId + rating + optional comment. */
+  create(body: { orderId: string; rating: number; comment?: string }) {
+    return apiFetch<unknown>("/reviews", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
 };

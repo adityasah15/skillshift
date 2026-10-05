@@ -69,3 +69,13 @@ export async function uploadFile(
   await confirmUpload({ ...meta, key });
   return key;
 }
+
+/** Short-lived download URL for delivery files. */
+export async function deliveryDownloadUrl(key: string): Promise<string> {
+  const params = new URLSearchParams({ key });
+  const { data } = await apiFetch<{ url: string }>(
+    `/upload/download-url?${params.toString()}`,
+    { method: "GET" },
+  );
+  return data.url;
+}

@@ -71,6 +71,39 @@ export interface Order {
   serviceId: string;
 }
 
+export interface DeliveryFile {
+  id: string;
+  orderId: string;
+  key: string;
+  originalName: string;
+  contentType: string;
+  size: number;
+}
+
+export interface OrderDetail {
+  id: string;
+  clientId: string;
+  freelancerId: string;
+  serviceId: string;
+  status: string;
+  price: number;
+  deliveryDays: number;
+  requirements: string | null;
+  deliveryNote: string | null;
+  autoCompleteAt: string | null;
+  createdAt: string;
+  deliveryFiles: DeliveryFile[];
+}
+
+export interface OrderListItem {
+  id: string;
+  status: string;
+  price: number;
+  createdAt: string;
+  serviceTitle: string;
+  roleLabel: string;
+}
+
 export interface ServiceReview {
   id: string;
   rating: number;
