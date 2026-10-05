@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authApi } from "@/lib/api/auth";
+import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { clearAccessToken, useSessionToken } from "@/lib/session";
 import type { Role } from "@/lib/types";
 
@@ -120,21 +121,7 @@ export function Navbar() {
         <div className="hidden items-center gap-2.5 md:flex">
           {authed ? (
             <>
-              <Link
-                href="/notifications"
-                aria-label="Notifications"
-                className="flex h-11 w-11 items-center justify-center rounded-[12px] text-text-muted transition hover:bg-surface-soft hover:text-text"
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-                  <path
-                    d="M10 2.5a5 5 0 0 0-5 5v3L3.5 13h13L15 10.5v-3a5 5 0 0 0-5-5z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinejoin="round"
-                  />
-                  <path d="M8 16a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </Link>
+              <NotificationsBell />
               <button
                 type="button"
                 onClick={logout}

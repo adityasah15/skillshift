@@ -142,6 +142,15 @@ export interface PublicProfile {
   totalReviews: number;
 }
 
+export interface NotificationItem {
+  id: string;
+  type: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
+  link: string | null;
+}
+
 export interface ApiErrorBody {
   statusCode: number;
   message: string | string[];

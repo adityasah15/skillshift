@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -16,13 +17,21 @@ import {
 import { OrderStatusTimeline } from "@/components/orders/OrderStatusTimeline";
 import { ApiRequestError } from "@/lib/api-client";
 import { authApi } from "@/lib/api/auth";
-import { chatApi, type ChatMessage } from "@/lib/api/chat";
 import { ordersApi } from "@/lib/api/orders";
 import { servicesApi } from "@/lib/api/services";
 import { useSessionToken } from "@/lib/session";
 import { formatINR } from "@/lib/format";
 import { deliveryDownloadUrl } from "@/lib/upload";
 import type { JwtPayload, OrderDetail } from "@/lib/types";
+
+// Socket code ships only when the discussion panel renders.
+const OrderChat = dynamic(
+  () => import("@/components/chat/OrderChat").then((m) => ({ default: m.OrderChat })),
+  {
+    ssr: false,
+    loading: () => <p className="mt-2 text-sm text-text-muted">Loading chat…</p>,
+  },
+);
 
 type Dialog = "deliver" | "complete" | "cancel" | "dispute" | "review" | null;
 
@@ -51,7 +60,6 @@ export function OrderCockpit({ id }: { id: string }) {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [me, setMe] = useState<JwtPayload | null>(null);
   const [serviceTitle, setServiceTitle] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
@@ -87,14 +95,6 @@ export function OrderCockpit({ id }: { id: string }) {
           })
           .catch(() => {
             if (!cancelled) setServiceTitle(null);
-          });
-        chatApi
-          .history(id)
-          .then((r) => {
-            if (!cancelled) setMessages(r.data.messages);
-          })
-          .catch(() => {
-            if (!cancelled) setMessages(null);
           });
       } catch (err) {
         if (cancelled) return;
@@ -239,44 +239,14 @@ export function OrderCockpit({ id }: { id: string }) {
           )}
 
           <section aria-label="Discussion" className="rounded-[18px] border border-border bg-surface p-6">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Discussion</h2>
-              <button
-                type="button"
-                onClick={() => setAttempt((n) => n + 1)}
-                className="cursor-pointer text-sm font-semibold text-primary hover:underline"
-              >
-                Refresh
-              </button>
+            <h2 className="text-lg font-semibold">Discussion</h2>
+            <div className="mt-2">
+              <OrderChat
+                orderId={order.id}
+                myId={me.sub}
+                peerId={isClient ? order.freelancerId : order.clientId}
+              />
             </div>
-            {messages === null ? (
-              <p className="mt-2 text-[15px] leading-7 text-text-muted">
-                Message history is unavailable right now. Live chat arrives with
-                real-time updates next.
-              </p>
-            ) : messages.length === 0 ? (
-              <p className="mt-2 text-[15px] leading-7 text-text-muted">
-                No messages yet. Use this space to align on scope and timelines —
-                live chat with instant updates arrives next.
-              </p>
-            ) : (
-              <ul className="mt-3 max-h-72 space-y-2.5 overflow-y-auto">
-                {messages.map((m) => {
-                  const mine = m.senderId === me.sub;
-                  return (
-                    <li key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                      <p
-                        className={`max-w-[80%] rounded-[14px] px-3.5 py-2.5 text-sm leading-6 ${
-                          mine ? "bg-primary text-white" : "bg-surface-soft text-text"
-                        }`}
-                      >
-                        {m.content}
-                      </p>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
           </section>
         </div>
 
