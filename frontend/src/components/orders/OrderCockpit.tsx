@@ -91,7 +91,7 @@ export function OrderCockpit({ id }: { id: string }) {
         chatApi
           .history(id)
           .then((r) => {
-            if (!cancelled) setMessages(r.data);
+            if (!cancelled) setMessages(r.data.messages);
           })
           .catch(() => {
             if (!cancelled) setMessages(null);
