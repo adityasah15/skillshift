@@ -58,6 +58,12 @@ export interface AccessTokenPayload {
   accessToken: string;
 }
 
+export interface RegisterResponse {
+  id: string;
+  email: string;
+  role: Role;
+}
+
 export interface Order {
   id: string;
   status: string;

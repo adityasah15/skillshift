@@ -3,11 +3,13 @@ import type {
   AccessTokenPayload,
   Envelope,
   JwtPayload,
+  RegisterResponse,
 } from "../types";
 
 export const authApi = {
+  /** Returns { id, email, role } — no tokens. User must verify email, then log in. */
   register(body: { email: string; password: string; role?: "CLIENT" | "FREELANCER" }) {
-    return apiFetch<AccessTokenPayload>("/auth/register", {
+    return apiFetch<RegisterResponse>("/auth/register", {
       method: "POST",
       auth: false,
       body: JSON.stringify(body),
@@ -19,6 +21,13 @@ export const authApi = {
       auth: false,
       body: JSON.stringify(body),
     });
+  },
+  verifyEmail(token: string, email: string) {
+    const params = new URLSearchParams({ token, email });
+    return apiFetch<{ message: string }>(
+      `/auth/verify-email?${params.toString()}`,
+      { method: "GET", auth: false },
+    );
   },
   me() {
     return apiFetch<JwtPayload>("/auth/me", { method: "GET" });

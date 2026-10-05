@@ -1,20 +1,97 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { authApi } from "@/lib/api/auth";
+import { clearAccessToken, useSessionToken } from "@/lib/session";
+import type { Role } from "@/lib/types";
 
-const links = [
+const publicLinks = [
   { href: "/services", label: "Browse" },
   { href: "/how-it-works", label: "How it works" },
+];
+
+const authedLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/orders", label: "Orders" },
   { href: "/wallet", label: "Wallet" },
 ];
 
+function NavLink({
+  href,
+  label,
+  active,
+  onClick,
+  mobile = false,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  onClick?: () => void;
+  mobile?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      className={
+        mobile
+          ? "block min-h-[44px] rounded-[12px] px-3 py-3 text-[15px] font-medium text-text transition hover:bg-surface-soft"
+          : `rounded-full px-4 py-2 text-sm font-medium transition ${
+              active
+                ? "bg-primary-soft text-primary"
+                : "text-text-muted hover:bg-surface-soft hover:text-text"
+            }`
+      }
+    >
+      {label}
+    </Link>
+  );
+}
+
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const token = useSessionToken();
+  const [roleEntry, setRoleEntry] = useState<{ forToken: string; role: Role | null } | null>(null);
+
+  // Best-effort role lookup — nav renders for any valid token regardless.
+  useEffect(() => {
+    if (!token || roleEntry?.forToken === token) return;
+    let cancelled = false;
+    authApi
+      .me()
+      .then((r) => {
+        if (!cancelled) setRoleEntry({ forToken: token, role: r.data.role });
+      })
+      .catch(() => {
+        if (!cancelled) setRoleEntry({ forToken: token, role: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, roleEntry?.forToken]);
+
+  const role = roleEntry?.forToken === token ? roleEntry.role : null;
+
+  async function logout() {
+    try {
+      await authApi.logout();
+    } catch {
+      // Session ends locally regardless of server acknowledgement.
+    }
+    clearAccessToken();
+    setOpen(false);
+    router.push("/");
+    router.refresh();
+  }
+
+  const authed = token !== null;
+  const primary = authed ? [...publicLinks.slice(0, 1), ...authedLinks] : [...publicLinks];
+  const showStudio = authed && role !== "CLIENT";
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur">
@@ -27,46 +104,61 @@ export function Navbar() {
         </Link>
 
         <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              aria-current={pathname === l.href ? "page" : undefined}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                pathname === l.href
-                  ? "bg-primary-soft text-primary"
-                  : "text-text-muted hover:bg-surface-soft hover:text-text"
-              }`}
-            >
-              {l.label}
-            </Link>
+          {primary.map((l) => (
+            <NavLink key={l.href} href={l.href} label={l.label} active={pathname === l.href} />
           ))}
           {/* Freelancer studio — correct target is /services/mine (not /services/new) */}
-          <Link
-            href="/services/mine"
-            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-              pathname === "/services/mine"
-                ? "bg-primary-soft text-primary"
-                : "text-text-muted hover:bg-surface-soft hover:text-text"
-            }`}
-          >
-            My services
-          </Link>
+          {showStudio && (
+            <NavLink
+              href="/services/mine"
+              label="My services"
+              active={pathname === "/services/mine"}
+            />
+          )}
         </nav>
 
         <div className="hidden items-center gap-2.5 md:flex">
-          <Link
-            href="/auth/login"
-            className="rounded-[12px] px-4 py-2.5 text-sm font-semibold text-text-muted transition hover:bg-surface-soft hover:text-text"
-          >
-            Log in
-          </Link>
-          <Link
-            href="/auth/register"
-            className="rounded-[12px] bg-text px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-85"
-          >
-            Join
-          </Link>
+          {authed ? (
+            <>
+              <Link
+                href="/notifications"
+                aria-label="Notifications"
+                className="flex h-11 w-11 items-center justify-center rounded-[12px] text-text-muted transition hover:bg-surface-soft hover:text-text"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+                  <path
+                    d="M10 2.5a5 5 0 0 0-5 5v3L3.5 13h13L15 10.5v-3a5 5 0 0 0-5-5z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M8 16a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </Link>
+              <button
+                type="button"
+                onClick={logout}
+                className="min-h-[44px] cursor-pointer rounded-[12px] border border-border px-4 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
+              >
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/auth/login"
+                className="rounded-[12px] px-4 py-2.5 text-sm font-semibold text-text-muted transition hover:bg-surface-soft hover:text-text"
+              >
+                Log in
+              </Link>
+              <Link
+                href="/auth/register"
+                className="rounded-[12px] bg-text px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-85"
+              >
+                Join
+              </Link>
+            </>
+          )}
         </div>
 
         <button
@@ -88,31 +180,52 @@ export function Navbar() {
 
       {open && (
         <nav aria-label="Mobile" className="border-t border-border bg-surface px-4 py-3 md:hidden">
-          {[...links, { href: "/services/mine", label: "My services" }].map((l) => (
-            <Link
+          {primary.map((l) => (
+            <NavLink
               key={l.href}
               href={l.href}
+              label={l.label}
+              active={pathname === l.href}
+              mobile
               onClick={() => setOpen(false)}
-              className="block min-h-[44px] rounded-[12px] px-3 py-3 text-[15px] font-medium text-text transition hover:bg-surface-soft"
-            >
-              {l.label}
-            </Link>
+            />
           ))}
+          {showStudio && (
+            <NavLink
+              href="/services/mine"
+              label="My services"
+              active={pathname === "/services/mine"}
+              mobile
+              onClick={() => setOpen(false)}
+            />
+          )}
           <div className="mt-2 flex gap-2 border-t border-border pt-3">
-            <Link
-              href="/auth/login"
-              onClick={() => setOpen(false)}
-              className="flex min-h-[44px] flex-1 items-center justify-center rounded-[12px] border border-border text-sm font-semibold"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/auth/register"
-              onClick={() => setOpen(false)}
-              className="flex min-h-[44px] flex-1 items-center justify-center rounded-[12px] bg-text text-sm font-semibold text-white"
-            >
-              Join
-            </Link>
+            {authed ? (
+              <button
+                type="button"
+                onClick={logout}
+                className="flex min-h-[44px] flex-1 cursor-pointer items-center justify-center rounded-[12px] border border-border text-sm font-semibold"
+              >
+                Log out
+              </button>
+            ) : (
+              <>
+                <Link
+                  href="/auth/login"
+                  onClick={() => setOpen(false)}
+                  className="flex min-h-[44px] flex-1 items-center justify-center rounded-[12px] border border-border text-sm font-semibold"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/auth/register"
+                  onClick={() => setOpen(false)}
+                  className="flex min-h-[44px] flex-1 items-center justify-center rounded-[12px] bg-text text-sm font-semibold text-white"
+                >
+                  Join
+                </Link>
+              </>
+            )}
           </div>
         </nav>
       )}
