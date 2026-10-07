@@ -15,7 +15,7 @@ export default function AdminPage() {
         <p className="text-sm font-medium text-text-muted">Admin</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Overview</h1>
         <p className="mt-2 text-[15px] leading-7 text-text-muted">
-          Orders, revenue, disputes, and signups — dense enough to act on.
+          Marketplace health at a glance.
         </p>
         <RequireAdmin>
           <div className="mt-6 space-y-6">

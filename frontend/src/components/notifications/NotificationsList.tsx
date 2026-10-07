@@ -126,8 +126,10 @@ export function NotificationsList() {
                 </span>
               </button>
             ) : (
-              <div
-                className={`flex items-start gap-3 rounded-[14px] border px-4 py-3.5 ${
+              <button
+                type="button"
+                onClick={() => open(n)}
+                className={`flex w-full cursor-pointer items-start gap-3 rounded-[14px] border px-4 py-3.5 text-left transition hover:border-border-strong ${
                   n.read ? "border-border bg-surface" : "border-primary/40 bg-primary-soft/40"
                 }`}
               >
@@ -138,14 +140,17 @@ export function NotificationsList() {
                 <span className="min-w-0">
                   <span className="block text-xs font-medium text-text-subtle">{n.type.replaceAll("_", " ").toLowerCase()}</span>
                   <span className="mt-0.5 block text-[15px] leading-6">{n.message}</span>
+                  {!n.read && (
+                    <span className="mt-1 block text-[13px] font-semibold text-primary">Mark read</span>
+                  )}
                 </span>
-              </div>
+              </button>
             )}
           </li>
         ))}
       </ul>
       <p className="mt-4 text-[13px] text-text-muted">
-        Tapping a notification marks it read. <Link href="/orders" className="font-semibold text-primary hover:underline">View orders</Link>
+        Unread items highlight in blue. <Link href="/orders" className="font-semibold text-primary hover:underline">View orders</Link>
       </p>
     </div>
   );

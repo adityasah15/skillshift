@@ -10,7 +10,7 @@ export default function WalletPage() {
         <p className="text-sm font-medium text-text-muted">Money</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Wallet</h1>
         <p className="mt-2 text-[15px] leading-7 text-text-muted">
-          Every rupee labeled by where it sits — available, held, released, or refunded.
+          Your money, always labeled by where it sits.
         </p>
         <div className="mt-6">
           <WalletDashboard />

@@ -15,7 +15,7 @@ export default function AdminUsersPage() {
         <p className="text-sm font-medium text-text-muted">Admin · Monitoring</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Users</h1>
         <p className="mt-2 text-[15px] leading-7 text-text-muted">
-          Accounts at a glance — disable only for spam, fraud, or abuse.
+          Search accounts and manage access.
         </p>
         <RequireAdmin>
           <div className="mt-6 space-y-6">

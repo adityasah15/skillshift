@@ -253,6 +253,23 @@ export function OrderCockpit({ id }: { id: string }) {
               />
             </div>
           </section>
+
+          {order.review && (
+            <section aria-label="Review" className="rounded-[18px] border border-border bg-surface p-6">
+              <h2 className="text-lg font-semibold">
+                {order.review.reviewerId === me.sub ? "Your review" : "Client review"}
+              </h2>
+              <p className="mt-2 text-lg tracking-wider text-warning" role="img" aria-label={`${order.review.rating} out of 5 stars`}>
+                {"★".repeat(order.review.rating)}{"☆".repeat(Math.max(0, 5 - order.review.rating))}
+              </p>
+              {order.review.comment && (
+                <p className="mt-2 text-[15px] leading-7 text-text-muted">{order.review.comment}</p>
+              )}
+              <p className="mt-2 font-mono text-[13px] text-text-subtle">
+                {new Date(order.review.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+              </p>
+            </section>
+          )}
         </div>
 
         <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
@@ -268,9 +285,10 @@ export function OrderCockpit({ id }: { id: string }) {
           </section>
 
           <section aria-label="Actions" className="rounded-[18px] border border-border bg-surface p-6">
-            <h2 className="text-[15px] font-semibold">
-              {isClient ? "You are the client" : "You are the freelancer"}
-            </h2>
+            <h2 className="text-[15px] font-semibold">Your actions</h2>
+            <p className="mt-0.5 text-[13px] text-text-muted">
+              {isClient ? "You ordered this work" : "You're doing this work"}
+            </p>
             <div className="mt-3 flex flex-col gap-2">
               {order.status === "IN_PROGRESS" && !isClient && (
                 <Button onClick={() => setDialog("deliver")}>Deliver order</Button>
@@ -293,7 +311,7 @@ export function OrderCockpit({ id }: { id: string }) {
                   Waiting on client review{order.autoCompleteAt ? ` — ${countdown(order.autoCompleteAt).toLowerCase()}` : ""}.
                 </p>
               )}
-              {order.status === "COMPLETED" && (
+              {order.status === "COMPLETED" && !order.review && (
                 <Button variant="secondary" onClick={() => setDialog("review")}>
                   Leave a review
                 </Button>
@@ -320,7 +338,7 @@ export function OrderCockpit({ id }: { id: string }) {
       {/* Mobile sticky primary action — mirrors the sidebar on small screens. */}
       {(order.status === "IN_PROGRESS" && !isClient) ||
       (order.status === "DELIVERED" && isClient) ||
-      order.status === "COMPLETED" ? (
+      (order.status === "COMPLETED" && !order.review) ? (
         <div className="sticky bottom-0 -mx-4 mt-6 border-t border-border bg-surface/95 p-4 backdrop-blur lg:hidden">
           {order.status === "IN_PROGRESS" && !isClient && (
             <Button size="lg" className="w-full" onClick={() => setDialog("deliver")}>
@@ -332,7 +350,7 @@ export function OrderCockpit({ id }: { id: string }) {
               Accept delivery
             </Button>
           )}
-          {order.status === "COMPLETED" && (
+          {order.status === "COMPLETED" && !order.review && (
             <Button size="lg" variant="secondary" className="w-full" onClick={() => setDialog("review")}>
               Leave a review
             </Button>

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { EmptyState } from "@/components/ui/States";
+import { EmptyState, ErrorState } from "@/components/ui/States";
 import { authApi } from "@/lib/api/auth";
 import { useSessionToken } from "@/lib/session";
 import type { Role } from "@/lib/types";
@@ -12,22 +12,30 @@ export function RequireFreelancer({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const token = useSessionToken();
   const [entry, setEntry] = useState<{ forToken: string; role: Role } | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!token || entry?.forToken === token) return;
+    const activeToken: string = token;
     let cancelled = false;
-    authApi
-      .me()
-      .then((r) => {
-        if (!cancelled) setEntry({ forToken: token, role: r.data.role });
-      })
-      .catch(() => {
-        if (!cancelled) setEntry(null);
-      });
+    async function check() {
+      setFailed(false);
+      try {
+        const r = await authApi.me();
+        if (!cancelled) setEntry({ forToken: activeToken, role: r.data.role });
+      } catch {
+        if (!cancelled) {
+          setEntry(null);
+          setFailed(true);
+        }
+      }
+    }
+    check();
     return () => {
       cancelled = true;
     };
-  }, [token, entry?.forToken]);
+  }, [token, entry?.forToken, attempt]);
 
   if (token === null) {
     return (
@@ -40,6 +48,15 @@ export function RequireFreelancer({ children }: { children: React.ReactNode }) {
   }
 
   const role = entry?.forToken === token ? entry.role : null;
+  if (role === null && failed) {
+    return (
+      <ErrorState
+        title="Could not verify access"
+        body="We could not reach the server. Check your connection and try again."
+        onRetry={() => setAttempt((n) => n + 1)}
+      />
+    );
+  }
   if (role === null) {
     return (
       <div className="space-y-3" aria-label="Checking account">

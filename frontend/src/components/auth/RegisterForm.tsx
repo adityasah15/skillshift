@@ -48,7 +48,7 @@ export function RegisterForm() {
   return (
     <AuthCard
       title="Join SkillShift"
-      subtitle="One account for ordering and selling — pick how you'll start."
+      subtitle="What brings you here today?"
       footer={
         <>
           Already have an account?{" "}
@@ -62,8 +62,8 @@ export function RegisterForm() {
         <div role="group" aria-label="Choose your account type" className="grid grid-cols-2 gap-2">
           {(
             [
-              { value: "CLIENT", label: "Hire", hint: "Post orders" },
-              { value: "FREELANCER", label: "Sell", hint: "Offer services" },
+              { value: "CLIENT", label: "I want to hire", hint: "Book services for my projects" },
+              { value: "FREELANCER", label: "I want to work", hint: "Sell services to clients" },
             ] as const
           ).map((o) => (
             <button

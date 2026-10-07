@@ -93,6 +93,13 @@ export interface OrderDetail {
   autoCompleteAt: string | null;
   createdAt: string;
   deliveryFiles: DeliveryFile[];
+  review: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    reviewerId: string;
+    createdAt: string;
+  } | null;
 }
 
 export interface OrderListItem {

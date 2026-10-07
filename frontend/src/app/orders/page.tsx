@@ -10,7 +10,7 @@ export default function OrdersPage() {
         <p className="text-sm font-medium text-text-muted">Workspace</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Orders</h1>
         <p className="mt-2 text-[15px] leading-7 text-text-muted">
-          Every order with its status and where the money sits.
+          Track every order from booking to delivery, with payments protected throughout.
         </p>
         <div className="mt-6">
           <OrdersList />
