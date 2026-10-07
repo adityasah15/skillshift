@@ -351,7 +351,7 @@ describe('OrderService', () => {
       );
       expect(prisma.order.findUnique).toHaveBeenCalledWith({
         where: { id: 'order-1' },
-        include: { deliveryFiles: true },
+        include: { deliveryFiles: true, review: true },
       });
     });
 
