@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { ResendVerificationForm } from "@/components/auth/ResendVerificationForm";
 
 export const metadata: Metadata = { title: "Check your email", robots: { index: false, follow: false } };
 
@@ -33,6 +34,12 @@ export default async function CheckEmailPage({
             Log in stays locked until your email is verified — this keeps the
             marketplace free of throwaway accounts.
           </p>
+          <div className="mt-4 border-t border-border pt-4">
+            <p className="mb-3 text-sm font-medium text-text">
+              Link expired or never arrived?
+            </p>
+            <ResendVerificationForm email={email} />
+          </div>
         </AuthCard>
       </div>
     </main>

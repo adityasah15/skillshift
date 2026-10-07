@@ -231,8 +231,112 @@ describe('AuthService', () => {
         data: {
           isEmailVerified: true,
           emailVerifyTokenHash: null,
+          emailVerifyTokenExpiresAt: null,
         },
       });
+    });
+
+    it('should throw when verification token is expired', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email,
+        isEmailVerified: false,
+        emailVerifyTokenHash: 'hash',
+        emailVerifyTokenExpiresAt: new Date(Date.now() - 1000),
+      });
+
+      await expect(service.verifyEmail(token, email)).rejects.toEqual(
+        new BadRequestException(
+          'This verification link has expired. Request a new one and try again.',
+        ),
+      );
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { email },
+        data: {
+          emailVerifyTokenHash: null,
+          emailVerifyTokenExpiresAt: null,
+        },
+      });
+    });
+  });
+
+  describe('resendVerification', () => {
+    const dto = {
+      email: 'user@example.com',
+    };
+    const generic = {
+      message:
+        'If an account exists for this email and it is not verified yet, a new verification link has been sent.',
+    };
+
+    it('should return the generic response when user does not exist', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.resendVerification(dto)).resolves.toEqual(generic);
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(notificationService.enqueueEmail).not.toHaveBeenCalled();
+    });
+
+    it('should return the generic response when email is already verified', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: dto.email,
+        isEmailVerified: true,
+      });
+
+      await expect(service.resendVerification(dto)).resolves.toEqual(generic);
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(notificationService.enqueueEmail).not.toHaveBeenCalled();
+    });
+
+    it('should skip resending when a fresh link was sent recently', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: dto.email,
+        isEmailVerified: false,
+        emailVerifyTokenHash: 'hash',
+        emailVerifyTokenExpiresAt: new Date(Date.now() + 23.5 * 60 * 60 * 1000),
+      });
+
+      await expect(service.resendVerification(dto)).resolves.toEqual(generic);
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(notificationService.enqueueEmail).not.toHaveBeenCalled();
+    });
+
+    it('should rotate the token and send a new link', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: dto.email,
+        isEmailVerified: false,
+        emailVerifyTokenHash: 'old-hash',
+        emailVerifyTokenExpiresAt: new Date(Date.now() - 1000),
+      });
+
+      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hash');
+      prisma.user.update.mockResolvedValue({});
+      notificationService.enqueueEmail.mockResolvedValue(undefined);
+
+      await expect(service.resendVerification(dto)).resolves.toEqual(generic);
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { email: dto.email },
+        data: {
+          emailVerifyTokenHash: 'new-hash',
+          emailVerifyTokenExpiresAt: expect.any(Date) as unknown,
+        },
+      });
+
+      expect(notificationService.enqueueEmail).toHaveBeenCalledWith(
+        'verification-email',
+        {
+          email: dto.email,
+          token: expect.any(String) as unknown,
+        },
+      );
     });
   });
 

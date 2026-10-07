@@ -9,9 +9,13 @@ export class MailService {
 
   constructor(private readonly configService: ConfigService) {
     const smtpHost = this.configService.get<string>('SMTP_HOST');
+    const mailFrom = this.configService.get<string>('MAIL_FROM');
     const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
     if (!smtpHost) {
       throw new Error('SMTP_HOST must be configured before starting the API.');
+    }
+    if (!mailFrom) {
+      throw new Error('MAIL_FROM must be configured before starting the API.');
     }
     if (nodeEnv === 'production' && smtpHost.includes('ethereal.email')) {
       throw new Error(

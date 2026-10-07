@@ -13,7 +13,14 @@ import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { NotificationService } from 'src/notification/notification.service';
+
+// Verification links live 24h. Resends are throttled to one per hour by
+// reusing the expiry column: a token expiring more than 23h out was sent
+// less than an hour ago.
+const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const RESEND_COOLDOWN_MS = 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
@@ -41,6 +48,7 @@ export class AuthService {
           email: registerDto.email,
           passwordHash,
           emailVerifyTokenHash: verificationTokenHash,
+          emailVerifyTokenExpiresAt: new Date(Date.now() + VERIFY_TOKEN_TTL_MS),
           role: registerDto.role,
         },
       });
@@ -81,17 +89,68 @@ export class AuthService {
     if (!user.emailVerifyTokenHash) {
       throw new BadRequestException('Verification token is unavailable');
     }
+    if (
+      user.emailVerifyTokenExpiresAt &&
+      user.emailVerifyTokenExpiresAt <= new Date()
+    ) {
+      await this.prismaService.user.update({
+        where: { email },
+        data: { emailVerifyTokenHash: null, emailVerifyTokenExpiresAt: null },
+      });
+      throw new BadRequestException(
+        'This verification link has expired. Request a new one and try again.',
+      );
+    }
     const match = await bcrypt.compare(token, user.emailVerifyTokenHash);
     if (!match) {
       throw new BadRequestException('Invalid verification token');
     }
     await this.prismaService.user.update({
       where: { email },
-      data: { isEmailVerified: true, emailVerifyTokenHash: null },
+      data: {
+        isEmailVerified: true,
+        emailVerifyTokenHash: null,
+        emailVerifyTokenExpiresAt: null,
+      },
     });
     return {
       message: 'Email verified successfully',
     };
+  }
+
+  async resendVerification(resendVerificationDto: ResendVerificationDto) {
+    const generic = {
+      message:
+        'If an account exists for this email and it is not verified yet, a new verification link has been sent.',
+    };
+    const user = await this.prismaService.user.findUnique({
+      where: { email: resendVerificationDto.email },
+    });
+    if (!user || user.isEmailVerified) {
+      return generic;
+    }
+    const freshTokenSentRecently =
+      user.emailVerifyTokenHash &&
+      user.emailVerifyTokenExpiresAt &&
+      user.emailVerifyTokenExpiresAt.getTime() - Date.now() >
+        VERIFY_TOKEN_TTL_MS - RESEND_COOLDOWN_MS;
+    if (freshTokenSentRecently) {
+      return generic;
+    }
+    const verificationToken = randomBytes(32).toString('hex');
+    const verificationTokenHash = await bcrypt.hash(verificationToken, 12);
+    await this.prismaService.user.update({
+      where: { email: resendVerificationDto.email },
+      data: {
+        emailVerifyTokenHash: verificationTokenHash,
+        emailVerifyTokenExpiresAt: new Date(Date.now() + VERIFY_TOKEN_TTL_MS),
+      },
+    });
+    await this.notificationService.enqueueEmail('verification-email', {
+      email: resendVerificationDto.email,
+      token: verificationToken,
+    });
+    return generic;
   }
 
   async login(loginDto: LoginDto) {

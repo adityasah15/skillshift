@@ -29,6 +29,13 @@ export const authApi = {
       { method: "GET", auth: false },
     );
   },
+  resendVerification(email: string) {
+    return apiFetch<{ message: string }>("/auth/resend-verification", {
+      method: "POST",
+      auth: false,
+      body: JSON.stringify({ email }),
+    });
+  },
   me() {
     return apiFetch<JwtPayload>("/auth/me", { method: "GET" });
   },

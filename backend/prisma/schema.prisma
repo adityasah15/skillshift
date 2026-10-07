@@ -80,6 +80,7 @@ model User {
   role                   Role      @default(CLIENT)
   isEmailVerified        Boolean   @default(false)
   emailVerifyTokenHash   String?
+  emailVerifyTokenExpiresAt DateTime?
   passwordResetTokenHash String?
   passwordResetExpiresAt DateTime?
   createdAt              DateTime  @default(now())

@@ -11,6 +11,7 @@ describe('MailService', () => {
     SMTP_SECURE: 'false',
     SMTP_USER: 'smtp-user',
     SMTP_PASS: 'smtp-password',
+    MAIL_FROM: 'SkillShift <noreply@test.local>',
     APP_URL: 'http://localhost:3001/',
     NODE_ENV: 'development',
   };
@@ -23,6 +24,7 @@ describe('MailService', () => {
       SMTP_SECURE: 'false',
       SMTP_USER: 'smtp-user',
       SMTP_PASS: 'smtp-password',
+      MAIL_FROM: 'SkillShift <noreply@test.local>',
       APP_URL: 'http://localhost:3001/',
       NODE_ENV: 'development',
     });
@@ -63,6 +65,17 @@ describe('MailService', () => {
 
     expect(() => new MailService(config as ConfigService)).toThrow(
       'SMTP_HOST must be configured before starting the API.',
+    );
+  });
+
+  it('requires a sender address', () => {
+    values.MAIL_FROM = '';
+    const config = {
+      get: (key: string, fallback?: string) => values[key] ?? fallback,
+    };
+
+    expect(() => new MailService(config as ConfigService)).toThrow(
+      'MAIL_FROM must be configured before starting the API.',
     );
   });
 

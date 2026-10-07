@@ -4,7 +4,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
-import { MailService } from './mail/mail.service';
 import { MailModule } from './mail/mail.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
@@ -59,7 +58,6 @@ import { AdminModule } from './admin/admin.module';
   controllers: [AppController],
   providers: [
     AppService,
-    MailService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

@@ -18,6 +18,7 @@ import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { Public } from '../common/decorators/public.decorator';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
@@ -47,6 +48,14 @@ export class AuthController {
     @Query('email') email: string,
   ) {
     return this.authService.verifyEmail(token, email);
+  }
+
+  @Public()
+  @Post('resend-verification')
+  async resendVerification(
+    @Body() resendVerificationDto: ResendVerificationDto,
+  ) {
+    return this.authService.resendVerification(resendVerificationDto);
   }
 
   @Public()
