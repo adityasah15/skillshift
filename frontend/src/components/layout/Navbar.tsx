@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { authApi } from "@/lib/api/auth";
+import { usersApi } from "@/lib/api/users";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { clearAccessToken, useSessionToken } from "@/lib/session";
 import type { Role } from "@/lib/types";
@@ -11,6 +12,7 @@ import type { Role } from "@/lib/types";
 const publicLinks = [
   { href: "/services", label: "Browse" },
   { href: "/how-it-works", label: "How it works" },
+  { href: "/about", label: "About" },
 ];
 
 const authedLinks = [
@@ -51,6 +53,99 @@ function NavLink({
   );
 }
 
+function AccountMenu({
+  name,
+  email,
+  showStudio,
+  showAdmin,
+  onLogout,
+}: {
+  name: string;
+  email: string;
+  showStudio: boolean;
+  showAdmin: boolean;
+  onLogout: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    const onPointer = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onPointer);
+    };
+  }, [menuOpen]);
+
+  const initial = name.trim().charAt(0).toUpperCase() || "?";
+  const items = [
+    { href: "/profile", label: "Profile" },
+    { href: "/orders", label: "Orders" },
+    { href: "/wallet", label: "Wallet" },
+    ...(showStudio ? [{ href: "/services/mine", label: "My services" }] : []),
+    ...(showAdmin ? [{ href: "/admin", label: "Admin" }] : []),
+  ];
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setMenuOpen((v) => !v)}
+        aria-expanded={menuOpen}
+        aria-haspopup="menu"
+        aria-label={`Account: ${name}`}
+        className="flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-[12px] border border-border py-1 pr-3 pl-1 transition hover:border-border-strong hover:bg-surface-soft"
+      >
+        <span aria-hidden className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-white">
+          {initial}
+        </span>
+        <span className="max-w-32 truncate text-sm font-semibold">{name}</span>
+      </button>
+      {menuOpen && (
+        <div
+          role="menu"
+          aria-label="Account"
+          className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-[14px] border border-border bg-surface shadow-lg"
+        >
+          <p className="truncate border-b border-border px-4 py-3 text-[13px] text-text-muted">{email}</p>
+          {items.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              role="menuitem"
+              onClick={() => setMenuOpen(false)}
+              className="block min-h-[44px] px-4 py-3 text-sm font-medium transition hover:bg-surface-soft"
+            >
+              {l.label}
+            </Link>
+          ))}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setMenuOpen(false);
+              onLogout();
+            }}
+            className="block min-h-[44px] w-full cursor-pointer px-4 py-3 text-left text-sm font-medium text-danger transition hover:bg-danger-soft/50"
+          >
+            Log out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -78,6 +173,30 @@ export function Navbar() {
   const role = roleEntry?.forToken === token ? roleEntry.role : null;
   const menuRef = useRef<HTMLElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const [acct, setAcct] = useState<{ forToken: string; displayName: string; email: string } | null>(null);
+
+  // Best-effort account lookup for the account chip.
+  useEffect(() => {
+    if (!token || acct?.forToken === token) return;
+    let cancelled = false;
+    usersApi
+      .me()
+      .then((r) => {
+        if (!cancelled) {
+          setAcct({
+            forToken: token,
+            displayName: r.data.profile?.displayName ?? r.data.email,
+            email: r.data.email,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAcct(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, acct?.forToken]);
 
   // Mobile menu: Escape closes and returns focus; opening moves focus in.
   useEffect(() => {
@@ -106,9 +225,18 @@ export function Navbar() {
   }
 
   const authed = token !== null;
-  const primary = authed ? [...publicLinks.slice(0, 1), ...authedLinks] : [...publicLinks];
-  const showStudio = authed && role !== "CLIENT";
-  const showAdmin = authed && role === "ADMIN";
+  // Role-aware workspace: clients order, freelancers also sell, admins only moderate.
+  // While the role is still loading we assume non-admin to avoid hiding items.
+  const isAdmin = role === "ADMIN";
+  const browse = publicLinks[0];
+  const about = publicLinks[2];
+  const primary = !authed
+    ? [...publicLinks]
+    : isAdmin
+      ? [browse, about]
+      : [browse, about, ...authedLinks];
+  const showStudio = authed && role === "FREELANCER";
+  const showAdmin = authed && isAdmin;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur">
@@ -145,13 +273,13 @@ export function Navbar() {
           {authed ? (
             <>
               <NotificationsBell />
-              <button
-                type="button"
-                onClick={logout}
-                className="min-h-[44px] cursor-pointer rounded-[12px] border border-border px-4 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
-              >
-                Log out
-              </button>
+              <AccountMenu
+                name={acct?.forToken === token && acct ? acct.displayName : "Account"}
+                email={acct?.forToken === token && acct ? acct.email : ""}
+                showStudio={showStudio}
+                showAdmin={showAdmin}
+                onLogout={logout}
+              />
             </>
           ) : (
             <>
@@ -191,6 +319,20 @@ export function Navbar() {
 
       {open && (
         <nav ref={menuRef} aria-label="Mobile" className="border-t border-border bg-surface px-4 py-3 md:hidden">
+          {authed && (
+            <p className="truncate px-3 pt-1 pb-2 text-[13px] font-medium text-text-subtle">
+              {acct?.forToken === token && acct ? acct.email : "Your account"}
+            </p>
+          )}
+          {authed && (
+            <NavLink
+              href="/profile"
+              label="Profile"
+              active={pathname === "/profile"}
+              mobile
+              onClick={() => setOpen(false)}
+            />
+          )}
           {primary.map((l) => (
             <NavLink
               key={l.href}
