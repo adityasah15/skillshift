@@ -174,7 +174,7 @@ export function ServiceDetail({ id }: { id: string }) {
             style={
               service.imageUrls[0]?.startsWith("http")
                 ? undefined
-                : { background: "linear-gradient(135deg, #eef0ff, #e2e7fb)" }
+                : { background: "linear-gradient(120deg, #e4e9ff 0%, #d3dcfb 100%)" }
             }
           >
             {service.imageUrls[0]?.startsWith("http") ? (
@@ -185,11 +185,20 @@ export function ServiceDetail({ id }: { id: string }) {
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full items-center justify-center p-8">
-                <p className="max-w-lg text-center text-xl leading-8 font-semibold text-text/70">
-                  {service.title}
-                </p>
-              </div>
+              <>
+                <div aria-hidden className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-white/30" />
+                <div aria-hidden className="absolute -bottom-20 -left-10 h-60 w-60 rounded-full bg-text/10" />
+                <div className="flex h-full items-center justify-between p-8 sm:p-12">
+                  <span aria-hidden className="text-[96px] leading-none font-extrabold tracking-tight text-white/70 sm:text-[128px]">
+                    {(service.title.trim().charAt(0).toUpperCase() || "S")}
+                  </span>
+                  {service.skills[0] && (
+                    <span className="self-start rounded-full bg-text/70 px-4 py-1.5 text-sm font-semibold text-white">
+                      {service.skills[0]}
+                    </span>
+                  )}
+                </div>
+              </>
             )}
             {service.status !== "ACTIVE" && (
               <div className="absolute top-4 left-4">

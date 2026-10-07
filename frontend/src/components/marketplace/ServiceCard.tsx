@@ -28,21 +28,23 @@ export function ServiceCard({
   const initial = seller.charAt(0).toUpperCase();
   const hue = service.hue ?? 232;
   // Backend stores raw S3 keys with no public resolver — only render URLs.
+  // Otherwise a designed cover (layered tones + monogram) stands in.
   const raw = service.imageUrls?.[0];
   const image = raw?.startsWith("http") ? raw : undefined;
+  const monogram = service.title.trim().charAt(0).toUpperCase() || "S";
 
   return (
     <Link
       href={`/services/${service.id}`}
-      className="lift group flex flex-col overflow-hidden rounded-[16px] border border-border bg-surface"
+      className="lift group flex flex-col overflow-hidden rounded-[18px] border border-border bg-surface"
     >
       <div
-        className="relative aspect-[4/3] w-full overflow-hidden"
+        className="relative aspect-[16/10] w-full overflow-hidden"
         style={
           image
             ? undefined
             : {
-                background: `linear-gradient(135deg, hsl(${hue} 55% 92%), hsl(${hue} 60% 82%))`,
+                background: `linear-gradient(120deg, hsl(${hue} 62% 90%) 0%, hsl(${(hue + 36) % 360} 64% 80%) 100%)`,
               }
         }
       >
@@ -55,11 +57,29 @@ export function ServiceCard({
             className="zoom h-full w-full object-cover"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center p-6">
-            <p className="zoom line-clamp-3 text-center text-[17px] leading-7 font-semibold text-text/80">
-              {service.title}
-            </p>
-          </div>
+          <>
+            <div
+              aria-hidden
+              className="absolute -top-10 -right-10 h-36 w-36 rounded-full bg-white/25"
+            />
+            <div
+              aria-hidden
+              className="absolute -bottom-14 -left-8 h-44 w-44 rounded-full bg-text/10"
+            />
+            <div className="absolute inset-0 flex items-center justify-between p-6">
+              <span
+                aria-hidden
+                className="text-[64px] leading-none font-extrabold tracking-tight text-white/70"
+              >
+                {monogram}
+              </span>
+              {service.skills[0] && (
+                <span className="self-start rounded-full bg-text/70 px-3 py-1 text-xs font-semibold text-white">
+                  {service.skills[0]}
+                </span>
+              )}
+            </div>
+          </>
         )}
         {service.status !== "ACTIVE" && (
           <div className="absolute top-3 left-3">
@@ -79,7 +99,7 @@ export function ServiceCard({
             </span>
           ))}
         </div>
-        <h3 className="mt-2.5 line-clamp-2 text-[17px] leading-6 font-semibold text-text">
+        <h3 className="mt-2.5 line-clamp-2 text-lg leading-7 font-bold text-text">
           {service.title}
         </h3>
 
@@ -114,7 +134,7 @@ export function ServiceCard({
         <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
           <div>
             <p className="text-xs text-text-subtle">Starting at</p>
-            <p className="font-mono text-[17px] font-bold text-text">
+            <p className="font-mono text-lg font-bold text-text">
               {formatINR(service.price)}
             </p>
           </div>

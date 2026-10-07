@@ -106,3 +106,17 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Scroll reveal — fires once via IntersectionObserver; the reduced-motion
+   kill above makes it appear instantly for those users. */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 560ms ease,
+    transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}

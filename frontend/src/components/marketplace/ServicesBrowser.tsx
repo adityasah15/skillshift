@@ -32,7 +32,8 @@ export function ServicesBrowser() {
   const params = useSearchParams();
   const initialQ = params.get("q") ?? "";
   const [query, setQuery] = useState(initialQ);
-  const [skill, setSkill] = useState<string | null>(null);
+  // Deep-linkable skill filter (e.g. landing category pills → ?skills=Design).
+  const [skill, setSkill] = useState<string | null>(() => params.get("skills"));
   const debouncedQ = useDebounced(query);
 
   const [services, setServices] = useState<Service[] | null>(null);
