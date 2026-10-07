@@ -211,6 +211,8 @@ Copy the example env and fill in the required values (database URL, Redis, JWT s
 - SMTP is required in production: `MailService` (`backend/src/mail/mail.service.ts`) throws on startup if `SMTP_HOST` is missing or contains `ethereal.email` while `NODE_ENV=production`.
 - On EC2 this surfaces as a container crash loop and Nginx `502` on `/api/docs`.
 - This repo uses Gmail SMTP (no custom domain): dedicated Gmail account + 2FA + App Password (spaces stripped) in `SMTP_USER` / `SMTP_PASS`, matching `MAIL_FROM`.
+- S3 uploads need an EC2 instance IAM role: the SDK authenticates via the default chain and compose passes only `AWS_REGION` / `AWS_S3_BUCKET` (no keys). Grant `s3:PutObject`, `s3:GetObject`, `s3:HeadObject` on the bucket plus `s3:ListBucket`.
+- Browser direct-PUT to S3 also needs bucket CORS allowing your frontend origin.
 
 ### 4. Database
 
