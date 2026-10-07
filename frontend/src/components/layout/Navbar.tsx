@@ -93,6 +93,7 @@ export function Navbar() {
   const authed = token !== null;
   const primary = authed ? [...publicLinks.slice(0, 1), ...authedLinks] : [...publicLinks];
   const showStudio = authed && role !== "CLIENT";
+  const showAdmin = authed && role === "ADMIN";
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur">
@@ -114,6 +115,13 @@ export function Navbar() {
               href="/services/mine"
               label="My services"
               active={pathname === "/services/mine"}
+            />
+          )}
+          {showAdmin && (
+            <NavLink
+              href="/admin"
+              label="Admin"
+              active={pathname === "/admin" || pathname.startsWith("/admin/")}
             />
           )}
         </nav>
@@ -182,6 +190,15 @@ export function Navbar() {
               href="/services/mine"
               label="My services"
               active={pathname === "/services/mine"}
+              mobile
+              onClick={() => setOpen(false)}
+            />
+          )}
+          {showAdmin && (
+            <NavLink
+              href="/admin"
+              label="Admin"
+              active={pathname === "/admin" || pathname.startsWith("/admin/")}
               mobile
               onClick={() => setOpen(false)}
             />
