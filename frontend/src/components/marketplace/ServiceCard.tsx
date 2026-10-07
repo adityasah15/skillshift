@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatINR } from "@/lib/format";
+import { resolvePublicImage } from "@/lib/images";
 import type { Service } from "@/lib/types";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
@@ -27,10 +28,10 @@ export function ServiceCard({
   const seller = freelancerName ?? "Freelancer";
   const initial = seller.charAt(0).toUpperCase();
   const hue = service.hue ?? 232;
-  // Backend stores raw S3 keys with no public resolver — only render URLs.
-  // Otherwise a designed cover (layered tones + monogram) stands in.
+  // Backend stores raw S3 keys with no public resolver — resolve via
+  // NEXT_PUBLIC_S3_PUBLIC_BASE when configured, else designed cover.
   const raw = service.imageUrls?.[0];
-  const image = raw?.startsWith("http") ? raw : undefined;
+  const image = resolvePublicImage(raw);
   const monogram = service.title.trim().charAt(0).toUpperCase() || "S";
 
   return (

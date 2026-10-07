@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { ApiRequestError } from "@/lib/api-client";
 import { usersApi, type AccountProfile } from "@/lib/api/users";
+import { resolvePublicImage } from "@/lib/images";
 import { useSessionToken } from "@/lib/session";
 import { assertUploadable, confirmUpload, putToS3, requestPresigned } from "@/lib/upload";
 
@@ -92,8 +93,7 @@ export function ProfilePage() {
   }
 
   const profile = account.profile;
-  const avatar = profile?.avatarUrl;
-  const avatarImg = avatar?.startsWith("http") ? avatar : undefined;
+  const avatarImg = resolvePublicImage(profile?.avatarUrl);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();

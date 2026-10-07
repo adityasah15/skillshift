@@ -12,6 +12,7 @@ import { servicesApi } from "@/lib/api/services";
 import { reviewsApi } from "@/lib/api/reviews";
 import { usersApi } from "@/lib/api/users";
 import { formatINR } from "@/lib/format";
+import { resolvePublicImage } from "@/lib/images";
 import { MOCK_SERVICES } from "@/lib/mock-services";
 import type { PublicProfile, Service, ServiceReview } from "@/lib/types";
 
@@ -49,6 +50,7 @@ export function ServiceDetail({ id }: { id: string }) {
   const [failed, setFailed] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [booking, setBooking] = useState(false);
+  const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -160,6 +162,10 @@ export function ServiceDetail({ id }: { id: string }) {
   }
 
   const sellerName = seller?.displayName ?? "Freelancer";
+  const gallery = (service.imageUrls ?? [])
+    .map((src) => resolvePublicImage(src))
+    .filter((src): src is string => Boolean(src));
+  const current = gallery[Math.min(activeImage, Math.max(0, gallery.length - 1))];
   const avg =
     reviews.length > 0
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
@@ -172,15 +178,15 @@ export function ServiceDetail({ id }: { id: string }) {
           <div
             className="relative aspect-[16/9] overflow-hidden rounded-[18px] border border-border"
             style={
-              service.imageUrls[0]?.startsWith("http")
+              current
                 ? undefined
                 : { background: "linear-gradient(120deg, #e4e9ff 0%, #d3dcfb 100%)" }
             }
           >
-            {service.imageUrls[0]?.startsWith("http") ? (
+            {current ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={service.imageUrls[0]}
+                src={current}
                 alt={service.title}
                 className="h-full w-full object-cover"
               />
@@ -206,6 +212,33 @@ export function ServiceDetail({ id }: { id: string }) {
               </div>
             )}
           </div>
+          {gallery.length > 1 && (
+            <ul className="mt-3 grid grid-cols-4 gap-2" aria-label="Service images">
+              {gallery.map((src, i) => (
+                <li key={src + i}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveImage(i)}
+                    aria-pressed={i === Math.min(activeImage, gallery.length - 1)}
+                    aria-label={`View image ${i + 1}`}
+                    className={`block aspect-[16/10] w-full cursor-pointer overflow-hidden rounded-[12px] border transition ${
+                      i === Math.min(activeImage, gallery.length - 1)
+                        ? "border-primary ring-2 ring-primary-soft"
+                        : "border-border hover:border-border-strong"
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
           <h1 className="mt-6 text-2xl font-bold tracking-tight sm:text-3xl">
             {service.title}

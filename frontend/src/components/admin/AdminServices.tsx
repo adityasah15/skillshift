@@ -9,6 +9,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import { adminApi, type AdminServiceRow } from "@/lib/api/admin";
 import { useSessionToken } from "@/lib/session";
 import { formatINR } from "@/lib/format";
+import { resolvePublicImage } from "@/lib/images";
 
 type Filter = "PENDING_REVIEW" | "ALL" | "ACTIVE" | "REJECTED" | "PAUSED";
 
@@ -65,11 +66,32 @@ function ServiceDetail({ row }: { row: AdminServiceRow }) {
       </div>
       <div>
         <p className="text-[13px] font-semibold text-text-muted">Images</p>
-        <p className="mt-1 text-text-muted">
-          {row.imageUrls.length === 0
-            ? "No images attached."
-            : `${row.imageUrls.length} attached — previews unavailable (image keys have no public resolver yet).`}
-        </p>
+        {row.imageUrls.length === 0 ? (
+          <p className="mt-1 text-text-muted">No images attached.</p>
+        ) : (
+          <ul className="mt-2 grid grid-cols-4 gap-2" aria-label="Attached images">
+            {row.imageUrls.map((key) => {
+              const src = resolvePublicImage(key);
+              return (
+                <li key={key} className="overflow-hidden rounded-[10px] border border-border">
+                  {src ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={src} alt="" loading="lazy" className="aspect-square w-full object-cover" />
+                  ) : (
+                    <span className="block truncate bg-surface-soft px-2 py-2 font-mono text-[11px] text-text-subtle">
+                      {(key.split("/").pop() ?? key).slice(0, 18)}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {row.imageUrls.length > 0 && !resolvePublicImage(row.imageUrls[0]) && (
+          <p className="mt-1.5 text-[13px] text-text-subtle">
+            Keys stored — set NEXT_PUBLIC_S3_PUBLIC_BASE for previews.
+          </p>
+        )}
       </div>
       <div className="sm:col-span-2">
         <p className="text-[13px] font-semibold text-text-muted">Service ID</p>

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { ApiRequestError } from "@/lib/api-client";
 import { usersApi } from "@/lib/api/users";
+import { resolvePublicImage } from "@/lib/images";
 import type { PublicProfile } from "@/lib/types";
 
 export function FreelancerProfile({ id }: { id: string }) {
@@ -82,9 +83,18 @@ export function FreelancerProfile({ id }: { id: string }) {
   return (
     <div>
       <div className="flex flex-col gap-4 rounded-[18px] border border-border bg-surface p-6 sm:flex-row sm:items-center">
-        <span aria-hidden className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-primary text-2xl font-bold text-white">
-          {profile.displayName.charAt(0).toUpperCase()}
-        </span>
+        {resolvePublicImage(profile.avatarUrl) ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={resolvePublicImage(profile.avatarUrl) as string}
+            alt={profile.displayName}
+            className="h-20 w-20 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <span aria-hidden className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-primary text-2xl font-bold text-white">
+            {profile.displayName.charAt(0).toUpperCase()}
+          </span>
+        )}
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">{profile.displayName}</h1>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-text-muted">

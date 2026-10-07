@@ -12,6 +12,7 @@ import { ServiceForm, type ServiceFormValues } from "@/components/studio/Service
 import { ApiRequestError } from "@/lib/api-client";
 import { servicesApi } from "@/lib/api/services";
 import { formatINR } from "@/lib/format";
+import { resolvePublicImage } from "@/lib/images";
 import { uploadServiceImage } from "@/lib/upload";
 import type { Service } from "@/lib/types";
 
@@ -125,11 +126,39 @@ function MineList() {
   return (
     <>
       <ul className="grid gap-5 sm:grid-cols-2">
-        {services.map((s) => (
+        {services.map((s) => {
+          const cover = resolvePublicImage(s.imageUrls?.[0]);
+          return (
           <li
             key={s.id}
-            className="flex flex-col rounded-[16px] border border-border bg-surface p-5"
+            className="flex flex-col overflow-hidden rounded-[16px] border border-border bg-surface"
           >
+            <div
+              className="relative aspect-[16/9] w-full overflow-hidden"
+              style={
+                cover
+                  ? undefined
+                  : { background: "linear-gradient(120deg, #e4e9ff 0%, #d3dcfb 100%)" }
+              }
+            >
+              {cover ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={cover}
+                  alt={s.title}
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span
+                  aria-hidden
+                  className="flex h-full items-center justify-center text-4xl font-extrabold text-white/70"
+                >
+                  {(s.title.trim().charAt(0).toUpperCase() || "S")}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-1 flex-col p-5">
             <div className="flex items-start justify-between gap-3">
               <h3 className="line-clamp-2 text-[17px] leading-6 font-semibold">{s.title}</h3>
               <StatusBadge status={s.status} />
@@ -155,8 +184,10 @@ function MineList() {
                 Delete
               </Button>
             </div>
+            </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       <Drawer

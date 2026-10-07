@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { ImagePicker } from "@/components/studio/ImagePicker";
+import { resolvePublicImage } from "@/lib/images";
 
 export interface ServiceFormValues {
   title: string;
@@ -144,25 +145,47 @@ export function ServiceForm({
       {kept.length > 0 && (
         <div>
           <p className="mb-1.5 text-sm font-medium text-text">Current images</p>
-          <ul className="flex flex-wrap gap-2">
-            {kept.map((u) => (
-              <li
-                key={u}
-                className="flex min-h-[44px] items-center gap-2 rounded-[12px] bg-surface-soft px-3 text-[13px]"
-              >
-                <span className="max-w-48 truncate font-mono">{u.split("/").pop()}</span>
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => setKept(kept.filter((x) => x !== u))}
-                  aria-label={`Remove ${u.split("/").pop()}`}
-                  className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center font-bold text-text-muted hover:text-danger disabled:opacity-60"
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {kept.map((u) => {
+              const src = resolvePublicImage(u);
+              const name = u.split("/").pop() ?? u;
+              return (
+                <li
+                  key={u}
+                  className="relative overflow-hidden rounded-[12px] border border-border"
                 >
-                  ×
-                </button>
-              </li>
-            ))}
+                  {src ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={src}
+                      alt={name}
+                      loading="lazy"
+                      className="aspect-square w-full object-cover"
+                    />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="flex aspect-square w-full items-center justify-center bg-surface-soft text-xl font-bold text-text-subtle"
+                    >
+                      {name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={() => setKept(kept.filter((x) => x !== u))}
+                    aria-label={`Remove ${name}`}
+                    className="absolute top-1 right-1 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-text/70 text-sm font-bold text-white transition hover:bg-text disabled:opacity-60"
+                  >
+                    ×
+                  </button>
+                </li>
+              );
+            })}
           </ul>
+          <p className="mt-1.5 text-[13px] text-text-subtle">
+            Stored on S3 — previews appear once public image hosting is configured.
+          </p>
         </div>
       )}
       <ImagePicker files={files} onChange={setFiles} disabled={submitting} />
