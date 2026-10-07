@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { NewServicePage } from "@/components/studio/NewService";
 
-export const metadata: Metadata = { title: "Publish a service" };
+export const metadata: Metadata = { title: "Publish a service", robots: { index: false, follow: false } };
 
 export default function NewServiceRoute() {
   return (

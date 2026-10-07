@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { EmptyState, ErrorState } from "@/components/ui/States";
 import { createChatSocket, type Socket } from "@/lib/chat-socket";
 import { chatApi, type ChatMessage } from "@/lib/api/chat";
 import { useSessionToken } from "@/lib/session";
@@ -180,7 +181,7 @@ export function OrderChat({
           <button
             type="button"
             onClick={retry}
-            className="cursor-pointer font-semibold text-primary hover:underline"
+            className="inline-flex min-h-[44px] cursor-pointer items-center font-semibold text-primary hover:underline"
           >
             Retry connection
           </button>
@@ -188,16 +189,18 @@ export function OrderChat({
       </div>
 
       {messages === null ? (
-        <p className="mt-2 text-[15px] leading-7 text-text-muted">
-          Message history is unavailable right now.{" "}
-          <button type="button" onClick={retry} className="cursor-pointer font-semibold text-primary hover:underline">
-            Retry
-          </button>
-        </p>
+        <ErrorState
+          title="Message history unavailable"
+          body="We could not load past messages. Your live discussion still works once connected."
+          onRetry={retry}
+        />
       ) : messages.length === 0 ? (
-        <p className="mt-2 text-[15px] leading-7 text-text-muted">
-          No messages yet. Say hello and align on scope and timelines.
-        </p>
+        <div className="mt-2">
+          <EmptyState
+            title="No messages yet"
+            body="Say hello and align on scope and timelines."
+          />
+        </div>
       ) : (
         <ul className="mt-3 max-h-72 space-y-2.5 overflow-y-auto" aria-live="polite">
           {messages.map((m) => {
@@ -228,9 +231,9 @@ export function OrderChat({
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Write a message…"
           maxLength={2000}
-          className="min-h-[44px] flex-1 rounded-[12px] border border-border bg-surface px-4 text-[15px] placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary-soft focus:outline-none disabled:opacity-60"
+          className="min-h-[44px] w-full min-w-0 flex-1 rounded-[12px] border border-border bg-surface px-4 text-[15px] placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary-soft focus:outline-none disabled:opacity-60"
         />
-        <Button type="submit" loading={sending} disabled={draft.trim().length === 0}>
+        <Button type="submit" loading={sending} disabled={draft.trim().length === 0} className="shrink-0">
           Send
         </Button>
       </form>

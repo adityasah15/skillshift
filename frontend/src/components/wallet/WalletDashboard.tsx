@@ -222,7 +222,7 @@ export function WalletDashboard() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-[13px] text-text-subtle">Available in wallet</p>
-            <p className="font-mono text-4xl font-bold">{formatINR(balance)}</p>
+            <p className="text-3xl font-mono font-bold break-words sm:text-4xl">{formatINR(balance)}</p>
             {held > 0 && (
               <p className="mt-1.5 text-sm font-medium text-warning">
                 + {formatINR(held)} held in escrow across open orders

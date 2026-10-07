@@ -269,7 +269,7 @@ export function AdminServices() {
                           type="button"
                           onClick={() => toggle(r.id)}
                           aria-expanded={expanded[r.id] ?? false}
-                          className="text-left font-semibold text-primary hover:underline"
+                          className="min-h-[44px] py-1 text-left font-semibold text-primary hover:underline"
                         >
                           {r.title}
                         </button>
@@ -339,7 +339,7 @@ export function AdminServices() {
                     <ServiceDetail row={r} />
                   </div>
                 )}
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
                   {moderationsFor(r.status).map((m) => (
                     <Button
                       key={m.label}

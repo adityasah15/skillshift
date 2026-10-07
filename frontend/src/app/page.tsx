@@ -1,7 +1,20 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { MOCK_SERVICES } from "@/lib/mock-services";
 import { ServiceCard } from "@/components/marketplace/ServiceCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+
+export const metadata: Metadata = {
+  title: "SkillShift — Find the right skills",
+  description:
+    "Browse freelance services with clear pricing and delivery times. Order confidently with protected payments.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "SkillShift — Find the right skills",
+    description:
+      "Browse freelance services with clear pricing and delivery times. Order confidently with protected payments.",
+  },
+};
 
 const steps = [
   {

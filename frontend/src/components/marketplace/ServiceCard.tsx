@@ -50,7 +50,7 @@ export function ServiceCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={image}
-            alt=""
+            alt={service.title}
             loading="lazy"
             className="zoom h-full w-full object-cover"
           />

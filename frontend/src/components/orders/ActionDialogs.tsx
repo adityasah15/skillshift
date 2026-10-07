@@ -258,15 +258,16 @@ export function ReviewDialog({
         }}
         className="flex flex-col gap-4"
       >
-        <div role="group" aria-label="Rating">
+        <div role="radiogroup" aria-label="Rating">
           <p className="mb-1.5 text-sm font-medium">Rating</p>
           <div className="flex gap-1.5">
             {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
                 type="button"
+                role="radio"
+                aria-checked={rating === n}
                 onClick={() => setRating(n)}
-                aria-pressed={rating === n}
                 aria-label={`${n} star${n > 1 ? "s" : ""}`}
                 className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-[12px] transition ${
                   n <= rating ? "text-warning" : "text-border-strong hover:text-text-muted"

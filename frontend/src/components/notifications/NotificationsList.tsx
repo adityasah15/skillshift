@@ -15,6 +15,7 @@ export function NotificationsList() {
   const [items, setItems] = useState<NotificationItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (token === null) return;
@@ -35,7 +36,7 @@ export function NotificationsList() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, attempt]);
 
   async function markAll() {
     try {
@@ -79,7 +80,13 @@ export function NotificationsList() {
   }
 
   if (failed || items === null) {
-    return <ErrorState title="Could not load notifications" body={failed ?? "Please try again."} />;
+    return (
+      <ErrorState
+        title="Could not load notifications"
+        body={failed ?? "Please try again."}
+        onRetry={() => setAttempt((n) => n + 1)}
+      />
+    );
   }
 
   if (items.length === 0) {

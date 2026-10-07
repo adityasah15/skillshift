@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { OrdersList } from "@/components/orders/OrdersList";
 
-export const metadata: Metadata = { title: "Orders" };
+export const metadata: Metadata = { title: "Orders", robots: { index: false, follow: false } };
 
 export default function OrdersPage() {
   return (

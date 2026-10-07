@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authApi } from "@/lib/api/auth";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { clearAccessToken, useSessionToken } from "@/lib/session";
@@ -14,7 +14,6 @@ const publicLinks = [
 ];
 
 const authedLinks = [
-  { href: "/dashboard", label: "Dashboard" },
   { href: "/orders", label: "Orders" },
   { href: "/wallet", label: "Wallet" },
 ];
@@ -40,7 +39,7 @@ function NavLink({
       className={
         mobile
           ? "block min-h-[44px] rounded-[12px] px-3 py-3 text-[15px] font-medium text-text transition hover:bg-surface-soft"
-          : `rounded-full px-4 py-2 text-sm font-medium transition ${
+          : `inline-flex min-h-[44px] items-center rounded-full px-4 text-sm font-medium transition ${
               active
                 ? "bg-primary-soft text-primary"
                 : "text-text-muted hover:bg-surface-soft hover:text-text"
@@ -77,6 +76,22 @@ export function Navbar() {
   }, [token, roleEntry?.forToken]);
 
   const role = roleEntry?.forToken === token ? roleEntry.role : null;
+  const menuRef = useRef<HTMLElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  // Mobile menu: Escape closes and returns focus; opening moves focus in.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    menuRef.current?.querySelector("a")?.focus();
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   async function logout() {
     try {
@@ -157,6 +172,7 @@ export function Navbar() {
         </div>
 
         <button
+          ref={toggleRef}
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
@@ -174,7 +190,7 @@ export function Navbar() {
       </div>
 
       {open && (
-        <nav aria-label="Mobile" className="border-t border-border bg-surface px-4 py-3 md:hidden">
+        <nav ref={menuRef} aria-label="Mobile" className="border-t border-border bg-surface px-4 py-3 md:hidden">
           {primary.map((l) => (
             <NavLink
               key={l.href}

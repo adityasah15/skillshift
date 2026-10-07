@@ -24,7 +24,7 @@ export function LoginForm({ next }: { next: string }) {
     try {
       const { data } = await authApi.login({ email: email.trim(), password });
       setAccessToken(data.accessToken);
-      router.push(next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
+      router.push(next.startsWith("/") && !next.startsWith("//") ? next : "/orders");
       router.refresh();
     } catch (err) {
       setError(

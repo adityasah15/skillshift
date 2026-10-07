@@ -155,8 +155,8 @@ export function ServiceForm({
                   type="button"
                   disabled={submitting}
                   onClick={() => setKept(kept.filter((x) => x !== u))}
-                  aria-label="Remove image"
-                  className="cursor-pointer font-bold text-text-muted hover:text-danger disabled:opacity-60"
+                  aria-label={`Remove ${u.split("/").pop()}`}
+                  className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center font-bold text-text-muted hover:text-danger disabled:opacity-60"
                 >
                   ×
                 </button>

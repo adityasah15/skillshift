@@ -1,7 +1,17 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "How it works" };
+export const metadata: Metadata = {
+  title: "How it works",
+  description:
+    "Discover, order, and receive project-based work on SkillShift — with delivery tracking and protected payments.",
+  alternates: { canonical: "/how-it-works" },
+  openGraph: {
+    title: "How it works · SkillShift",
+    description:
+      "Discover, order, and receive project-based work on SkillShift — with delivery tracking and protected payments.",
+  },
+};
 
 const steps = [
   {

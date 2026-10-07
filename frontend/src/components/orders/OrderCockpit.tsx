@@ -29,7 +29,12 @@ const OrderChat = dynamic(
   () => import("@/components/chat/OrderChat").then((m) => ({ default: m.OrderChat })),
   {
     ssr: false,
-    loading: () => <p className="mt-2 text-sm text-text-muted">Loading chat…</p>,
+    loading: () => (
+      <div className="mt-2 space-y-2" aria-label="Loading chat">
+        <div className="skeleton-shimmer h-10 w-3/4 rounded-[14px]" />
+        <div className="skeleton-shimmer ml-auto h-10 w-2/3 rounded-[14px]" />
+      </div>
+    ),
   },
 );
 
@@ -227,7 +232,7 @@ export function OrderCockpit({ id }: { id: string }) {
                         type="button"
                         disabled={downloading === f.key}
                         onClick={() => download(f.key, f.originalName)}
-                        className="shrink-0 cursor-pointer text-sm font-semibold text-primary hover:underline disabled:opacity-60"
+                        className="inline-flex min-h-[44px] shrink-0 cursor-pointer items-center px-2 text-sm font-semibold text-primary hover:underline disabled:opacity-60"
                       >
                         {downloading === f.key ? "Preparing…" : "Download"}
                       </button>
@@ -311,6 +316,29 @@ export function OrderCockpit({ id }: { id: string }) {
           </Link>
         </aside>
       </div>
+
+      {/* Mobile sticky primary action — mirrors the sidebar on small screens. */}
+      {(order.status === "IN_PROGRESS" && !isClient) ||
+      (order.status === "DELIVERED" && isClient) ||
+      order.status === "COMPLETED" ? (
+        <div className="sticky bottom-0 -mx-4 mt-6 border-t border-border bg-surface/95 p-4 backdrop-blur lg:hidden">
+          {order.status === "IN_PROGRESS" && !isClient && (
+            <Button size="lg" className="w-full" onClick={() => setDialog("deliver")}>
+              Deliver order
+            </Button>
+          )}
+          {order.status === "DELIVERED" && isClient && (
+            <Button size="lg" className="w-full" onClick={() => setDialog("complete")}>
+              Accept delivery
+            </Button>
+          )}
+          {order.status === "COMPLETED" && (
+            <Button size="lg" variant="secondary" className="w-full" onClick={() => setDialog("review")}>
+              Leave a review
+            </Button>
+          )}
+        </div>
+      ) : null}
 
       <DeliverDialog open={dialog === "deliver"} onClose={() => setDialog(null)} orderId={order.id} onDone={refetch} />
       <CompleteDialog open={dialog === "complete"} onClose={() => setDialog(null)} orderId={order.id} price={order.price} onDone={refetch} />

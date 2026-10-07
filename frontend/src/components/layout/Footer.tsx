@@ -19,25 +19,24 @@ export function Footer() {
         <nav aria-label="Marketplace">
           <p className="text-sm font-semibold">Marketplace</p>
           <ul className="mt-3 space-y-2.5 text-sm text-text-muted">
-            <li><Link href="/services" className="transition hover:text-text">Browse services</Link></li>
-            <li><Link href="/how-it-works" className="transition hover:text-text">How it works</Link></li>
-            <li><Link href="/services/mine" className="transition hover:text-text">Sell on SkillShift</Link></li>
+            <li><Link href="/services" className="inline-flex min-h-[44px] items-center transition hover:text-text">Browse services</Link></li>
+            <li><Link href="/how-it-works" className="inline-flex min-h-[44px] items-center transition hover:text-text">How it works</Link></li>
+            <li><Link href="/services/mine" className="inline-flex min-h-[44px] items-center transition hover:text-text">Sell on SkillShift</Link></li>
           </ul>
         </nav>
         <nav aria-label="Account">
           <p className="text-sm font-semibold">Account</p>
           <ul className="mt-3 space-y-2.5 text-sm text-text-muted">
-            <li><Link href="/dashboard" className="transition hover:text-text">Dashboard</Link></li>
-            <li><Link href="/orders" className="transition hover:text-text">Orders</Link></li>
-            <li><Link href="/wallet" className="transition hover:text-text">Wallet</Link></li>
+            <li><Link href="/orders" className="inline-flex min-h-[44px] items-center transition hover:text-text">Orders</Link></li>
+            <li><Link href="/wallet" className="inline-flex min-h-[44px] items-center transition hover:text-text">Wallet</Link></li>
           </ul>
         </nav>
         <nav aria-label="Support">
           <p className="text-sm font-semibold">Support</p>
           <ul className="mt-3 space-y-2.5 text-sm text-text-muted">
-            <li><Link href="/auth/login" className="transition hover:text-text">Log in</Link></li>
-            <li><Link href="/auth/register" className="transition hover:text-text">Join</Link></li>
-            <li><Link href="/notifications" className="transition hover:text-text">Notifications</Link></li>
+            <li><Link href="/auth/login" className="inline-flex min-h-[44px] items-center transition hover:text-text">Log in</Link></li>
+            <li><Link href="/auth/register" className="inline-flex min-h-[44px] items-center transition hover:text-text">Join</Link></li>
+            <li><Link href="/notifications" className="inline-flex min-h-[44px] items-center transition hover:text-text">Notifications</Link></li>
           </ul>
         </nav>
       </div>

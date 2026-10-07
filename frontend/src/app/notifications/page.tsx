@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { NotificationsList } from "@/components/notifications/NotificationsList";
 
-export const metadata: Metadata = { title: "Notifications" };
+export const metadata: Metadata = { title: "Notifications", robots: { index: false, follow: false } };
 
 export default function NotificationsPage() {
   return (

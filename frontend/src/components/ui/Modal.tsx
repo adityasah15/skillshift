@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 
 interface ModalProps {
   open: boolean;
@@ -10,8 +10,8 @@ interface ModalProps {
   children: React.ReactNode;
 }
 
-export function Modal({ open, onClose, title, description, children }: ModalProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
+/** Keyboard trap: Tab cycles inside the panel, Escape closes, focus restores. */
+function useDialogBehavior(open: boolean, panelRef: React.RefObject<HTMLDivElement | null>, onClose: () => void) {
   const onCloseRef = useRef(onClose);
 
   useEffect(() => {
@@ -20,21 +20,46 @@ export function Modal({ open, onClose, title, description, children }: ModalProp
 
   useEffect(() => {
     if (!open) return;
+    const panel = panelRef.current;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCloseRef.current();
+      if (e.key === "Escape") {
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== "Tab" || !panel) return;
+      const focusables = panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input:not([disabled]), select, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const panel = panelRef.current;
     if (panel && !panel.contains(document.activeElement)) {
       panel.focus();
     }
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      previouslyFocused?.focus?.();
     };
-  }, [open]);
+  }, [open, panelRef]);
+}
+
+export function Modal({ open, onClose, title, description, children }: ModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const descId = useId();
+  useDialogBehavior(open, panelRef, onClose);
 
   if (!open) return null;
   return (
@@ -48,15 +73,16 @@ export function Modal({ open, onClose, title, description, children }: ModalProp
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg rounded-[20px] border border-border bg-surface p-6 shadow-lg outline-none"
+        className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-[20px] border border-border bg-surface p-6 shadow-lg outline-none"
       >
         <div className="mb-1 flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-text">{title}</h2>
             {description && (
-              <p className="mt-1 text-sm leading-6 text-text-muted">{description}</p>
+              <p id={descId} className="mt-1 text-sm leading-6 text-text-muted">{description}</p>
             )}
           </div>
           <button
@@ -83,29 +109,8 @@ export function Modal({ open, onClose, title, description, children }: ModalProp
 
 export function Drawer({ open, onClose, title, description, children }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCloseRef.current();
-    };
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const panel = panelRef.current;
-    if (panel && !panel.contains(document.activeElement)) {
-      panel.focus();
-    }
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
+  const descId = useId();
+  useDialogBehavior(open, panelRef, onClose);
 
   if (!open) return null;
   return (
@@ -119,6 +124,7 @@ export function Drawer({ open, onClose, title, description, children }: ModalPro
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className="absolute top-0 right-0 flex h-full w-full max-w-md flex-col border-l border-border bg-surface p-6 shadow-lg outline-none"
@@ -127,7 +133,7 @@ export function Drawer({ open, onClose, title, description, children }: ModalPro
           <div>
             <h2 className="text-xl font-semibold text-text">{title}</h2>
             {description && (
-              <p className="mt-1 text-sm leading-6 text-text-muted">{description}</p>
+              <p id={descId} className="mt-1 text-sm leading-6 text-text-muted">{description}</p>
             )}
           </div>
           <button

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { AuthCard } from "@/components/auth/AuthCard";
 
-export const metadata: Metadata = { title: "Check your email" };
+export const metadata: Metadata = { title: "Check your email", robots: { index: false, follow: false } };
 
 export default async function CheckEmailPage({
   searchParams,

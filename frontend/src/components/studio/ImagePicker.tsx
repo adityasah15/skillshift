@@ -41,7 +41,7 @@ export function ImagePicker({
         Images {files.length > 0 && <span className="text-text-subtle">({files.length}/5)</span>}
       </p>
       <label
-        className={`flex min-h-[96px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[14px] border border-dashed px-4 py-6 text-center transition ${
+        className={`flex min-h-[96px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[14px] border border-dashed px-4 py-6 text-center transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-soft ${
           disabled ? "cursor-not-allowed opacity-60" : "border-border-strong hover:border-primary hover:bg-primary-soft/40"
         }`}
       >
@@ -84,7 +84,7 @@ export function ImagePicker({
                 disabled={disabled}
                 onClick={() => onChange(files.filter((x) => x !== f))}
                 aria-label={`Remove ${f.name}`}
-                className="absolute top-1 right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-text/70 text-sm font-bold text-white transition hover:bg-text disabled:opacity-60"
+                className="absolute top-1 right-1 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-text/70 text-sm font-bold text-white transition hover:bg-text disabled:opacity-60"
               >
                 ×
               </button>

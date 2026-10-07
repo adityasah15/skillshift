@@ -181,7 +181,7 @@ export function ServiceDetail({ id }: { id: string }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={service.imageUrls[0]}
-                alt=""
+                alt={service.title}
                 className="h-full w-full object-cover"
               />
             ) : (

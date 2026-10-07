@@ -3,7 +3,17 @@ import type { Metadata } from "next";
 import { ServicesBrowser } from "@/components/marketplace/ServicesBrowser";
 import { SkeletonGrid } from "@/components/ui/States";
 
-export const metadata: Metadata = { title: "Browse services" };
+export const metadata: Metadata = {
+  title: "Browse services",
+  description:
+    "Search freelance services by skill and price. Clear delivery times, reviews, and protected payments on every order.",
+  alternates: { canonical: "/services" },
+  openGraph: {
+    title: "Browse services · SkillShift",
+    description:
+      "Search freelance services by skill and price. Clear delivery times, reviews, and protected payments on every order.",
+  },
+};
 
 export default function ServicesPage() {
   return (
@@ -22,13 +32,6 @@ export default function ServicesPage() {
         <Suspense fallback={<SkeletonGrid count={6} />}>
           <ServicesBrowser />
         </Suspense>
-
-        <p className="mt-8 rounded-[14px] border border-border bg-surface px-4 py-3 text-[13px] leading-6 text-text-muted">
-          Live data via same-origin <span className="font-mono">/api/backend</span> proxy →{" "}
-          <span className="font-mono">GET /services</span> and{" "}
-          <span className="font-mono">GET /search/services</span>. Shows a local
-          preview only when the backend is unreachable.
-        </p>
       </div>
     </main>
   );

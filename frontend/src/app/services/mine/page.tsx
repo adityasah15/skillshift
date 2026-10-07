@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { MyServicesPage } from "@/components/studio/MyServices";
 
-export const metadata: Metadata = { title: "My services" };
+export const metadata: Metadata = { title: "My services", robots: { index: false, follow: false } };
 
 export default function MyServicesRoute() {
   return (

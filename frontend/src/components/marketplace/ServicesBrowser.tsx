@@ -135,7 +135,7 @@ export function ServicesBrowser() {
           type="button"
           onClick={() => setSkill(null)}
           aria-pressed={skill === null}
-          className={`min-h-[36px] cursor-pointer rounded-full border px-4 text-sm font-medium transition ${
+          className={`min-h-[44px] cursor-pointer rounded-full border px-4 text-sm font-medium transition ${
             skill === null
               ? "border-text bg-text text-white"
               : "border-border bg-surface text-text-muted hover:border-border-strong hover:text-text"
@@ -149,7 +149,7 @@ export function ServicesBrowser() {
             type="button"
             onClick={() => setSkill((cur) => (cur === s ? null : s))}
             aria-pressed={skill === s}
-            className={`min-h-[36px] cursor-pointer rounded-full border px-4 text-sm font-medium transition ${
+            className={`min-h-[44px] cursor-pointer rounded-full border px-4 text-sm font-medium transition ${
               skill === s
                 ? "border-text bg-text text-white"
                 : "border-border bg-surface text-text-muted hover:border-border-strong hover:text-text"
