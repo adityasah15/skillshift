@@ -27,7 +27,9 @@ export function ServiceCard({
   const seller = freelancerName ?? "Freelancer";
   const initial = seller.charAt(0).toUpperCase();
   const hue = service.hue ?? 232;
-  const image = service.imageUrls?.[0];
+  // Backend stores raw S3 keys with no public resolver — only render URLs.
+  const raw = service.imageUrls?.[0];
+  const image = raw?.startsWith("http") ? raw : undefined;
 
   return (
     <Link

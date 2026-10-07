@@ -33,6 +33,33 @@ export const servicesApi = {
   mine() {
     return apiFetch<Service[]>("/services/mine", { method: "GET" });
   },
+  /** FREELANCER. Whitelist-exact create body. Images upload after (needs the id). */
+  create(body: {
+    title: string;
+    description: string;
+    price: number;
+    deliveryDays: number;
+    skills: string[];
+    imageUrls: string[];
+  }) {
+    return apiFetch<Service>("/services", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+  /** FREELANCER owner. Partial — only whitelisted fields. No status flips. */
+  update(id: string, body: Partial<Pick<Service, "title" | "description" | "price" | "deliveryDays" | "skills" | "imageUrls">>) {
+    return apiFetch<Service>(`/services/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
+  /** FREELANCER owner. Soft delete. */
+  remove(id: string) {
+    return apiFetch<unknown>(`/services/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+  },
 };
 
 export const searchApi = {

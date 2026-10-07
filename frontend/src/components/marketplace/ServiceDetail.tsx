@@ -172,12 +172,12 @@ export function ServiceDetail({ id }: { id: string }) {
           <div
             className="relative aspect-[16/9] overflow-hidden rounded-[18px] border border-border"
             style={
-              service.imageUrls[0]
+              service.imageUrls[0]?.startsWith("http")
                 ? undefined
                 : { background: "linear-gradient(135deg, #eef0ff, #e2e7fb)" }
             }
           >
-            {service.imageUrls[0] ? (
+            {service.imageUrls[0]?.startsWith("http") ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={service.imageUrls[0]}
