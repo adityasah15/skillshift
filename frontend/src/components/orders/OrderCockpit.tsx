@@ -243,7 +243,7 @@ export function OrderCockpit({ id }: { id: string }) {
             </section>
           )}
 
-          <section aria-label="Discussion" className="rounded-[18px] border border-border bg-surface p-6">
+          <section aria-label="Discussion" id="discussion" className="scroll-mt-24 rounded-[18px] border border-border bg-surface p-6">
             <h2 className="text-lg font-semibold">Discussion</h2>
             <div className="mt-2">
               <OrderChat

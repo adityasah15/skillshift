@@ -17,6 +17,7 @@ const publicLinks = [
 
 const authedLinks = [
   { href: "/orders", label: "Orders" },
+  { href: "/messages", label: "Messages" },
   { href: "/wallet", label: "Wallet" },
 ];
 
