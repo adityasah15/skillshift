@@ -68,7 +68,11 @@ export function Footer() {
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-1 px-4 py-5 text-[13px] text-text-subtle sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <p>© 2026 SkillShift. All rights reserved.</p>
-          <p>Project-based work, delivered and protected.</p>
+          <p className="flex items-center gap-4">
+            <span>Project-based work, delivered and protected.</span>
+            <Link href="/terms" className="transition hover:text-text">Terms</Link>
+            <Link href="/privacy" className="transition hover:text-text">Privacy</Link>
+          </p>
         </div>
       </div>
     </footer>

@@ -122,7 +122,7 @@ export function MessagesInbox() {
       {(threads ?? []).map(({ order, preview, lastActive }) => (
         <li key={order.id}>
           <Link
-            href={`/orders/${order.id}#discussion`}
+            href={`/chat/${order.id}`}
             className="lift flex items-center gap-4 rounded-[16px] border border-border bg-surface p-5"
           >
             <div className="min-w-0 flex-1">
