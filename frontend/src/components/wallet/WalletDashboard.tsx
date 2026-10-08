@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { ApiRequestError } from "@/lib/api-client";
 import { authApi } from "@/lib/api/auth";
+import { ordersApi } from "@/lib/api/orders";
 import { walletApi } from "@/lib/api/wallet";
 import { useSessionToken } from "@/lib/session";
 import { formatINR } from "@/lib/format";
@@ -144,6 +145,7 @@ export function WalletDashboard() {
   const token = useSessionToken();
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [held, setHeld] = useState<number | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState<string | null>(null);
@@ -166,6 +168,27 @@ export function WalletDashboard() {
         setBalance(bal.data);
         setTransactions(txns.data);
         setRole(me?.data.role ?? null);
+        // Escrow truth comes from open orders, not txn history: the release
+        // leg posts to the freelancer's history, so txn math overcounts held
+        // on the client side after completion. Best-effort — hides on failure.
+        try {
+          const { data: orders } = await ordersApi.list();
+          if (!cancelled) {
+            setHeld(
+              orders
+                .filter(
+                  (o) =>
+                    o.roleLabel === "Client order" &&
+                    (o.status === "IN_PROGRESS" ||
+                      o.status === "DELIVERED" ||
+                      o.status === "DISPUTED"),
+                )
+                .reduce((sum, o) => sum + o.price, 0),
+            );
+          }
+        } catch {
+          if (!cancelled) setHeld(null);
+        }
       } catch (err) {
         if (cancelled) return;
         if (err instanceof ApiRequestError) setFailed(err.message);
@@ -210,11 +233,7 @@ export function WalletDashboard() {
     );
   }
 
-  const held = transactions.reduce((sum, t) => {
-    if (t.type === "ESCROW_HOLD") return sum + t.amount;
-    if (t.type === "ESCROW_RELEASE" || t.type === "ESCROW_REFUND") return sum - t.amount;
-    return sum;
-  }, 0);
+  const heldLine = held;
 
   return (
     <div>
@@ -223,9 +242,9 @@ export function WalletDashboard() {
           <div>
             <p className="text-[13px] text-text-subtle">Available in wallet</p>
             <p className="text-3xl font-mono font-bold break-words sm:text-4xl">{formatINR(balance)}</p>
-            {held > 0 && (
+            {heldLine !== null && heldLine > 0 && (
               <p className="mt-1.5 text-sm font-medium text-warning">
-                + {formatINR(held)} held in escrow across open orders
+                + {formatINR(heldLine)} held in escrow across open orders
               </p>
             )}
             <p className="mt-2 text-[13px] text-text-muted">Test mode — no real money moves.</p>
