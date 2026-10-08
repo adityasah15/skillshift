@@ -127,13 +127,24 @@ export function FreelancerProfile({ id }: { id: string }) {
         <section aria-label="Portfolio" className="mt-6 rounded-[18px] border border-border bg-surface p-6">
           <h2 className="text-lg font-semibold">Portfolio</h2>
           <ul className="mt-3 space-y-2">
-            {profile.portfolioUrls.map((u) => (
-              <li key={u}>
-                <a href={u} target="_blank" rel="noreferrer" className="text-sm font-medium break-all text-primary hover:underline">
-                  {u}
-                </a>
-              </li>
-            ))}
+            {profile.portfolioUrls.map((u) => {
+              // Uploaded file keys are not URLs: link them only when they
+              // resolve to a public location, otherwise show the filename as
+              // plain text rather than a broken link.
+              const resolved = resolvePublicImage(u);
+              const label = /^https?:\/\//i.test(u) ? u : u.substring(u.lastIndexOf("/") + 1);
+              return (
+                <li key={u}>
+                  {resolved ? (
+                    <a href={resolved} target="_blank" rel="noreferrer" className="text-sm font-medium break-all text-primary hover:underline">
+                      {label}
+                    </a>
+                  ) : (
+                    <span className="text-sm break-all text-text-muted">{label}</span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

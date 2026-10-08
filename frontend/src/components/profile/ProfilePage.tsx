@@ -10,7 +10,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import { usersApi, type AccountProfile } from "@/lib/api/users";
 import { resolvePublicImage } from "@/lib/images";
 import { useSessionToken } from "@/lib/session";
-import { assertUploadable, confirmUpload, putToS3, requestPresigned } from "@/lib/upload";
+import { assertUploadable, confirmUpload, putToS3, requestPresigned, uploadPortfolioFile } from "@/lib/upload";
 
 function initials(name: string): string {
   return name.trim().charAt(0).toUpperCase() || "?";
@@ -34,6 +34,10 @@ export function ProfilePage() {
 
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  const [portfolioBusy, setPortfolioBusy] = useState(false);
+  const [portfolioProgress, setPortfolioProgress] = useState<string | null>(null);
+  const [portfolioError, setPortfolioError] = useState<string | null>(null);
 
   useEffect(() => {
     if (token === null) return;
@@ -94,6 +98,9 @@ export function ProfilePage() {
 
   const profile = account.profile;
   const avatarImg = resolvePublicImage(profile?.avatarUrl);
+  const uploadedKeys = (profile?.portfolioUrls ?? []).filter(
+    (u) => !/^https?:\/\//i.test(u),
+  );
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -108,12 +115,18 @@ export function ProfilePage() {
       setSaving(false);
       return;
     }
+    // Uploaded file keys are stored alongside links server-side. Re-send
+    // the stored keys so a profile save never wipes uploads (the backend
+    // accepts keys as well as URLs in this array).
+    const storedUploads = (account?.profile?.portfolioUrls ?? []).filter(
+      (u) => !/^https?:\/\//i.test(u),
+    );
     try {
       await usersApi.updateProfile({
         displayName: displayName.trim(),
         bio: bio.trim(),
         skills,
-        portfolioUrls,
+        portfolioUrls: [...portfolioUrls, ...storedUploads.filter((k) => !portfolioUrls.includes(k))],
       });
       const { data } = await usersApi.me();
       setAccount(data);
@@ -126,6 +139,38 @@ export function ProfilePage() {
     }
   }
 
+  async function uploadPortfolio(fileList: FileList | null) {
+    const ownerId = account?.id;
+    if (!fileList || !ownerId || portfolioBusy) return;
+    const picked = Array.from(fileList).slice(0, 5);
+    setPortfolioBusy(true);
+    setPortfolioError(null);
+    try {
+      for (let i = 0; i < picked.length; i++) {
+        const f = picked[i];
+        setPortfolioProgress(
+          picked.length > 1 ? `Uploading file ${i + 1} of ${picked.length}…` : "Uploading file…",
+        );
+        // Confirm appends the key to portfolioUrls server-side. The keys
+        // are not URLs, so they stay out of the links editor below (which
+        // PATCHes URL-only arrays) and render in the uploads list instead.
+        await uploadPortfolioFile(ownerId, f, i, picked.length);
+      }
+      const { data } = await usersApi.me();
+      setAccount(data);
+    } catch (err) {
+      setPortfolioError(err instanceof Error ? err.message : "Portfolio upload failed. Please retry.");
+      try {
+        const { data } = await usersApi.me();
+        setAccount(data);
+      } catch {
+        // Best-effort refresh only; the error above is what matters.
+      }
+    } finally {
+      setPortfolioBusy(false);
+      setPortfolioProgress(null);
+    }
+  }
   async function uploadAvatar(file: File) {
     const ownerId = account?.id;
     if (!ownerId) return;
@@ -246,6 +291,50 @@ export function ProfilePage() {
             onChange={(e) => setPortfolioText(e.target.value)}
             placeholder="One link per line, starting with https://"
           />
+          <div>
+            <label
+              className={`inline-flex min-h-[44px] cursor-pointer items-center rounded-[12px] border border-border px-4 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft ${
+                portfolioBusy ? "pointer-events-none opacity-60" : ""
+              }`}
+            >
+              {portfolioBusy ? "Uploading…" : "Upload portfolio files"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,application/pdf,application/zip"
+                multiple
+                disabled={portfolioBusy}
+                onChange={(e) => {
+                  uploadPortfolio(e.target.files);
+                  e.target.value = "";
+                }}
+                className="sr-only"
+              />
+            </label>
+            <p className="mt-1.5 text-[13px] text-text-muted">
+              JPG, PNG, PDF, or ZIP — up to 5MB each, max 5 at a time. Uploaded files save immediately and appear below.
+            </p>
+            {portfolioProgress && (
+              <p role="status" className="mt-1.5 text-[13px] font-medium text-primary">{portfolioProgress}</p>
+            )}
+            {portfolioError && (
+              <p role="alert" className="mt-1.5 text-[13px] text-danger">{portfolioError}</p>
+            )}
+            {uploadedKeys.length > 0 && (
+              <ul className="mt-2 space-y-1.5" aria-label="Uploaded portfolio files">
+                {uploadedKeys.map((k) => (
+                  <li
+                    key={k}
+                    className="flex items-center justify-between gap-3 rounded-[12px] bg-surface-soft/70 px-3.5 py-2.5"
+                  >
+                    <span className="min-w-0 truncate text-sm font-medium">
+                      {k.substring(k.lastIndexOf("/") + 1)}
+                    </span>
+                    <span className="shrink-0 px-2 text-[13px] text-text-subtle">uploaded</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           {saveError && (
             <p role="alert" className="text-sm text-danger">{saveError}</p>
           )}

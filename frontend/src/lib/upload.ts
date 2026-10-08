@@ -117,6 +117,49 @@ export async function uploadServiceImage(
   return presigned.key;
 }
 
+/**
+ * Portfolio file upload with step-labeled errors (never a bare generic).
+ * Confirm auto-appends the key to `profile.portfolioUrls` server-side —
+ * callers must refetch `usersApi.me()` for server truth afterwards.
+ * `resourceId` is the user id (backend forbids uploading for another user).
+ */
+export async function uploadPortfolioFile(
+  userId: string,
+  file: File,
+  index: number,
+  total: number,
+): Promise<string> {
+  assertUploadable(file);
+  const meta: PresignedRequest = {
+    resource: "portfolio",
+    resourceId: userId,
+    fileName: file.name,
+    contentType: file.type,
+    fileSize: file.size,
+  };
+  const label = total > 1 ? `File ${index + 1} of ${total}` : "File";
+  let presigned: PresignedResponse;
+  try {
+    presigned = await requestPresigned(meta);
+  } catch (err) {
+    console.error("[portfolio] presigned request failed", err);
+    throw new Error(`${label}: upload request failed (${cause(err)}).`);
+  }
+  try {
+    await putToS3(presigned.url, file);
+  } catch (err) {
+    console.error("[portfolio] S3 PUT failed", err);
+    throw new Error(`${label}: storage upload failed (${cause(err)}). The bucket may be unreachable.`);
+  }
+  try {
+    await confirmUpload({ ...meta, key: presigned.key });
+  } catch (err) {
+    console.error("[portfolio] confirm failed", err);
+    throw new Error(`${label}: verification failed (${cause(err)}).`);
+  }
+  return presigned.key;
+}
+
 /** Short-lived download URL for delivery files. */
 export async function deliveryDownloadUrl(key: string): Promise<string> {
   const params = new URLSearchParams({ key });
