@@ -126,3 +126,46 @@ export async function deliveryDownloadUrl(key: string): Promise<string> {
   );
   return data.url;
 }
+
+/**
+ * Order-delivery file upload with step-labeled errors (never a bare generic).
+ * Confirm auto-creates the DeliveryFile row server-side keyed by order id.
+ * Uploads may happen before delivery: files attach to the order regardless
+ * of when `PATCH /orders/:id/deliver` runs.
+ */
+export async function uploadDeliveryFile(
+  orderId: string,
+  file: File,
+  index: number,
+  total: number,
+): Promise<string> {
+  assertUploadable(file);
+  const meta: PresignedRequest = {
+    resource: "delivery",
+    resourceId: orderId,
+    fileName: file.name,
+    contentType: file.type,
+    fileSize: file.size,
+  };
+  const label = total > 1 ? `File ${index + 1} of ${total}` : "File";
+  let presigned: PresignedResponse;
+  try {
+    presigned = await requestPresigned(meta);
+  } catch (err) {
+    console.error("[delivery] presigned request failed", err);
+    throw new Error(`${label}: upload request failed (${cause(err)}).`);
+  }
+  try {
+    await putToS3(presigned.url, file);
+  } catch (err) {
+    console.error("[delivery] S3 PUT failed", err);
+    throw new Error(`${label}: storage upload failed (${cause(err)}). The bucket may be unreachable.`);
+  }
+  try {
+    await confirmUpload({ ...meta, key: presigned.key });
+  } catch (err) {
+    console.error("[delivery] confirm failed", err);
+    throw new Error(`${label}: verification failed (${cause(err)}).`);
+  }
+  return presigned.key;
+}

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/Input";
 import { ApiRequestError } from "@/lib/api-client";
 import { disputesApi, ordersApi } from "@/lib/api/orders";
 import { reviewsApi } from "@/lib/api/reviews";
+import { assertUploadable, uploadDeliveryFile } from "@/lib/upload";
 import { formatINR } from "@/lib/format";
 
 function useAction() {
@@ -64,8 +65,79 @@ export function DeliverDialog({
   orderId: string;
   onDone: () => void;
 }) {
-  const { submitting, error, run } = useAction();
   const [note, setNote] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  // done counts confirm-completed uploads: retry resumes after it, so a
+  // retry never duplicates DeliveryFile rows server-side.
+  const [done, setDone] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [busyNote, setBusyNote] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  const busyLabel =
+    busyNote ?? (busy ? "Sending delivery…" : null);
+
+  function addFiles(incoming: FileList | null) {
+    if (!incoming || busy) return;
+    setFileError(null);
+    setFiles((cur) => {
+      const next = [...cur];
+      for (const f of Array.from(incoming)) {
+        try {
+          assertUploadable(f);
+          if (!next.some((x) => x.name === f.name && x.size === f.size)) {
+            next.push(f);
+          }
+        } catch (err) {
+          setFileError(err instanceof Error ? `${f.name}: ${err.message}` : `${f.name} rejected.`);
+        }
+      }
+      return next.slice(0, 5);
+    });
+  }
+
+  function removeFile(target: File) {
+    if (busy) return;
+    setFiles((cur) => {
+      const idx = cur.indexOf(target);
+      // Only pending files are removable: confirmed uploads already exist
+      // server-side and will show in the cockpit after delivery.
+      if (idx !== -1 && idx >= done) return cur.filter((x) => x !== target);
+      return cur;
+    });
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      for (let i = done; i < files.length; i++) {
+        setBusyNote(
+          files.length > 1
+            ? `Uploading file ${i + 1} of ${files.length}…`
+            : "Uploading file…",
+        );
+        await uploadDeliveryFile(orderId, files[i], i, files.length);
+        setDone(i + 1);
+      }
+      setBusyNote("Sending delivery…");
+      await ordersApi.deliver(orderId, note.trim());
+      onDone();
+    } catch (err) {
+      setError(
+        err instanceof ApiRequestError || err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
+    } finally {
+      setBusy(false);
+      setBusyNote(null);
+    }
+  }
+
   return (
     <Modal
       open={open}
@@ -73,13 +145,7 @@ export function DeliverDialog({
       title="Deliver this order"
       description="The client reviews your delivery and releases payment — or auto-completes in 7 days."
     >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          run(() => ordersApi.deliver(orderId, note.trim()), onDone);
-        }}
-        className="flex flex-col gap-4"
-      >
+      <form onSubmit={submit} className="flex flex-col gap-4">
         <Textarea
           label="Delivery note"
           name="deliveryNote"
@@ -89,8 +155,83 @@ export function DeliverDialog({
           placeholder="What was delivered, links, how to use it…"
           maxLength={2000}
         />
+        <div>
+          <p className="mb-1.5 text-sm font-medium">
+            Files{" "}
+            <span className="font-normal text-text-subtle">
+              (optional{files.length > 0 ? `, ${files.length}/5` : ""})
+            </span>
+          </p>
+          <label
+            className={`flex min-h-[88px] cursor-pointer flex-col items-center justify-center gap-1 rounded-[14px] border border-dashed px-4 py-5 text-center transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-soft ${
+              busy ? "cursor-not-allowed opacity-60" : "border-border-strong hover:border-primary hover:bg-primary-soft/40"
+            }`}
+          >
+            <span className="text-sm font-medium">Attach files or click to browse</span>
+            <span className="text-[13px] text-text-subtle">JPG, PNG, PDF, or ZIP — up to 5MB each, max 5</span>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,application/pdf,application/zip"
+              multiple
+              disabled={busy}
+              onChange={(e) => {
+                addFiles(e.target.files);
+                e.target.value = "";
+              }}
+              className="sr-only"
+            />
+          </label>
+          {fileError && (
+            <p role="alert" className="mt-1.5 text-[13px] text-danger">
+              {fileError}
+            </p>
+          )}
+          {files.length > 0 && (
+            <ul className="mt-2 space-y-1.5">
+              {files.map((f, i) => (
+                <li
+                  key={`${f.name}-${f.size}`}
+                  className="flex items-center justify-between gap-3 rounded-[12px] bg-surface-soft/70 px-3.5 py-2.5"
+                >
+                  <span className="min-w-0 truncate text-sm font-medium">
+                    {f.name}
+                    {i < done && <span className="ml-2 font-normal text-success">✓ uploaded</span>}
+                  </span>
+                  {i >= done ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => removeFile(f)}
+                      aria-label={`Remove ${f.name}`}
+                      className="inline-flex min-h-[44px] shrink-0 cursor-pointer items-center px-2 text-sm font-semibold text-text-muted hover:text-danger disabled:opacity-60"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <span className="shrink-0 px-2 text-[13px] text-text-subtle">attached</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-2 text-[13px] leading-6 text-text-muted">
+            Files attach to the order and the client can download them from the delivery section.
+          </p>
+        </div>
+        {busyLabel && (
+          <p role="status" className="text-sm font-medium text-primary">
+            {busyLabel}
+          </p>
+        )}
         <ErrorNote error={error} />
-        <Actions onClose={onClose} submitting={submitting} />
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={busy}>
+            Back
+          </Button>
+          <Button type="submit" loading={busy}>
+            {done > 0 && done < files.length ? "Retry remaining & deliver" : "Confirm"}
+          </Button>
+        </div>
       </form>
     </Modal>
   );
