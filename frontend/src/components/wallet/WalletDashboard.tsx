@@ -252,16 +252,17 @@ export function WalletDashboard() {
           <StatusBadge status="ACTIVE" />
         </div>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          {role !== "FREELANCER" && role !== "ADMIN" && (
+          {role !== "ADMIN" && (
             <Button onClick={() => setDialog("deposit")}>Add funds</Button>
           )}
-          {role === "FREELANCER" || role === "CLIENT" ? (
+          {role === "FREELANCER" || role === "CLIENT" || role === null ? (
             <Button variant="secondary" onClick={() => setDialog("withdraw")}>
               Withdraw
             </Button>
           ) : (
             <p className="self-center text-[13px] text-text-muted">
-              Withdrawals are available to clients and freelancers.
+              Admin accounts don’t hold funds — balances live on client and
+              freelancer accounts.
             </p>
           )}
         </div>

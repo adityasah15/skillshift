@@ -59,12 +59,14 @@ function AccountMenu({
   name,
   email,
   showStudio,
+  showSell,
   showAdmin,
   onLogout,
 }: {
   name: string;
   email: string;
   showStudio: boolean;
+  showSell: boolean;
   showAdmin: boolean;
   onLogout: () => void;
 }) {
@@ -95,6 +97,7 @@ function AccountMenu({
     { href: "/orders", label: "Orders" },
     { href: "/wallet", label: "Wallet" },
     ...(showStudio ? [{ href: "/services/mine", label: "My services" }] : []),
+    ...(showSell ? [{ href: "/auth/register", label: "Want to sell? Join as a freelancer" }] : []),
     ...(showAdmin ? [{ href: "/admin", label: "Admin" }] : []),
   ];
 
@@ -238,6 +241,7 @@ export function Navbar() {
       ? [browse, about]
       : [browse, about, ...authedLinks];
   const showStudio = authed && role === "FREELANCER";
+  const showSell = authed && role === "CLIENT";
   const showAdmin = authed && isAdmin;
 
   return (
@@ -279,6 +283,7 @@ export function Navbar() {
                 name={acct?.forToken === token && acct ? acct.displayName : "Account"}
                 email={acct?.forToken === token && acct ? acct.email : ""}
                 showStudio={showStudio}
+                showSell={showSell}
                 showAdmin={showAdmin}
                 onLogout={logout}
               />
@@ -350,6 +355,15 @@ export function Navbar() {
               href="/services/mine"
               label="My services"
               active={pathname === "/services/mine"}
+              mobile
+              onClick={() => setOpen(false)}
+            />
+          )}
+          {showSell && (
+            <NavLink
+              href="/auth/register"
+              label="Want to sell? Join as a freelancer"
+              active={false}
               mobile
               onClick={() => setOpen(false)}
             />

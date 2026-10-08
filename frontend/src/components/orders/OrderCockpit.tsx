@@ -311,10 +311,15 @@ export function OrderCockpit({ id }: { id: string }) {
                   Waiting on client review{order.autoCompleteAt ? ` — ${countdown(order.autoCompleteAt).toLowerCase()}` : ""}.
                 </p>
               )}
-              {order.status === "COMPLETED" && !order.review && (
+              {order.status === "COMPLETED" && isClient && !order.review && (
                 <Button variant="secondary" onClick={() => setDialog("review")}>
                   Leave a review
                 </Button>
+              )}
+              {order.status === "COMPLETED" && !isClient && !order.review && (
+                <p className="text-sm leading-6 text-text-muted">
+                  Only the client can leave a review for this order.
+                </p>
               )}
               {(order.status === "DISPUTED" || order.status === "CANCELLED" || order.status === "REFUNDED") && (
                 <p className="text-sm leading-6 text-text-muted">No actions available.</p>
@@ -338,7 +343,7 @@ export function OrderCockpit({ id }: { id: string }) {
       {/* Mobile sticky primary action — mirrors the sidebar on small screens. */}
       {(order.status === "IN_PROGRESS" && !isClient) ||
       (order.status === "DELIVERED" && isClient) ||
-      (order.status === "COMPLETED" && !order.review) ? (
+      (order.status === "COMPLETED" && isClient && !order.review) ? (
         <div className="sticky bottom-0 -mx-4 mt-6 border-t border-border bg-surface/95 p-4 backdrop-blur lg:hidden">
           {order.status === "IN_PROGRESS" && !isClient && (
             <Button size="lg" className="w-full" onClick={() => setDialog("deliver")}>
@@ -350,7 +355,7 @@ export function OrderCockpit({ id }: { id: string }) {
               Accept delivery
             </Button>
           )}
-          {order.status === "COMPLETED" && !order.review && (
+          {order.status === "COMPLETED" && isClient && !order.review && (
             <Button size="lg" variant="secondary" className="w-full" onClick={() => setDialog("review")}>
               Leave a review
             </Button>

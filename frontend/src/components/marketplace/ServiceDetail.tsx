@@ -11,6 +11,8 @@ import { ApiRequestError } from "@/lib/api-client";
 import { servicesApi } from "@/lib/api/services";
 import { reviewsApi } from "@/lib/api/reviews";
 import { usersApi } from "@/lib/api/users";
+import { useSessionToken } from "@/lib/session";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 import { formatINR } from "@/lib/format";
 import { resolvePublicImage } from "@/lib/images";
 import { MOCK_SERVICES } from "@/lib/mock-services";
@@ -41,6 +43,8 @@ function Stars({ value }: { value: number }) {
 
 export function ServiceDetail({ id }: { id: string }) {
   const router = useRouter();
+  const token = useSessionToken();
+  const { role, userId } = useCurrentUser();
   const [service, setService] = useState<Service | null>(null);
   const [reviews, setReviews] = useState<ServiceReview[]>([]);
   const [seller, setSeller] = useState<PublicProfile | null>(null);
@@ -170,6 +174,13 @@ export function ServiceDetail({ id }: { id: string }) {
     reviews.length > 0
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       : (seller?.rating ?? null);
+  const isOwn = userId !== null && service.freelancerId === userId;
+  const isFreelancer = token !== null && role === "FREELANCER";
+  const isAdmin = token !== null && role === "ADMIN";
+  // Optimistic while the role resolves: assume the visitor can order so the
+  // primary CTA never flickers for clients. Freelancers/admins get the
+  // explainer as soon as their role is known (dialog guards too).
+  const canOrder = token === null || role === null || (role === "CLIENT" && !isOwn);
 
   return (
     <div>
@@ -326,9 +337,54 @@ export function ServiceDetail({ id }: { id: string }) {
                 <span className="block text-[13px] text-text-muted">View profile →</span>
               </span>
             </Link>
-            <Button size="lg" className="mt-4 w-full" onClick={() => setBooking(true)}>
-              Continue · {formatINR(service.price)}
-            </Button>
+            {canOrder ? (
+              <Button size="lg" className="mt-4 w-full" onClick={() => setBooking(true)}>
+                Continue · {formatINR(service.price)}
+              </Button>
+            ) : isOwn ? (
+              <div className="mt-4 flex flex-col gap-2">
+                <p className="rounded-[14px] bg-surface-soft px-4 py-3 text-[13px] leading-6 text-text-muted">
+                  This is your service — clients see this exact page before ordering.
+                </p>
+                <Link
+                  href="/services/mine"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+                >
+                  Manage this service
+                </Link>
+              </div>
+            ) : isFreelancer ? (
+              <div className="mt-4 flex flex-col gap-2">
+                <p className="rounded-[14px] bg-warning-soft px-4 py-3 text-[13px] leading-6 text-warning">
+                  You’re logged in as a freelancer. Want to buy services? Log in
+                  or join with a separate client account.
+                </p>
+                <Link
+                  href={`/auth/login?next=${encodeURIComponent(`/services/${service.id}`)}`}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+                >
+                  Log in as a client
+                </Link>
+                <Link
+                  href="/auth/register"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] border border-border px-5 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
+                >
+                  Join as a client
+                </Link>
+              </div>
+            ) : (
+              <div className="mt-4 flex flex-col gap-2">
+                <p className="rounded-[14px] bg-surface-soft px-4 py-3 text-[13px] leading-6 text-text-muted">
+                  Admin accounts can’t place orders.
+                </p>
+                <Link
+                  href="/admin/services"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] border border-border px-5 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
+                >
+                  Review in moderation queue
+                </Link>
+              </div>
+            )}
             <p className="mt-3 text-[13px] leading-6 text-text-muted">
               Test mode — no real money moves.
             </p>
@@ -336,11 +392,30 @@ export function ServiceDetail({ id }: { id: string }) {
         </aside>
       </div>
 
-      <div className="sticky bottom-0 -mx-4 mt-6 border-t border-border bg-surface/95 p-4 backdrop-blur lg:hidden">
-        <Button size="lg" className="w-full" onClick={() => setBooking(true)}>
-          Continue · {formatINR(service.price)}
-        </Button>
-      </div>
+      {canOrder ? (
+        <div className="sticky bottom-0 -mx-4 mt-6 border-t border-border bg-surface/95 p-4 backdrop-blur lg:hidden">
+          <Button size="lg" className="w-full" onClick={() => setBooking(true)}>
+            Continue · {formatINR(service.price)}
+          </Button>
+        </div>
+      ) : isOwn ? (
+        <div className="sticky bottom-0 -mx-4 mt-6 border-t border-border bg-surface/95 p-4 backdrop-blur lg:hidden">
+          <Link
+            href="/services/mine"
+            className="inline-flex min-h-[48px] w-full items-center justify-center rounded-[12px] bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+          >
+            Manage this service
+          </Link>
+        </div>
+      ) : (
+        !isAdmin && (
+          <div className="sticky bottom-0 -mx-4 mt-6 border-t border-border bg-surface/95 p-4 backdrop-blur lg:hidden">
+            <Button size="lg" variant="secondary" className="w-full" onClick={() => setBooking(true)}>
+              How to order
+            </Button>
+          </div>
+        )
+      )}
 
       {preview && (
         <p className="mt-6 rounded-[14px] border border-border bg-surface px-4 py-3 text-[13px] leading-6 text-text-muted">

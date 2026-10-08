@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/Input";
 import { ApiRequestError } from "@/lib/api-client";
 import { ordersApi } from "@/lib/api/orders";
 import { useSessionToken } from "@/lib/session";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 import { formatINR } from "@/lib/format";
 
 export function BookingDialog({
@@ -24,6 +25,7 @@ export function BookingDialog({
   price: number;
 }) {
   const token = useSessionToken();
+  const { role } = useCurrentUser();
   const [requirements, setRequirements] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +107,48 @@ export function BookingDialog({
             </Link>
             <Button variant="secondary" onClick={close}>
               Cancel
+            </Button>
+          </div>
+        </div>
+      ) : role === "FREELANCER" ? (
+        <div className="flex flex-col gap-4">
+          <p className="rounded-[14px] bg-warning-soft px-4 py-3 text-sm leading-6 text-warning">
+            You’re logged in as a freelancer. Ordering needs a separate client
+            account — one account holds one role.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link
+              href={`/auth/login?next=${encodeURIComponent(`/services/${serviceId}`)}`}
+              className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-[12px] bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+            >
+              Log in as a client
+            </Link>
+            <Link
+              href="/auth/register"
+              className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-[12px] border border-border px-5 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
+            >
+              Join as a client
+            </Link>
+          </div>
+          <Button variant="secondary" onClick={close}>
+            Back
+          </Button>
+        </div>
+      ) : role === "ADMIN" ? (
+        <div className="flex flex-col gap-4">
+          <p className="rounded-[14px] bg-surface-soft px-4 py-3 text-sm leading-6 text-text-muted">
+            Admin accounts can’t place orders. Review this listing from the
+            moderation queue instead.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link
+              href="/admin/services"
+              className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-[12px] bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+            >
+              Go to moderation
+            </Link>
+            <Button variant="secondary" onClick={close}>
+              Back
             </Button>
           </div>
         </div>

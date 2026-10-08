@@ -7,11 +7,13 @@ import { EmptyState, ErrorState, SkeletonGrid } from "@/components/ui/States";
 import { ApiRequestError } from "@/lib/api-client";
 import { ordersApi } from "@/lib/api/orders";
 import { useSessionToken } from "@/lib/session";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 import type { OrderListItem } from "@/lib/types";
 
 export function OrdersList() {
   const router = useRouter();
   const token = useSessionToken();
+  const { role } = useCurrentUser();
   const [orders, setOrders] = useState<OrderListItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState<string | null>(null);
@@ -63,11 +65,20 @@ export function OrdersList() {
   }
 
   if (!orders || orders.length === 0) {
+    const isFreelancer = role === "FREELANCER";
     return (
       <EmptyState
         title="No orders yet"
-        body="When you book a service or receive an order, it will appear here with status and payment state."
-        action={{ label: "Browse services", onClick: () => router.push("/services") }}
+        body={
+          isFreelancer
+            ? "When a client orders your work, it will appear here with status and payment state."
+            : "When you book a service, it will appear here with status and payment state."
+        }
+        action={
+          isFreelancer
+            ? { label: "Publish a service", onClick: () => router.push("/services/new") }
+            : { label: "Browse services", onClick: () => router.push("/services") }
+        }
       />
     );
   }
