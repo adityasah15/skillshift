@@ -24,6 +24,10 @@ export function OrderChat({
   peerId: string;
 }) {
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
+  // Backend pages newest-first; the list renders oldest-first, so every
+  // page is reversed on the way in (older pages prepend, live prepend none).
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [draft, setDraft] = useState("");
   const [attempt, setAttempt] = useState(0);
   // Render-phase reset keeps "connecting" honest across manual retries
@@ -50,7 +54,9 @@ export function OrderChat({
     chatApi
       .history(orderId)
       .then((r) => {
-        if (!cancelled) setMessages(r.data.messages);
+        if (cancelled) return;
+        setMessages([...r.data.messages].reverse());
+        setNextCursor(r.data.nextCursor);
       })
       .catch(() => {
         if (!cancelled) setMessages(null);
@@ -59,6 +65,25 @@ export function OrderChat({
       cancelled = true;
     };
   }, [orderId]);
+
+  async function loadOlder() {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const r = await chatApi.history(orderId, nextCursor);
+      const older = [...r.data.messages].reverse();
+      setMessages((cur) => {
+        if (cur === null) return older;
+        const seen = new Set(cur.map((m) => m.id));
+        return [...older.filter((m) => !seen.has(m.id)), ...cur];
+      });
+      setNextCursor(r.data.nextCursor);
+    } catch {
+      // History stays as-is; the button remains for retry.
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   // attempt doubles as the manual-retry trigger: recreating the socket.
   // No synchronous setState here — all updates happen in socket callbacks.
@@ -203,6 +228,18 @@ export function OrderChat({
         </div>
       ) : (
         <ul className="mt-3 max-h-72 space-y-2.5 overflow-y-auto" aria-live="polite">
+          {nextCursor !== null && (
+            <li className="flex justify-center">
+              <button
+                type="button"
+                onClick={loadOlder}
+                disabled={loadingMore}
+                className="inline-flex min-h-[44px] cursor-pointer items-center px-3 text-[13px] font-semibold text-primary hover:underline disabled:opacity-60"
+              >
+                {loadingMore ? "Loading…" : "Load older messages"}
+              </button>
+            </li>
+          )}
           {messages.map((m) => {
             const mine = m.senderId === myId;
             return (
