@@ -252,7 +252,9 @@ export function WalletDashboard() {
           <StatusBadge status="ACTIVE" />
         </div>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <Button onClick={() => setDialog("deposit")}>Add funds</Button>
+          {role !== "FREELANCER" && role !== "ADMIN" && (
+            <Button onClick={() => setDialog("deposit")}>Add funds</Button>
+          )}
           {role === "FREELANCER" || role === "CLIENT" ? (
             <Button variant="secondary" onClick={() => setDialog("withdraw")}>
               Withdraw
