@@ -74,16 +74,4 @@ export class ServiceController {
   ) {
     return this.serviceService.delete(req.user.sub, serviceId);
   }
-
-  @Roles(Role.ADMIN)
-  @Patch(':id/approve')
-  async approveService(@Param('id') serviceId: string) {
-    return this.serviceService.approve(serviceId);
-  }
-
-  @Roles(Role.ADMIN)
-  @Patch(':id/reject')
-  async rejectService(@Param('id') serviceId: string) {
-    return this.serviceService.reject(serviceId);
-  }
 }

@@ -144,5 +144,21 @@ describe('AdminService', () => {
       expect(redis.del).not.toHaveBeenCalled();
       expect(redis.delByPattern).not.toHaveBeenCalled();
     });
+
+    it('does not moderate a soft-deleted service', async () => {
+      prisma.service.findUnique.mockResolvedValue({
+        id: 'service-1',
+        status: 'ACTIVE',
+        deletedAt: new Date(),
+      });
+
+      await expect(
+        service.moderateService('service-1', 'REJECTED'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+
+      expect(prisma.service.update).not.toHaveBeenCalled();
+      expect(redis.del).not.toHaveBeenCalled();
+      expect(redis.delByPattern).not.toHaveBeenCalled();
+    });
   });
 });

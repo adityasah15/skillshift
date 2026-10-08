@@ -220,7 +220,7 @@ export class AdminService {
       },
     });
 
-    if (!service) {
+    if (!service || service.deletedAt) {
       throw new NotFoundException('Service not found');
     }
 

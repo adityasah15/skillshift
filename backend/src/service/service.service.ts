@@ -157,46 +157,4 @@ export class ServiceService {
     await this.redisService.delByPattern('search:services:*');
     return deletedService;
   }
-
-  async approve(serviceId: string) {
-    const service = await this.prismaService.service.findFirst({
-      where: {
-        id: serviceId,
-        deletedAt: null,
-      },
-    });
-    if (!service) {
-      throw new NotFoundException('Service not found.');
-    }
-    const approvedService = await this.prismaService.service.update({
-      where: { id: service.id },
-      data: { status: ServiceStatus.ACTIVE },
-    });
-    // Invalidate the cache for this service
-    await this.redisService.del(`service:v2:${serviceId}`);
-    await this.redisService.delByPattern('services:*'); // Invalidate the cache for all services
-    await this.redisService.delByPattern('search:services:*');
-    return approvedService;
-  }
-
-  async reject(serviceId: string) {
-    const service = await this.prismaService.service.findFirst({
-      where: {
-        id: serviceId,
-        deletedAt: null,
-      },
-    });
-    if (!service) {
-      throw new NotFoundException('Service not found.');
-    }
-    const rejectedService = await this.prismaService.service.update({
-      where: { id: service.id },
-      data: { status: ServiceStatus.REJECTED },
-    });
-    // Invalidate the cache for this service
-    await this.redisService.del(`service:v2:${serviceId}`);
-    await this.redisService.delByPattern('services:*'); // Invalidate the cache for all services
-    await this.redisService.delByPattern('search:services:*');
-    return rejectedService;
-  }
 }

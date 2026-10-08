@@ -94,6 +94,8 @@ export const adminApi = {
     });
   },
   /**
+   * Sole moderation path (canonical — the old
+   * `PATCH /services/:id/approve|reject` pair was removed).
    * Whitelist is exact: only `{ status }`.
    * Quirk: backend accepts no moderation note — UI explains the decision
    * inline via consequence text instead of a persisted note field.
