@@ -52,7 +52,14 @@ export function ProfilePage() {
         setDisplayName(data.profile?.displayName ?? "");
         setBio(data.profile?.bio ?? "");
         setSkillsText((data.profile?.skills ?? []).join(", "));
-        setPortfolioText((data.profile?.portfolioUrls ?? []).join("\n"));
+        // The links editor manages http(s) links only — uploaded file keys
+        // (e.g. `portfolios/<id>/<file>`) render in the uploads list below and
+        // are re-sent unchanged on save.
+        setPortfolioText(
+          (data.profile?.portfolioUrls ?? [])
+            .filter((u) => /^https?:\/\//i.test(u))
+            .join("\n"),
+        );
       } catch (err) {
         if (cancelled) return;
         if (err instanceof ApiRequestError) setFailed(err.message);
