@@ -8,6 +8,9 @@ import { ResendVerificationForm } from "@/components/auth/ResendVerificationForm
 import { ApiRequestError } from "@/lib/api-client";
 import { authApi } from "@/lib/api/auth";
 
+/** One verification call per link per page load (dev StrictMode double-fires effects). */
+const attemptedLinks = new Set<string>();
+
 export function VerifyEmail() {
   const params = useSearchParams();
   const token = params.get("token") ?? "";
@@ -16,20 +19,26 @@ export function VerifyEmail() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    let cancelled = false;
     async function run() {
       if (!token || !email) {
         setState("error");
         setMessage("This verification link is incomplete. Request a new one or register again.");
         return;
       }
+      const linkKey = `${email}:${token}`;
+      if (attemptedLinks.has(linkKey)) return;
+      attemptedLinks.add(linkKey);
       try {
         const { data } = await authApi.verifyEmail(token, email);
-        if (cancelled) return;
         setState("done");
         setMessage(data.message);
       } catch (err) {
-        if (cancelled) return;
+        // Re-opening an already-verified link is a success, not an error.
+        if (err instanceof ApiRequestError && /already verified/i.test(err.message)) {
+          setState("done");
+          setMessage(err.message);
+          return;
+        }
         setState("error");
         setMessage(
           err instanceof ApiRequestError
@@ -39,9 +48,6 @@ export function VerifyEmail() {
       }
     }
     run();
-    return () => {
-      cancelled = true;
-    };
   }, [token, email]);
 
   return (
