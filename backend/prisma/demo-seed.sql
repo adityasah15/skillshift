@@ -1,5 +1,6 @@
--- SkillShift local demo data. Safe to rerun: all rows use deterministic IDs and upserts.
+-- SkillShift demo data. Safe to rerun: all rows use deterministic IDs and upserts.
 -- Demo password for every account: Demo1234!
+-- Images are hotlinked Unsplash demos (Unsplash License); real uploads live in S3.
 
 ALTER TABLE "User" ALTER COLUMN "updatedAt" SET DEFAULT now();
 ALTER TABLE "Profile" ALTER COLUMN "updatedAt" SET DEFAULT now();
@@ -17,75 +18,143 @@ INSERT INTO "User" (id, email, "passwordHash", role, "isEmailVerified", "updated
   ('00000000-0000-4000-8000-000000000099', 'admin@skillshift.demo', '$2b$10$O5YiAncLBt9waOxaUsX9fertdAOsiZGqD36fukQSJpD9KdxEyiSYe', 'ADMIN', true, now())
 ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, role = EXCLUDED.role, "isEmailVerified" = true;
 
-INSERT INTO "Profile" (id, "userId", "displayName", bio, skills, "portfolioUrls", rating, "totalReviews") VALUES
-  ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'Aarav Client', 'Product builder looking for thoughtful collaborators.', ARRAY['product','startups'], ARRAY[]::text[], 0, 0),
-  ('10000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000002', 'Diya Client', 'Independent founder with a growing studio.', ARRAY['branding','content'], ARRAY[]::text[], 0, 0),
-  ('10000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000011', 'Maya Rao', 'Brand designer turning complex ideas into clear visual systems.', ARRAY['branding','figma','illustration'], ARRAY['portfolios/00000000-0000-4000-8000-000000000011/maya-branding']::text[], 4.8, 12),
-  ('10000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000012', 'Noah Shah', 'Full-stack developer focused on fast, dependable product launches.', ARRAY['react','nextjs','typescript'], ARRAY['portfolios/00000000-0000-4000-8000-000000000012/noah-products']::text[], 4.9, 18),
-  ('10000000-0000-4000-8000-000000000013', '00000000-0000-4000-8000-000000000013', 'Zara Mehta', 'Copywriter and content strategist for ambitious teams.', ARRAY['copywriting','seo','content'], ARRAY['portfolios/00000000-0000-4000-8000-000000000013/zara-copy']::text[], 4.7, 9),
-  ('10000000-0000-4000-8000-000000000014', '00000000-0000-4000-8000-000000000014', 'Leo Fernandes', 'Motion designer making product stories feel alive.', ARRAY['motion','video','after-effects'], ARRAY['portfolios/00000000-0000-4000-8000-000000000014/leo-motion']::text[], 4.6, 7),
-  ('10000000-0000-4000-8000-000000000099', '00000000-0000-4000-8000-000000000099', 'SkillShift Admin', 'Marketplace operations.', ARRAY['operations'], ARRAY[]::text[], 0, 0)
-ON CONFLICT ("userId") DO UPDATE SET "displayName" = EXCLUDED."displayName", bio = EXCLUDED.bio, skills = EXCLUDED.skills, rating = EXCLUDED.rating, "totalReviews" = EXCLUDED."totalReviews";
+INSERT INTO "Profile" (id, "userId", "displayName", bio, "avatarUrl", skills, "portfolioUrls", rating, "totalReviews") VALUES
+  ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'Aarav Client', 'Product builder looking for thoughtful collaborators.', 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&crop=faces&w=400&h=400&q=80', ARRAY['product','startups'], ARRAY[]::text[], 0, 0),
+  ('10000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000002', 'Diya Client', 'Independent founder with a growing studio.', 'https://images.unsplash.com/photo-1627161683077-e34782c24d81?auto=format&fit=crop&crop=faces&w=400&h=400&q=80', ARRAY['branding','content'], ARRAY[]::text[], 0, 0),
+  ('10000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000011', 'Maya Rao', 'Brand designer turning complex ideas into clear visual systems.', 'https://images.unsplash.com/photo-1765005204058-10418f5123c5?auto=format&fit=crop&crop=faces&w=400&h=400&q=80', ARRAY['branding','figma','illustration'], ARRAY['portfolios/00000000-0000-4000-8000-000000000011/maya-branding']::text[], 4.8, 12),
+  ('10000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000012', 'Noah Shah', 'Full-stack developer focused on fast, dependable product launches.', 'https://images.unsplash.com/photo-1724128195247-ab10e4535b53?auto=format&fit=crop&crop=faces&w=400&h=400&q=80', ARRAY['react','nextjs','typescript'], ARRAY['portfolios/00000000-0000-4000-8000-000000000012/noah-products']::text[], 4.9, 18),
+  ('10000000-0000-4000-8000-000000000013', '00000000-0000-4000-8000-000000000013', 'Zara Mehta', 'Copywriter and content strategist for ambitious teams.', 'https://images.unsplash.com/photo-1611432579699-484f7990b127?auto=format&fit=crop&crop=faces&w=400&h=400&q=80', ARRAY['copywriting','seo','content'], ARRAY['portfolios/00000000-0000-4000-8000-000000000013/zara-copy']::text[], 4.7, 9),
+  ('10000000-0000-4000-8000-000000000014', '00000000-0000-4000-8000-000000000014', 'Leo Fernandes', 'Motion designer making product stories feel alive.', 'https://images.unsplash.com/photo-1656399910161-8efafd973a29?auto=format&fit=crop&crop=faces&w=400&h=400&q=80', ARRAY['motion','video','after-effects'], ARRAY['portfolios/00000000-0000-4000-8000-000000000014/leo-motion']::text[], 4.6, 7),
+  ('10000000-0000-4000-8000-000000000099', '00000000-0000-4000-8000-000000000099', 'SkillShift Admin', 'Marketplace operations.', NULL, ARRAY['operations'], ARRAY[]::text[], 0, 0)
+ON CONFLICT ("userId") DO UPDATE SET "displayName" = EXCLUDED."displayName", bio = EXCLUDED.bio, "avatarUrl" = EXCLUDED."avatarUrl", skills = EXCLUDED.skills, rating = EXCLUDED.rating, "totalReviews" = EXCLUDED."totalReviews";
 
 INSERT INTO "Wallet" (id, "userId", balance) VALUES
-  ('20000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 18400),
-  ('20000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000002', 9200),
-  ('20000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000011', 28600),
-  ('20000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000012', 41200),
-  ('20000000-0000-4000-8000-000000000013', '00000000-0000-4000-8000-000000000013', 19700),
-  ('20000000-0000-4000-8000-000000000014', '00000000-0000-4000-8000-000000000014', 15300),
+  ('20000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 12500300),
+  ('20000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000002', 10800400),
+  ('20000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000011', 9450000),
+  ('20000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000012', 27500000),
+  ('20000000-0000-4000-8000-000000000013', '00000000-0000-4000-8000-000000000013', 12500000),
+  ('20000000-0000-4000-8000-000000000014', '00000000-0000-4000-8000-000000000014', 9800000),
   ('20000000-0000-4000-8000-000000000099', '00000000-0000-4000-8000-000000000099', 0)
 ON CONFLICT ("userId") DO UPDATE SET balance = EXCLUDED.balance;
 
 INSERT INTO "Service" (id, "freelancerId", title, description, price, "deliveryDays", skills, "imageUrls", status) VALUES
-  ('30000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000011', 'Brand identity starter kit', 'A focused logo, colour palette, typography pair, and handoff guide for a new product.', 8500, 7, ARRAY['branding','figma','logo'], ARRAY[]::text[], 'ACTIVE'),
-  ('30000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000012', 'Next.js product landing page', 'A responsive, accessible landing page built with Next.js and a clean content structure.', 18000, 10, ARRAY['react','nextjs','typescript'], ARRAY[]::text[], 'ACTIVE'),
-  ('30000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000013', 'Website copy that converts', 'Homepage and product messaging rewritten around one clear customer promise.', 6500, 5, ARRAY['copywriting','content','seo'], ARRAY[]::text[], 'ACTIVE'),
-  ('30000000-0000-4000-8000-000000000004', '00000000-0000-4000-8000-000000000014', 'Product launch motion pack', 'Three short motion assets for a launch page, social post, or product demo.', 12000, 8, ARRAY['motion','video','after-effects'], ARRAY[]::text[], 'ACTIVE'),
-  ('30000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000011', 'Figma mobile app screens', 'A polished six-screen mobile flow with components and developer-ready specs.', 14000, 9, ARRAY['figma','ui','mobile'], ARRAY[]::text[], 'ACTIVE'),
-  ('30000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000012', 'API integration sprint', 'Connect a frontend to a REST API with loading, error, and empty states.', 22000, 12, ARRAY['react','node','api'], ARRAY[]::text[], 'ACTIVE'),
-  ('30000000-0000-4000-8000-000000000007', '00000000-0000-4000-8000-000000000013', 'SEO content plan', 'A practical 30-day content plan with search intent, briefs, and publishing priorities.', 5000, 4, ARRAY['seo','content','research'], ARRAY[]::text[], 'ACTIVE'),
-  ('30000000-0000-4000-8000-000000000008', '00000000-0000-4000-8000-000000000014', 'Explainer video edit', 'A concise product explainer edit with captions, pacing, and delivery-ready exports.', 16000, 10, ARRAY['video','editing','motion'], ARRAY[]::text[], 'ACTIVE'),
-  ('30000000-0000-4000-8000-000000000009', '00000000-0000-4000-8000-000000000011', 'Design system audit', 'A practical audit of tokens, components, and interaction consistency.', 9500, 6, ARRAY['design-system','figma','ux'], ARRAY[]::text[], 'PENDING_REVIEW'),
-  ('30000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000012', 'React performance review', 'A focused review of rendering, data loading, and bundle opportunities.', 11000, 5, ARRAY['react','performance','typescript'], ARRAY[]::text[], 'PAUSED'),
-  ('30000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000013', 'Founder story article', 'A warm, edited founder story for a launch, press page, or investor update.', 7200, 6, ARRAY['writing','editing','storytelling'], ARRAY[]::text[], 'ACTIVE'),
-  ('30000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000014', 'Social launch templates', 'A reusable set of launch graphics and motion-ready social templates.', 8800, 7, ARRAY['design','social','motion'], ARRAY[]::text[], 'REJECTED')
-ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, price = EXCLUDED.price, "deliveryDays" = EXCLUDED."deliveryDays", skills = EXCLUDED.skills, status = EXCLUDED.status, "deletedAt" = NULL;
+  ('30000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000011', 'Brand identity starter kit', 'A focused logo, colour palette, typography pair, and handoff guide for a new product.', 2999900, 7, ARRAY['branding','figma','logo'], ARRAY[
+    'https://images.unsplash.com/photo-1627384113710-424c9181ebbb?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1718670014130-ee9ee053598d?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1777652918753-d66882b15391?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'ACTIVE'),
+  ('30000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000012', 'Next.js product landing page', 'A responsive, accessible landing page built with Next.js and a clean content structure.', 4499900, 10, ARRAY['react','nextjs','typescript'], ARRAY[
+    'https://images.unsplash.com/photo-1775441031103-1d559a6f91cd?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1519222970733-f546218fa6d7?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1707836916010-3c4ad261936c?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'ACTIVE'),
+  ('30000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000013', 'Website copy that converts', 'Homepage and product messaging rewritten around one clear customer promise.', 1499900, 5, ARRAY['copywriting','content','seo'], ARRAY[
+    'https://images.unsplash.com/photo-1504691342899-4d92b50853e1?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1550592704-6c76defa9985?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'ACTIVE'),
+  ('30000000-0000-4000-8000-000000000004', '00000000-0000-4000-8000-000000000014', 'Product launch motion pack', 'Three short motion assets for a launch page, social post, or product demo.', 3299900, 8, ARRAY['motion','video','after-effects'], ARRAY[
+    'https://images.unsplash.com/photo-1617791160505-6f00504e3519?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1650943574955-ac02c65cfc71?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1622737133809-d95047b9e673?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'ACTIVE'),
+  ('30000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000011', 'Figma mobile app screens', 'A polished six-screen mobile flow with components and developer-ready specs.', 3999900, 9, ARRAY['figma','ui','mobile'], ARRAY[
+    'https://images.unsplash.com/photo-1767449280971-46e438b1ce4a?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1762341119237-98df67c9c3c9?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1618788372246-79faff0c3742?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'ACTIVE'),
+  ('30000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000012', 'API integration sprint', 'Connect a frontend to a REST API with loading, error, and empty states.', 5999900, 12, ARRAY['react','node','api'], ARRAY[
+    'https://images.unsplash.com/photo-1542831371-29b0f74f9713?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1605379399642-870262d3d051?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'ACTIVE'),
+  ('30000000-0000-4000-8000-000000000007', '00000000-0000-4000-8000-000000000013', 'SEO content plan', 'A practical 30-day content plan with search intent, briefs, and publishing priorities.', 1199900, 4, ARRAY['seo','content','research'], ARRAY[
+    'https://images.unsplash.com/photo-1763038311036-6d18805537e5?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1783115259399-3a5a3e0e4592?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1666875753105-c63a6f3bdc86?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'ACTIVE'),
+  ('30000000-0000-4000-8000-000000000008', '00000000-0000-4000-8000-000000000014', 'Explainer video edit', 'A concise product explainer edit with captions, pacing, and delivery-ready exports.', 2499900, 10, ARRAY['video','editing','motion'], ARRAY[
+    'https://images.unsplash.com/photo-1779896412277-c4fd15c7a89c?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1609619385002-f40f1df9b7eb?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'ACTIVE'),
+  ('30000000-0000-4000-8000-000000000009', '00000000-0000-4000-8000-000000000011', 'Design system audit', 'A practical audit of tokens, components, and interaction consistency.', 1299900, 6, ARRAY['design-system','figma','ux'], ARRAY[
+    'https://images.unsplash.com/photo-1680016661694-1cd3faf31c3a?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1573867639040-6dd25fa5f597?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1561406059-0229136fe606?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'PENDING_REVIEW'),
+  ('30000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-000000000012', 'React performance review', 'A focused review of rendering, data loading, and bundle opportunities.', 2199900, 5, ARRAY['react','performance','typescript'], ARRAY[
+    'https://images.unsplash.com/photo-1587620962725-abab7fe55159?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1571171637578-41bc2dd41cd2?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1765445665883-085301570c87?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'PAUSED'),
+  ('30000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000013', 'Founder story article', 'A warm, edited founder story for a launch, press page, or investor update.', 999900, 6, ARRAY['writing','editing','storytelling'], ARRAY[
+    'https://images.unsplash.com/photo-1769167693699-ff3e3b91abb5?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1555601568-c9e6f328489b?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1530819568329-97653eafbbfa?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'ACTIVE'),
+  ('30000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000014', 'Social launch templates', 'A reusable set of launch graphics and motion-ready social templates.', 1599900, 7, ARRAY['design','social','motion'], ARRAY[
+    'https://images.unsplash.com/photo-1787834564757-ecbf58d80138?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1724862936518-ae7fcfc052c1?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'REJECTED'),
+  ('30000000-0000-4000-8000-000000000013', '00000000-0000-4000-8000-000000000012', 'Product analytics dashboard build', 'A production-ready dashboard that turns raw product data into clear, decision-ready views.', 4999900, 14, ARRAY['react','dashboards','data'], ARRAY[
+    'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'ACTIVE'),
+  ('30000000-0000-4000-8000-000000000014', '00000000-0000-4000-8000-000000000011', 'Pitch deck design and storytelling', 'A persuasive investor or sales deck: narrative, slide design, and speaker notes.', 1799900, 8, ARRAY['presentation','figma','storytelling'], ARRAY[
+    'https://images.unsplash.com/photo-1758691736545-5c33b6255dca?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1758691736407-02406d18df6c?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'ACTIVE'),
+  ('30000000-0000-4000-8000-000000000015', '00000000-0000-4000-8000-000000000013', 'Landing page microcopy that guides', 'Buttons, empty states, and onboarding text rewritten so users always know the next step.', 799900, 5, ARRAY['ux-writing','microcopy','copywriting'], ARRAY[
+    'https://images.unsplash.com/photo-1775440285627-ce48346bc58c?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1600&h=1000&q=80',
+    'https://images.unsplash.com/photo-1558478551-1a378f63328e?auto=format&fit=crop&w=1600&h=1000&q=80'
+  ]::text[], 'ACTIVE')
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, price = EXCLUDED.price, "deliveryDays" = EXCLUDED."deliveryDays", skills = EXCLUDED.skills, "imageUrls" = EXCLUDED."imageUrls", status = EXCLUDED.status, "deletedAt" = NULL;
 
 INSERT INTO "Order" (id, "clientId", "freelancerId", "serviceId", status, price, "deliveryDays", requirements, "deliveryNote", "autoCompleteAt") VALUES
-  ('40000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000011', '30000000-0000-4000-8000-000000000001', 'IN_PROGRESS', 8500, 7, 'Need a calm, editorial identity for a climate analytics product.', NULL, NULL),
-  ('40000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000012', '30000000-0000-4000-8000-000000000002', 'DELIVERED', 18000, 10, 'Please use the attached product notes and keep the page fast on mobile.', 'The responsive landing page and handoff notes are ready for review.', now() + interval '5 days'),
-  ('40000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000011', '30000000-0000-4000-8000-000000000005', 'COMPLETED', 14000, 9, 'Design a simple onboarding flow for a habit app.', 'Final Figma file and component notes delivered.', NULL),
-  ('40000000-0000-4000-8000-000000000004', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000013', '30000000-0000-4000-8000-000000000003', 'DISPUTED', 6500, 5, 'Rewrite the homepage with a sharper enterprise message.', 'First draft delivered, but several requested sections are missing.', NULL),
-  ('40000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000014', '30000000-0000-4000-8000-000000000004', 'CANCELLED', 12000, 8, 'Create a product launch animation for the new release.', NULL, NULL),
-  ('40000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000012', '30000000-0000-4000-8000-000000000006', 'COMPLETED', 22000, 12, 'Connect the checkout flow to the existing API.', 'Integration shipped with error and loading states.', NULL),
-  ('40000000-0000-4000-8000-000000000007', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000014', '30000000-0000-4000-8000-000000000008', 'IN_PROGRESS', 16000, 10, 'Edit a concise explainer for our product launch.', NULL, NULL),
-  ('40000000-0000-4000-8000-000000000008', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000013', '30000000-0000-4000-8000-000000000007', 'DELIVERED', 5000, 4, 'Build a four-week SEO plan for a new marketplace.', 'The plan, keywords, and first briefs are ready.', now() + interval '6 days')
-ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, requirements = EXCLUDED.requirements, "deliveryNote" = EXCLUDED."deliveryNote", "autoCompleteAt" = EXCLUDED."autoCompleteAt";
+  ('40000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000011', '30000000-0000-4000-8000-000000000001', 'IN_PROGRESS', 2999900, 7, 'Need a calm, editorial identity for a climate analytics product.', NULL, NULL),
+  ('40000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000012', '30000000-0000-4000-8000-000000000002', 'DELIVERED', 4499900, 10, 'Please use the attached product notes and keep the page fast on mobile.', 'The responsive landing page and handoff notes are ready for review.', now() + interval '5 days'),
+  ('40000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000011', '30000000-0000-4000-8000-000000000005', 'COMPLETED', 3999900, 9, 'Design a simple onboarding flow for a habit app.', 'Final Figma file and component notes delivered.', NULL),
+  ('40000000-0000-4000-8000-000000000004', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000013', '30000000-0000-4000-8000-000000000003', 'DISPUTED', 1499900, 5, 'Rewrite the homepage with a sharper enterprise message.', 'First draft delivered, but several requested sections are missing.', NULL),
+  ('40000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000014', '30000000-0000-4000-8000-000000000004', 'CANCELLED', 3299900, 8, 'Create a product launch animation for the new release.', NULL, NULL),
+  ('40000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000012', '30000000-0000-4000-8000-000000000006', 'COMPLETED', 5999900, 12, 'Connect the checkout flow to the existing API.', 'Integration shipped with error and loading states.', NULL),
+  ('40000000-0000-4000-8000-000000000007', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000014', '30000000-0000-4000-8000-000000000008', 'IN_PROGRESS', 2499900, 10, 'Edit a concise explainer for our product launch.', NULL, NULL),
+  ('40000000-0000-4000-8000-000000000008', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000013', '30000000-0000-4000-8000-000000000007', 'DELIVERED', 1199900, 4, 'Build a four-week SEO plan for a new marketplace.', 'The plan, keywords, and first briefs are ready.', now() + interval '6 days')
+ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, price = EXCLUDED.price, "deliveryDays" = EXCLUDED."deliveryDays", requirements = EXCLUDED.requirements, "deliveryNote" = EXCLUDED."deliveryNote", "autoCompleteAt" = EXCLUDED."autoCompleteAt";
 
 INSERT INTO "Escrow" (id, "orderId", amount, status, "releasedAt", "refundedAt") VALUES
-  ('50000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 8500, 'HOLDING', NULL, NULL),
-  ('50000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', 18000, 'HOLDING', NULL, NULL),
-  ('50000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003', 14000, 'RELEASED', now() - interval '8 days', NULL),
-  ('50000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000004', 6500, 'HOLDING', NULL, NULL),
-  ('50000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000005', 12000, 'REFUNDED', NULL, now() - interval '12 days'),
-  ('50000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000006', 22000, 'RELEASED', now() - interval '20 days', NULL),
-  ('50000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000007', 16000, 'HOLDING', NULL, NULL),
-  ('50000000-0000-4000-8000-000000000008', '40000000-0000-4000-8000-000000000008', 5000, 'HOLDING', NULL, NULL)
+  ('50000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 2999900, 'HOLDING', NULL, NULL),
+  ('50000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', 4499900, 'HOLDING', NULL, NULL),
+  ('50000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003', 3999900, 'RELEASED', now() - interval '8 days', NULL),
+  ('50000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000004', 1499900, 'HOLDING', NULL, NULL),
+  ('50000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000005', 3299900, 'REFUNDED', NULL, now() - interval '12 days'),
+  ('50000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000006', 5999900, 'RELEASED', now() - interval '20 days', NULL),
+  ('50000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000007', 2499900, 'HOLDING', NULL, NULL),
+  ('50000000-0000-4000-8000-000000000008', '40000000-0000-4000-8000-000000000008', 1199900, 'HOLDING', NULL, NULL)
 ON CONFLICT ("orderId") DO UPDATE SET amount = EXCLUDED.amount, status = EXCLUDED.status, "releasedAt" = EXCLUDED."releasedAt", "refundedAt" = EXCLUDED."refundedAt";
 
 INSERT INTO "Transaction" (id, "walletId", type, amount, description, "orderId") VALUES
-  ('60000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'DEPOSIT', 50000, 'Initial demo wallet funding', NULL),
-  ('60000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 'ESCROW_HOLD', 8500, 'Escrow hold for order 40000000', '40000000-0000-4000-8000-000000000001'),
-  ('60000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', 'ESCROW_HOLD', 18000, 'Escrow hold for order 40000000', '40000000-0000-4000-8000-000000000002'),
-  ('60000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000001', 'ESCROW_REFUND', 12000, 'Refund for cancelled order', '40000000-0000-4000-8000-000000000005'),
-  ('60000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000002', 'DEPOSIT', 40000, 'Initial demo wallet funding', NULL),
-  ('60000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000011', 'ESCROW_RELEASE', 14000, 'Payment received for completed order', '40000000-0000-4000-8000-000000000003'),
-  ('60000000-0000-4000-8000-000000000007', '20000000-0000-4000-8000-000000000012', 'ESCROW_RELEASE', 22000, 'Payment received for completed order', '40000000-0000-4000-8000-000000000006'),
-  ('60000000-0000-4000-8000-000000000008', '20000000-0000-4000-8000-000000000012', 'WITHDRAWAL', 5000, 'Demo earnings withdrawal', NULL),
-  ('60000000-0000-4000-8000-000000000009', '20000000-0000-4000-8000-000000000013', 'DEPOSIT', 25000, 'Demo earnings balance', NULL),
-  ('60000000-0000-4000-8000-000000000010', '20000000-0000-4000-8000-000000000014', 'DEPOSIT', 20000, 'Demo earnings balance', NULL)
-ON CONFLICT (id) DO NOTHING;
+  ('60000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'DEPOSIT', 26000000, 'Initial demo wallet funding', NULL),
+  ('60000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 'ESCROW_HOLD', 2999900, 'Escrow hold for brand identity order', '40000000-0000-4000-8000-000000000001'),
+  ('60000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', 'ESCROW_HOLD', 4499900, 'Escrow hold for landing page order', '40000000-0000-4000-8000-000000000002'),
+  ('60000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000001', 'ESCROW_REFUND', 3299900, 'Refund for cancelled motion order', '40000000-0000-4000-8000-000000000005'),
+  ('60000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000002', 'DEPOSIT', 20000000, 'Initial demo wallet funding', NULL),
+  ('60000000-0000-4000-8000-000000000006', '20000000-0000-4000-8000-000000000011', 'ESCROW_RELEASE', 3999900, 'Payment received for completed order', '40000000-0000-4000-8000-000000000003'),
+  ('60000000-0000-4000-8000-000000000007', '20000000-0000-4000-8000-000000000012', 'ESCROW_RELEASE', 5999900, 'Payment received for completed order', '40000000-0000-4000-8000-000000000006'),
+  ('60000000-0000-4000-8000-000000000008', '20000000-0000-4000-8000-000000000012', 'WITHDRAWAL', 2500000, 'Demo earnings withdrawal', NULL),
+  ('60000000-0000-4000-8000-000000000009', '20000000-0000-4000-8000-000000000013', 'DEPOSIT', 10000000, 'Demo earnings balance', NULL),
+  ('60000000-0000-4000-8000-000000000010', '20000000-0000-4000-8000-000000000014', 'DEPOSIT', 8000000, 'Demo earnings balance', NULL),
+  ('60000000-0000-4000-8000-000000000011', '20000000-0000-4000-8000-000000000002', 'ESCROW_HOLD', 1499900, 'Escrow hold for copy order', '40000000-0000-4000-8000-000000000004'),
+  ('60000000-0000-4000-8000-000000000012', '20000000-0000-4000-8000-000000000002', 'ESCROW_HOLD', 2499900, 'Escrow hold for explainer order', '40000000-0000-4000-8000-000000000007'),
+  ('60000000-0000-4000-8000-000000000013', '20000000-0000-4000-8000-000000000002', 'ESCROW_HOLD', 1199900, 'Escrow hold for SEO plan order', '40000000-0000-4000-8000-000000000008'),
+  ('60000000-0000-4000-8000-000000000014', '20000000-0000-4000-8000-000000000001', 'ESCROW_HOLD', 5999900, 'Escrow hold for API integration order', '40000000-0000-4000-8000-000000000006'),
+  ('60000000-0000-4000-8000-000000000015', '20000000-0000-4000-8000-000000000001', 'ESCROW_HOLD', 3299900, 'Escrow hold for motion order', '40000000-0000-4000-8000-000000000005')
+ON CONFLICT (id) DO UPDATE SET "walletId" = EXCLUDED."walletId", type = EXCLUDED.type, amount = EXCLUDED.amount, description = EXCLUDED.description, "orderId" = EXCLUDED."orderId";
 
 INSERT INTO "Review" (id, "orderId", "serviceId", "reviewerId", "revieweeId", rating, comment) VALUES
   ('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000011', 5, 'Thoughtful work, clear handoff, and excellent component detail.'),
@@ -127,6 +196,7 @@ ON CONFLICT (id) DO NOTHING;
 SELECT 'users' AS table_name, count(*) AS demo_count FROM "User" WHERE email LIKE '%@skillshift.demo'
 UNION ALL SELECT 'services', count(*) FROM "Service" WHERE id LIKE '30000000-%'
 UNION ALL SELECT 'orders', count(*) FROM "Order" WHERE id LIKE '40000000-%'
+UNION ALL SELECT 'wallets', count(*) FROM "Wallet" WHERE id LIKE '20000000-%'
 UNION ALL SELECT 'transactions', count(*) FROM "Transaction" WHERE id LIKE '60000000-%'
 UNION ALL SELECT 'notifications', count(*) FROM "Notification" WHERE id LIKE 'a0000000-%';
 
