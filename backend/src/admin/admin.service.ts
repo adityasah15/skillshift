@@ -16,15 +16,20 @@ export class AdminService {
 
   async listUsers() {
     return this.prisma.user.findMany({
-      where: { deletedAt: null },
+      // Disabled (soft-deleted) accounts stay listed so admins can re-enable
+      // them; active accounts sort first.
       select: {
         id: true,
         email: true,
         role: true,
         createdAt: true,
+        deletedAt: true,
         profile: { select: { displayName: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { deletedAt: { sort: 'asc', nulls: 'first' } },
+        { createdAt: 'desc' },
+      ],
       take: 100,
     });
   }

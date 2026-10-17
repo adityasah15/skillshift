@@ -45,21 +45,24 @@ describe('AdminService', () => {
   });
 
   describe('admin lists', () => {
-    it('returns bounded non-deleted users with intentional fields', async () => {
+    it('returns bounded users including disabled ones, active first', async () => {
       prisma.user.findMany.mockResolvedValue([]);
 
       await service.listUsers();
 
       expect(prisma.user.findMany).toHaveBeenCalledWith({
-        where: { deletedAt: null },
         select: {
           id: true,
           email: true,
           role: true,
           createdAt: true,
+          deletedAt: true,
           profile: { select: { displayName: true } },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [
+          { deletedAt: { sort: 'asc', nulls: 'first' } },
+          { createdAt: 'desc' },
+        ],
         take: 100,
       });
     });

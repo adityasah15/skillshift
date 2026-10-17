@@ -24,6 +24,7 @@ export interface AdminUser {
   email: string;
   role: string;
   createdAt: string;
+  deletedAt: string | null;
   profile: { displayName: string } | null;
 }
 

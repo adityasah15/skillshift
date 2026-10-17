@@ -60,8 +60,7 @@ export function AdminUsers() {
     try {
       await adminApi.manageUser(target.user.id, target.action);
       setTarget(null);
-      // Note: backend listUsers filters deletedAt=null, so a disabled user
-      // disappears on refetch. That is the server truth — not a missing row.
+      // Refetch server truth; disabled accounts stay listed for re-enabling.
       const { data } = await adminApi.listUsers();
       setRows(data);
     } catch (err) {
@@ -96,7 +95,7 @@ export function AdminUsers() {
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-text-muted">
-          {visible.length} account{visible.length === 1 ? "" : "s"} · disabled accounts leave this list.
+          {visible.length} account{visible.length === 1 ? "" : "s"} · disabled accounts stay listed so you can re-enable them.
         </p>
         <label className="block sm:w-72">
           <span className="sr-only">Search users</span>
@@ -129,7 +128,7 @@ export function AdminUsers() {
               </thead>
               <tbody className="divide-y divide-border">
                 {visible.map((u) => (
-                  <tr key={u.id}>
+                  <tr key={u.id} className={u.deletedAt ? "opacity-60" : undefined}>
                     <td className="px-5 py-4">
                       <p className="font-semibold text-text">{u.profile?.displayName ?? u.email}</p>
                       <p className="text-[13px] text-text-muted">{u.email}</p>
@@ -141,6 +140,13 @@ export function AdminUsers() {
                     <td className="px-5 py-4 text-right">
                       {u.role === "ADMIN" ? (
                         <span className="text-[13px] text-text-subtle">Protected</span>
+                      ) : u.deletedAt ? (
+                        <div className="flex items-center justify-end gap-3">
+                          <span className="text-[13px] font-semibold text-danger">Disabled</span>
+                          <Button variant="secondary" size="sm" onClick={() => setTarget({ user: u, action: "enable" })}>
+                            Enable
+                          </Button>
+                        </div>
                       ) : (
                         <Button variant="secondary" size="sm" onClick={() => setTarget({ user: u, action: "disable" })}>
                           Disable
@@ -155,17 +161,26 @@ export function AdminUsers() {
 
           <ul className="space-y-3 md:hidden">
             {visible.map((u) => (
-              <li key={u.id} className="rounded-[16px] border border-border bg-surface p-4">
+              <li key={u.id} className={`rounded-[16px] border border-border bg-surface p-4 ${u.deletedAt ? "opacity-60" : ""}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-semibold text-text">{u.profile?.displayName ?? u.email}</p>
                     <p className="truncate text-sm text-text-muted">{u.email}</p>
-                    <p className="mt-1 text-[13px] text-text-subtle">{u.role}</p>
+                    <p className="mt-1 text-[13px] text-text-subtle">
+                      {u.role}
+                      {u.deletedAt ? <span className="ml-2 font-semibold text-danger">Disabled</span> : null}
+                    </p>
                   </div>
                   {u.role !== "ADMIN" && (
-                    <Button variant="secondary" size="sm" onClick={() => setTarget({ user: u, action: "disable" })}>
-                      Disable
-                    </Button>
+                    u.deletedAt ? (
+                      <Button variant="secondary" size="sm" onClick={() => setTarget({ user: u, action: "enable" })}>
+                        Enable
+                      </Button>
+                    ) : (
+                      <Button variant="secondary" size="sm" onClick={() => setTarget({ user: u, action: "disable" })}>
+                        Disable
+                      </Button>
+                    )
                   )}
                 </div>
               </li>
@@ -180,7 +195,7 @@ export function AdminUsers() {
         title={target?.action === "disable" ? "Disable account?" : "Enable account?"}
         description={
           target?.action === "disable"
-            ? "The user loses access immediately and leaves this list. Use for spam, fraud, or abuse."
+            ? "The user loses access immediately. Use for spam, fraud, or abuse — you can re-enable them here later."
             : "The account regains access immediately."
         }
       >
@@ -194,8 +209,12 @@ export function AdminUsers() {
               <Button variant="ghost" onClick={() => setTarget(null)} disabled={acting}>
                 Cancel
               </Button>
-              <Button variant="danger" onClick={confirm} loading={acting}>
-                Disable account
+              <Button
+                variant={target.action === "disable" ? "danger" : "primary"}
+                onClick={confirm}
+                loading={acting}
+              >
+                {target.action === "disable" ? "Disable account" : "Enable account"}
               </Button>
             </div>
           </div>
