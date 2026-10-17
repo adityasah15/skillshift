@@ -1,68 +1,129 @@
 <p align="center">
-  <!-- Replace src with your actual logo path once you have one -->
-  <!-- <img src="assets/logo.png" alt="SkillShift Logo" width="160"> -->
+  <img src="docs/assets/logo.svg" width="72" height="72" alt="SkillShift logo">
 </p>
 
 <h1 align="center">SkillShift</h1>
 
 <p align="center">
-  <strong>Production-oriented freelance marketplace backend built with NestJS</strong>
+  <strong>The escrow-protected marketplace for freelance work.</strong><br>
+  Hire skilled freelancers, collaborate in real time, and release payment only when the work is approved.
 </p>
 
 <p align="center">
-  Authentication · Escrow · Orders · Real-time Chat · Search · Atomic Transactions
+  <a href="https://skillshift-live.vercel.app"><img src="https://img.shields.io/badge/Live%20demo-skillshift--live.vercel.app-16a34a?style=flat-square&logo=vercel&logoColor=white" alt="Live demo"></a>
+  &nbsp;
+  <a href="https://skillshift-api.duckdns.org/api/docs"><img src="https://img.shields.io/badge/API%20docs-Swagger%20UI-85EA2D?style=flat-square&logo=swagger&logoColor=black" alt="API documentation"></a>
+  &nbsp;
+  <img src="https://img.shields.io/badge/tests-225%20passing-10b981?style=flat-square" alt="225 tests passing">
+  &nbsp;
+  <img src="https://img.shields.io/badge/license-MIT-38bdf8?style=flat-square" alt="MIT license">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Status-In%20Active%20Development-orange" alt="Status">
+  <img src="https://img.shields.io/badge/Next.js%2016-000000?style=flat-square&logo=next.js&logoColor=white" alt="Next.js 16">
   &nbsp;
-  <img src="https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white" alt="NestJS">
+  <img src="https://img.shields.io/badge/NestJS%2011-E0234E?style=flat-square&logo=nestjs&logoColor=white" alt="NestJS 11">
   &nbsp;
-  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   &nbsp;
-  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL">
   &nbsp;
-  <img src="https://img.shields.io/badge/Prisma-2D3748?logo=prisma&logoColor=white" alt="Prisma">
+  <img src="https://img.shields.io/badge/Prisma%207-2D3748?style=flat-square&logo=prisma&logoColor=white" alt="Prisma 7">
   &nbsp;
-  <img src="https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white" alt="Redis">
+  <img src="https://img.shields.io/badge/Redis-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis">
+  &nbsp;
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
+</p>
+
+<p align="center">
+  <a href="https://skillshift-live.vercel.app">Live demo</a> ·
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#engineering-highlights">Engineering</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#getting-started">Getting started</a> ·
+  <a href="#documentation">Documentation</a>
 </p>
 
 ---
 
-SkillShift models the core workflows of a real freelance platform including authentication & sessions, service listings, orders, escrow-based payments, disputes, real-time chat, notifications, search, and file uploads. The focus is on real production concerns: data integrity, state machines, atomic transactions, caching, background jobs, and observability.
+## What is SkillShift?
 
----
+SkillShift is a two-sided marketplace for project-based work. Clients browse services offered by freelancers, order with the money held safely in escrow, collaborate with the freelancer through an order-scoped chat, and release payment only after approving the delivery. Freelancers publish services, deliver work, and build a reputation through reviews. Admins moderate the marketplace and resolve disputes — with a full audit trail behind every state change.
 
-## Why this project exists
+The whole product lives in this repo and runs live on the internet: a Next.js 16 web app, a NestJS 11 API, PostgreSQL with Prisma, Redis for caching and queues, WebSocket chat, and S3-backed uploads — deployed on Vercel and AWS, with the operational documentation to run it end to end.
 
-Most marketplace tutorials stop at basic CRUD.
+**How an order works**
 
-SkillShift focuses on the harder parts of backend engineering that actually matter in production systems:
+1. **Browse & order** — compare services by price, delivery window, and reviews, then place an order from your wallet.
+2. **Money moves to escrow** — the order value is held by the platform, not the freelancer. Nobody can touch it while the work is in progress.
+3. **Collaborate & deliver** — requirements, files, and updates stay in one order cockpit with real-time chat; the freelancer marks the work as delivered.
+4. **Approve, cancel, or dispute** — approval releases escrow to the freelancer; cancellation refunds it; disputes go to admin resolution. Every transition is recorded.
 
-- **Financial atomicity** — wallet deduction, order creation, and escrow funding happen inside a single Prisma `$transaction`
-- **Strict state machines** for Orders and Escrow (invalid transitions are rejected in the service layer)
-- **Refresh-token rotation + revocation** with hashed tokens stored in the database
-- **Cursor-based pagination**, Redis cache-aside, and BullMQ delayed jobs (e.g. 7-day auto-complete)
-- **Append-only audit logs** that capture before/after state for every critical transition
-- **Presigned S3 uploads** so the API never handles file bytes
-- **Ownership checks + RBAC** enforced consistently across modules
+## Screenshots
 
-The goal is to demonstrate solid backend engineering judgment through a realistic, end-to-end system.
+<p align="center">
+  <img src="docs/screenshots/landing.png" alt="SkillShift — find the right skills for your next project">
+</p>
 
----
+|  |  |
+| :---: | :---: |
+| ![Browse services](docs/screenshots/catalog.png) | ![Service detail with reviews and delivery terms](docs/screenshots/service-detail.png) |
+| ![Order cockpit with escrow status and live chat](docs/screenshots/order-cockpit.png) | ![Wallet with labeled money states](docs/screenshots/wallet.png) |
+
+<p align="center">
+  <img src="docs/screenshots/chat.png" width="640" alt="Order-scoped real-time chat">
+</p>
+
+## Features
+
+**For clients**
+
+- **Discover** — full-text search and tags across the marketplace; compare price, turnaround, and reviews side by side.
+- **Protected orders** — fund orders from an in-app wallet; the money is held in escrow, never sent to the freelancer directly.
+- **One cockpit per order** — requirements, status timeline, delivery notes, files, chat, cancellation, and disputes in a single view.
+- **Clear money states** — every balance labeled Available, Held in escrow, Released, or Refunded, with a full transaction history.
+
+**For freelancers**
+
+- **Publish services** — create and manage listings with photos, pricing, and delivery windows (S3-backed uploads).
+- **Deliver with confidence** — submit work with notes and files; earnings are visible while in escrow and settle on release.
+- **Grow reputation** — client reviews on completed orders, real-time messages, and notifications.
+
+**For admins**
+
+- **Operations dashboard** — platform analytics across users, orders, and GMV.
+- **Dispute resolution** — investigate and resolve conflicts, with the outcome recorded on the order.
+- **Moderation** — user and marketplace management on top of an append-only audit log.
+
+**Money & trust**
+
+- A complete wallet + escrow ledger: deposits, holds, releases, refunds, and withdrawals are all first-class transaction records.
+- Payments are intentionally simulated — the UI is explicit that it's in test mode, so the demo is safe to click through end to end.
+- Reviews are gated to completed orders, so social proof can't be gamed.
+
+## Engineering highlights
+
+- **Atomic money movement** — wallet debits, order creation, and escrow funding commit in a single Prisma `$transaction`; balances can't drift if a later step fails.
+- **Guarded status transitions** — order and escrow lifecycles are validated in the service layer; invalid transitions are rejected server-side, not just hidden in the UI.
+- **Session security** — short-lived JWT access tokens with rotating, hashed refresh tokens; a password reset invalidates every active session.
+- **Redis cache-aside + BullMQ jobs** — hot marketplace queries are cached and invalidated on writes; delayed jobs auto-complete stale orders and queue transactional email.
+- **Real-time chat** — a Socket.IO gateway with order-scoped rooms and Redis-backed online presence.
+- **Presigned S3 uploads** — the API never proxies file bytes; the browser uploads directly with scoped, short-lived URLs.
+- **Operational hygiene** — cursor-based pagination, append-only audit logs, three-role RBAC, and rate limiting on sensitive endpoints.
 
 ## Architecture
 
-Modular monolith. PostgreSQL is the source of truth. Redis is used for caching and as the BullMQ backend. File storage lives on S3. WebSockets run inside the same NestJS process.
+A modular NestJS monolith: PostgreSQL is the source of truth, Redis backs caching and the BullMQ queues, files live on S3, and WebSockets run inside the API process. The web app is a Next.js App Router frontend that talks to the API through a same-origin proxy.
 
 ```text
 ┌─────────────────────────────────────────────────┐
-│                 Next.js Frontend                │
-│                  ( App Router)                  │
+│              Next.js 16 · App Router            │
+│       (Vercel · React 19 · Tailwind CSS 4)      │
 └────────────────────────┬────────────────────────┘
                          │  HTTP / WebSocket
 ┌────────────────────────▼────────────────────────┐
-│               NestJS API Server                 │
+│               NestJS 11 API Server              │
 │                                                 │
 │     Auth · User · Service · Order · Escrow      │
 │     Wallet · Dispute · Chat · Notification      │
@@ -81,210 +142,181 @@ Modular monolith. PostgreSQL is the source of truth. Redis is used for caching a
 
 **Key decisions**
 
-- Single NestJS monolith (no microservices for this scope)
-- Business rules live in the service layer; controllers stay thin
-- Soft deletes on User and Service
-- Price snapshot on Order so later price changes never affect existing orders
-- Refresh tokens stored as hashes — a DB leak does not immediately compromise sessions
+- Modular monolith — clear module boundaries without microservice overhead at this scope.
+- Business rules live in the service layer; controllers stay thin.
+- Soft deletes on users and services; price snapshots on orders so later price edits never change existing orders.
+- Refresh tokens stored as hashes — a database leak doesn't hand over live sessions.
 
----
+## Tech stack
 
-## Tech Stack
+| Layer              | Technology                                             |
+| ------------------ | ------------------------------------------------------ |
+| Web app            | Next.js 16 (App Router) · React 19 · Tailwind CSS 4    |
+| API                | NestJS 11 · TypeScript                                 |
+| Database           | PostgreSQL · Prisma 7                                  |
+| Cache & queues     | Redis · BullMQ                                         |
+| Auth               | JWT access tokens + rotating refresh tokens (hashed)   |
+| Real-time          | Socket.IO — order-scoped rooms, Redis presence         |
+| File storage       | Amazon S3 (presigned uploads)                          |
+| Email              | Nodemailer over SMTP (queued with BullMQ)              |
+| Search             | PostgreSQL full-text search (`tsvector`)               |
+| Infrastructure     | Docker Compose · Nginx · AWS EC2 · Vercel              |
 
-| Layer          | Technology                                      |
-| -------------- | ----------------------------------------------- |
-| Runtime        | Node.js + NestJS + TypeScript                   |
-| Database & ORM | PostgreSQL + Prisma                             |
-| Cache & Queues | Redis + BullMQ                                  |
-| Auth           | JWT (access) + rotating refresh tokens (hashed) |
-| File Storage   | AWS S3 (presigned URLs)                         |
-| Email          | Gmail SMTP via Nodemailer (BullMQ queue)        |
-| Real-time      | NestJS WebSocket Gateway (Socket.IO)            |
-| Search         | PostgreSQL full-text (`tsvector`)               |
-| Infrastructure | Docker, Docker Compose, Nginx                   |
-| Frontend       | Next.js 14 App Router                           |
+## Repository layout
 
----
-
-## Core Features (planned / in progress)
-
-### Authentication & Security
-
-- Registration + email verification
-- JWT access tokens (short-lived)
-- Refresh-token rotation and revocation
-- Password reset with full session invalidation
-- Global auth guard + `@Public()` opt-out
-- Role-based access control (CLIENT / FREELANCER / ADMIN)
-
-### Marketplace
-
-- Freelancer profiles & service listings
-- Service discovery + full-text search
-- Order lifecycle with delivery workflow
-- Reviews & ratings
-
-### Payments (simulated)
-
-- Wallet system
-- Escrow hold → release / refund
-- All money movements logged as transactions
-- Atomic financial operations via Prisma transactions
-
-### Communication
-
-- Order-scoped conversations
-- Real-time messaging (WebSockets)
-- Persisted history + online status (Redis)
-- In-app + email notifications
-
-### Platform
-
-- Admin moderation & dispute resolution
-- Audit logs for critical state changes
-- Rate limiting on sensitive endpoints
-- Cursor-based pagination everywhere
-
----
-
-## Project Structure
+Two independent npm packages — there are no root scripts, so install and run commands from inside `backend/` or `frontend/`.
 
 ```text
 skillshift/
-├── prisma/
-│   └── schema.prisma          # Single source of truth for the data model
-├── src/
-│   ├── auth/                  # Registration, login, refresh, password reset
-│   ├── user/
-│   ├── service/               # Freelancer service listings
-│   ├── order/
-│   ├── escrow/                # State machine for funds
-│   ├── wallet/
-│   ├── dispute/
-│   ├── chat/                  # WebSocket gateway + message history
-│   ├── notification/          # BullMQ email + in-app notifications
-│   ├── upload/                # S3 presigned URLs
-│   ├── search/
-│   ├── admin/
-│   ├── common/                # Guards, filters, interceptors, decorators
-│   ├── config/
+├── backend/                        # NestJS API
 │   ├── prisma/
-│   └── redis/
-├── docs/                      # Architecture, decisions, API conventions
-├── docker-compose.yml
-└── package.json
+│   │   ├── schema.prisma           # data model, enums, relations
+│   │   ├── migrations/             # versioned SQL migrations
+│   │   └── demo-seed.sql           # deterministic demo dataset
+│   ├── src/
+│   │   ├── auth/                   # registration, login, refresh, verification
+│   │   ├── user/                   # accounts, profiles, reputation
+│   │   ├── wallet/                 # balances, deposits, withdrawals, ledger
+│   │   ├── service/                # service listings and moderation
+│   │   ├── order/                  # order lifecycle and status transitions
+│   │   ├── escrow/                 # holds, releases, refunds
+│   │   ├── dispute/                # dispute resolution outcomes
+│   │   ├── review/                 # ratings and profile aggregates
+│   │   ├── search/                 # full-text service search
+│   │   ├── chat/                   # Socket.IO gateway and message history
+│   │   ├── notification/           # in-app notifications and queued email
+│   │   ├── upload/                 # presigned S3 uploads
+│   │   ├── admin/                  # moderation, analytics, dispute tools
+│   │   ├── mail/                   # SMTP transport
+│   │   ├── common/                 # guards, filters, interceptors, decorators
+│   │   ├── prisma/                 # database module
+│   │   └── redis/                  # cache, rate limits, presence, queues
+│   ├── test/                       # end-to-end suites
+│   ├── generated/                  # Prisma Client output (gitignored)
+│   └── Dockerfile                  # production API image
+├── frontend/                       # Next.js App Router web app
+│   └── src/
+│       ├── app/                    # routes, layouts, metadata, /api/backend proxy
+│       ├── components/             # feature UI: marketplace, orders, wallet,
+│       │                           # chat, dashboard, admin, profile, ui, layout
+│       └── lib/                    # typed API client, session, socket, formatting
+├── docs/                           # architecture · api-conventions · decisions ·
+│                                   # demo-data · deployment
+├── .github/workflows/ci.yml        # lint, tests, build, publish, EC2 deploy
+├── docker-compose.yml              # production stack: api, postgres, redis
+└── docker-compose.dev.yml          # development override (loopback ports)
 ```
 
----
+Prisma Client is generated into `backend/generated/` (gitignored) — run `npx prisma generate` after schema changes.
 
-## Getting Started
+## Live demo
 
-### Prerequisites
+Both halves of the stack are deployed and open to explore:
 
-- Node.js 20+
-- Docker
+- **Web app** → [skillshift-live.vercel.app](https://skillshift-live.vercel.app)
+- **API docs** → [skillshift-api.duckdns.org/api/docs](https://skillshift-api.duckdns.org/api/docs) (Swagger UI)
 
-### 1. Clone & install
+Sign in with any of the seeded accounts:
+
+| Role       | Email                      | Password   |
+| ---------- | -------------------------- | ---------- |
+| Client     | `client.one@skillshift.demo` | `Demo1234!` |
+| Client     | `client.two@skillshift.demo` | `Demo1234!` |
+| Freelancer | `maya@skillshift.demo`       | `Demo1234!` |
+| Freelancer | `noah@skillshift.demo`       | `Demo1234!` |
+
+The demo is seeded with a 27-service catalog, funded wallets, active orders, and reviews. Payments run in test mode — no real money moves. These are shared accounts on a public deployment: don't enter personal or sensitive data, and expect demo data to be reset.
+
+## Getting started
+
+**Prerequisites:** Node.js 20+ and Docker.
 
 ```bash
 git clone https://github.com/adityasah15/skillshift.git
 cd skillshift
-npm install
+cp .env.example .env
 ```
 
-### 2. Start infrastructure
+`.env.example` documents every variable the backend reads (database, Redis, JWT secrets, SMTP, S3).
+
+**1. Start infrastructure**
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis
 ```
 
-This development override binds PostgreSQL and Redis to loopback so host-run tools can reach them. The default Compose topology does not publish database or cache ports.
-
-### 3. Environment
+**2. Run the API** — `http://localhost:3000`, Swagger at `/api/docs`
 
 ```bash
-cp .env.example .env
-```
-
-Copy the example env and fill in the required values (database URL, Redis, JWT secrets, etc.).
-
-- SMTP is required in production: `MailService` (`backend/src/mail/mail.service.ts`) throws on startup if `SMTP_HOST` is missing or contains `ethereal.email` while `NODE_ENV=production`.
-- On EC2 this surfaces as a container crash loop and Nginx `502` on `/api/docs`.
-- This repo uses Gmail SMTP (no custom domain): dedicated Gmail account + 2FA + App Password (spaces stripped) in `SMTP_USER` / `SMTP_PASS`, matching `MAIL_FROM`.
-- S3 uploads need an EC2 instance IAM role: the SDK authenticates via the default chain and compose passes only `AWS_REGION` / `AWS_S3_BUCKET` (no keys). Grant `s3:PutObject`, `s3:GetObject`, `s3:HeadObject` on the bucket plus `s3:ListBucket`.
-- Browser direct-PUT to S3 also needs bucket CORS allowing your frontend origin.
-
-### 4. Database
-
-```bash
+cd backend
+npm install
 npx prisma migrate dev
 npx prisma generate
-```
-
-### 5. Run the API
-
-```bash
 npm run start:dev
 ```
 
-Once the server is running:
+**3. Run the web app** — `http://localhost:3001`
 
-- API → `http://localhost:3000`
-- Swagger docs → `http://localhost:3000/api/docs`
+```bash
+cd frontend
+npm install
+```
 
-> Live API: `https://skillshift-api.duckdns.org` · Swagger: `https://skillshift-api.duckdns.org/api/docs`
+Create `frontend/.env.local`:
 
----
+```bash
+SKILLSHIFT_API_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://localhost:3000
+```
 
-## Implementation Status
+```bash
+npm run dev -- -p 3001
+```
 
-- [x] Project setup & Docker infrastructure
-- [x] Database schema (Prisma)
-- [x] Authentication (registration, verification, JWT, rotation, logout, password reset)
-- [x] User / Profile module
-- [x] Wallet
-- [x] Service marketplace
-- [x] Orders
-- [x] Escrow
-- [x] Notifications (BullMQ + email)
-- [x] Disputes
-- [x] Reviews
-- [x] Real-time chat
-- [x] File uploads (S3 presigned)
-- [x] Search
-- [x] Admin module & analytics
-- [x] Automated tests (unit + integration)
-- [x] CI/CD + production deployment (Docker → AWS EC2 + Nginx)
-- [ ] Next.js frontend
+Port 3001 matches the backend's CORS and WebSocket origin config (`FRONTEND_URL`).
 
-See `docs/` for the full implementation blueprint and engineering decisions.
+**Optional: load the demo data**
 
----
+```bash
+docker compose exec -T postgres psql -U postgres -d skillshift < backend/prisma/demo-seed.sql
+```
 
-## Engineering Focus
+Seeds the demo accounts, the full service catalog, orders, wallets, and reviews. See [`docs/demo-data.md`](docs/demo-data.md) for details, including clearing the Redis cache after reseeding.
 
-This project prioritizes:
+## Testing
 
-- Correctness of financial and order state transitions
-- Clear ownership and authorization boundaries
-- Consistent API shape and error handling
-- Observability (request logging + audit trail)
-- Developer experience (Docker one-command infra, typed config, Swagger)
+```bash
+cd backend
+npm run test       # 36 suites · 221 tests (unit + integration)
+npm run test:e2e   # 2 suites · end-to-end API flows (needs Postgres + Redis)
+```
 
-It intentionally avoids microservices, real payment gateways, and heavy frontend work until the backend core is solid.
+**225 tests across 38 suites, all passing.** Frontend checks:
 
----
+```bash
+cd frontend
+npm run lint && npx tsc --noEmit && npm run build
+```
+
+## Deployment
+
+The API ships as a Docker image to AWS EC2 behind Nginx with TLS; PostgreSQL and Redis run via Docker Compose on the same host. The web app deploys to Vercel. The deployment runbook — server layout, CI/CD, environment variables, and known gotchas — is in [`docs/deployment.md`](docs/deployment.md).
 
 ## Documentation
 
-Detailed notes on architecture, API conventions, design decisions, and implementation live in the [`docs/`](docs/) folder.
+| Document                                         | Contents                                                |
+| ------------------------------------------------ | ------------------------------------------------------- |
+| [`architecture.md`](docs/architecture.md)        | System design, escrow flows, caching, realtime, and deployment |
+| [`api-conventions.md`](docs/api-conventions.md)  | Response envelopes, auth, money, pagination, and rate limits |
+| [`decisions.md`](docs/decisions.md)              | Engineering decision log                                |
+| [`demo-data.md`](docs/demo-data.md)              | The seed dataset and how to reseed                      |
+| [`deployment.md`](docs/deployment.md)            | Production deployment runbook                           |
+| [Swagger UI](https://skillshift-api.duckdns.org/api/docs) | Interactive API reference (live)                |
 
----
+## Contributing
+
+Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local setup and the checks to run before opening a pull request. This project follows the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-**Built as a deliberate exercise in production-grade NestJS backend design.**
+[MIT](LICENSE) © 2026 Aditya Sah
