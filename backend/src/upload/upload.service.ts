@@ -231,9 +231,16 @@ export class UploadService {
     }
 
     const bucket = this.configService.getOrThrow<string>('AWS_S3_BUCKET');
+    // Force a download when the browser follows the presigned URL — without
+    // this the SPA navigates away to the S3 host and loses the session view.
+    const safeName = file.originalName.replace(/["\\\r\n]/g, '_');
     const url = await getSignedUrl(
       this.s3,
-      new GetObjectCommand({ Bucket: bucket, Key: file.key }),
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: file.key,
+        ResponseContentDisposition: `attachment; filename="${safeName}"`,
+      }),
       { expiresIn: 300 },
     );
     return { url, expiresIn: 300 };

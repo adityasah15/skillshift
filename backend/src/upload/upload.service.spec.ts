@@ -275,6 +275,7 @@ describe('UploadService', () => {
     async (userId, role) => {
       prisma.deliveryFile.findFirst.mockResolvedValue({
         key: 'deliveries/order-1/final.pdf',
+        originalName: 'final.pdf',
         order: { clientId: 'client-1', freelancerId: 'freelancer-1' },
       });
       jest
@@ -298,6 +299,7 @@ describe('UploadService', () => {
           input: {
             Bucket: 'test-value',
             Key: 'deliveries/order-1/final.pdf',
+            ResponseContentDisposition: 'attachment; filename="final.pdf"',
           },
         }),
         { expiresIn: 300 },
