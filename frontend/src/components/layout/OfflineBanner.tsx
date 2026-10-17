@@ -1,23 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+function subscribe(onChange: () => void) {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
+}
+
+function getSnapshot() {
+  return navigator.onLine;
+}
+
+/** Assume online on the server; the banner only shows on a confirmed disconnect. */
+function getServerSnapshot() {
+  return true;
+}
 
 /** Calm global banner when the browser goes offline. */
 export function OfflineBanner() {
-  const [online, setOnline] = useState<boolean>(
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
-
-  useEffect(() => {
-    const goOnline = () => setOnline(true);
-    const goOffline = () => setOnline(false);
-    window.addEventListener("online", goOnline);
-    window.addEventListener("offline", goOffline);
-    return () => {
-      window.removeEventListener("online", goOnline);
-      window.removeEventListener("offline", goOffline);
-    };
-  }, []);
+  const online = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   if (online) return null;
 
