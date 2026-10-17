@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { authApi } from "@/lib/api/auth";
 import { usersApi } from "@/lib/api/users";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
+import { BrandMark } from "@/components/layout/BrandMark";
 import { clearAccessToken, useSessionToken } from "@/lib/session";
 import type { Role } from "@/lib/types";
 
@@ -248,9 +249,7 @@ export function Navbar() {
     <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2.5" aria-label="SkillShift home">
-          <span className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-primary text-lg font-bold text-white">
-            S
-          </span>
+          <BrandMark className="shrink-0" />
           <span className="text-[17px] font-bold tracking-tight text-text">SkillShift</span>
         </Link>
 

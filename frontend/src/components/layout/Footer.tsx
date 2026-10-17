@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/layout/BrandMark";
 
 const columns: Array<{ heading: string; links: Array<{ href: string; label: string }> }> = [
   {
@@ -35,9 +36,7 @@ export function Footer() {
       <div className="mx-auto grid max-w-[1280px] gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.5fr_1fr_1fr_1fr] lg:px-8">
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-primary text-lg font-bold text-white">
-              S
-            </span>
+            <BrandMark className="shrink-0" />
             <span className="text-[17px] font-bold tracking-tight">SkillShift</span>
           </div>
           <p className="mt-3 max-w-xs text-sm leading-6 text-text-muted">
