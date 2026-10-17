@@ -1,6 +1,6 @@
 # API Conventions
 
-Shared conventions for the SkillShift HTTP API and the realtime chat gateway. The complete route inventory is documented in Swagger at `/api/docs`.
+Shared conventions for the SkillShift HTTP API and the realtime chat gateway. The full route inventory is in [api-endpoints.md](api-endpoints.md); Swagger at `/api/docs` remains the interactive reference.
 
 ## Base URLs
 

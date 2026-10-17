@@ -200,8 +200,8 @@ skillshift/
 │       ├── components/             # feature UI: marketplace, orders, wallet,
 │       │                           # chat, dashboard, admin, profile, ui, layout
 │       └── lib/                    # typed API client, session, socket, formatting
-├── docs/                           # architecture · api-conventions · decisions ·
-│                                   # demo-data · deployment
+├── docs/                           # architecture · api-conventions · api-endpoints ·
+│                                   # decisions · demo-data · deployment
 ├── .github/workflows/ci.yml        # lint, tests, build, publish, EC2 deploy
 ├── docker-compose.yml              # production stack: api, postgres, redis
 └── docker-compose.dev.yml          # development override (loopback ports)
@@ -308,6 +308,7 @@ The API ships as a Docker image to AWS EC2 behind Nginx with TLS; PostgreSQL and
 | ------------------------------------------------ | ------------------------------------------------------- |
 | [`architecture.md`](docs/architecture.md)        | System design, escrow flows, caching, realtime, and deployment |
 | [`api-conventions.md`](docs/api-conventions.md)  | Response envelopes, auth, money, pagination, and rate limits |
+| [`api-endpoints.md`](docs/api-endpoints.md)     | Full route inventory grouped by domain, with access levels |
 | [`decisions.md`](docs/decisions.md)              | Engineering decision log                                |
 | [`demo-data.md`](docs/demo-data.md)              | The seed dataset and how to reseed                      |
 | [`deployment.md`](docs/deployment.md)            | Production deployment runbook                           |
