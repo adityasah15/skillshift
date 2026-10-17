@@ -142,7 +142,7 @@ export default function Home() {
                   deliveryDays: s.deliveryDays,
                   skills: [...s.skills],
                   status: s.status,
-                  imageUrls: [],
+                  imageUrls: s.imageUrls,
                   hue: s.hue,
                 }}
                 freelancerName={s.freelancer.name}

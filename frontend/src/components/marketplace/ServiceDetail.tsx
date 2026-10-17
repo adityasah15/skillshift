@@ -96,7 +96,7 @@ export function ServiceDetail({ id }: { id: string }) {
               price: mock.price,
               deliveryDays: mock.deliveryDays,
               skills: [...mock.skills],
-              imageUrls: [],
+              imageUrls: mock.imageUrls,
               status: mock.status,
               createdAt: new Date().toISOString(),
             });

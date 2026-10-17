@@ -11,6 +11,7 @@ export interface MockService {
   status: MockServiceStatus;
   freelancer: { name: string; avatarColor: string };
   hue: number;
+  imageUrls: string[];
 }
 
 export const MOCK_SKILLS = [
@@ -34,6 +35,9 @@ export const MOCK_SERVICES: MockService[] = [
     status: "ACTIVE",
     freelancer: { name: "Ananya Rao", avatarColor: "#3f4fe0" },
     hue: 232,
+    imageUrls: [
+      "https://images.unsplash.com/photo-1718670014130-ee9ee053598d?auto=format&fit=crop&w=1600&h=1000&q=80",
+    ],
   },
   {
     id: "svc-landing-page",
@@ -46,6 +50,9 @@ export const MOCK_SERVICES: MockService[] = [
     status: "ACTIVE",
     freelancer: { name: "Rohan Mehta", avatarColor: "#7357ff" },
     hue: 252,
+    imageUrls: [
+      "https://images.unsplash.com/photo-1618424181497-157f25b6ddd5?auto=format&fit=crop&w=1600&h=1000&q=80",
+    ],
   },
   {
     id: "svc-seo-articles",
@@ -58,6 +65,9 @@ export const MOCK_SERVICES: MockService[] = [
     status: "ACTIVE",
     freelancer: { name: "Priya Nair", avatarColor: "#16875d" },
     hue: 160,
+    imageUrls: [
+      "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1600&h=1000&q=80",
+    ],
   },
   {
     id: "svc-dashboard-ui",
@@ -70,6 +80,9 @@ export const MOCK_SERVICES: MockService[] = [
     status: "PENDING_REVIEW",
     freelancer: { name: "Karan Shah", avatarColor: "#b76a1f" },
     hue: 32,
+    imageUrls: [
+      "https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?auto=format&fit=crop&w=1600&h=1000&q=80",
+    ],
   },
   {
     id: "svc-product-video",
@@ -82,6 +95,9 @@ export const MOCK_SERVICES: MockService[] = [
     status: "ACTIVE",
     freelancer: { name: "Sneha Kulkarni", avatarColor: "#2478d4" },
     hue: 214,
+    imageUrls: [
+      "https://images.unsplash.com/photo-1609619385002-f40f1df9b7eb?auto=format&fit=crop&w=1600&h=1000&q=80",
+    ],
   },
   {
     id: "svc-data-cleanup",
@@ -94,5 +110,8 @@ export const MOCK_SERVICES: MockService[] = [
     status: "ACTIVE",
     freelancer: { name: "Amit Verma", avatarColor: "#141824" },
     hue: 220,
+    imageUrls: [
+      "https://images.unsplash.com/photo-1783115259399-3a5a3e0e4592?auto=format&fit=crop&w=1600&h=1000&q=80",
+    ],
   },
 ];
