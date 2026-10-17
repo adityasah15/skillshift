@@ -230,9 +230,9 @@ npm run start:dev
 Once the server is running:
 
 - API → `http://localhost:3000`
-- Swagger docs → `http://localhost:3000/api`
+- Swagger docs → `http://localhost:3000/api/docs`
 
-> Live production URL will be added here after deployment.
+> Live API: `https://skillshift-api.duckdns.org` · Swagger: `https://skillshift-api.duckdns.org/api/docs`
 
 ---
 
