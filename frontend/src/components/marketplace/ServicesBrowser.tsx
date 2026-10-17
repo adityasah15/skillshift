@@ -54,11 +54,11 @@ export function ServicesBrowser() {
           ? await searchApi.services({
               q,
               skills: skill ? [skill] : undefined,
-              limit: 20,
+              limit: 50,
             })
           : await servicesApi.list({
               skills: skill ? [skill] : undefined,
-              limit: 20,
+              limit: 50,
             });
         if (cancelled) return;
         setServices(data);
