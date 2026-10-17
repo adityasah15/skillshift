@@ -1,114 +1,126 @@
 # Contributing to SkillShift
 
-Thank you for considering contributing to SkillShift! We welcome bug reports, feature suggestions, and code contributions to help grow and improve this project.
+Thanks for considering a contribution to SkillShift. Bug reports, feature suggestions, and pull requests are welcome. By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-By participating, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
+## Prerequisites
 
----
+- Node.js 20+
+- npm (the repository uses npm lockfiles for both packages)
+- Docker (PostgreSQL and Redis run in containers)
+- Git
 
-## Getting Started
+## Set up locally
 
-### Prerequisites
+1. Fork the repository and clone your fork:
 
-Before running the project locally, ensure you have the following installed:
-
-- [Node.js](https://nodejs.org/) (v18 or higher recommended)
-- [npm](https://www.npmjs.com/) or [pnpm](https://pnpm.io/)
-- [Git](https://git-scm.com/)
-
-### Local Development Setup
-
-1. **Fork the Repository**  
-   Click the **Fork** button at the top right of this repository to create your own copy.
-
-2. **Clone Your Fork**
    ```bash
-   git clone https://github.com/adityasah15/skillshift.git
+   git clone https://github.com/<your-username>/skillshift.git
    cd skillshift
    ```
 
-3. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+2. Create the environment file:
 
-4. **Environment Configuration**  
-   Copy the example environment file and set your local credentials:
    ```bash
    cp .env.example .env
    ```
 
-5. **Run the Application**
+3. Start PostgreSQL and Redis:
+
    ```bash
-   # Development mode
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis
+   ```
+
+4. Start the API — `http://localhost:3000`, Swagger at `/api/docs`:
+
+   ```bash
+   cd backend
+   npm install
+   npx prisma migrate dev
+   npx prisma generate
    npm run start:dev
    ```
 
----
+5. Start the web app in a second terminal — `http://localhost:3001`:
 
-## How to Contribute
-
-### 1. Reporting Bugs
-
-If you encounter a bug or unexpected behavior:
-
-1. Check existing [Issues](https://github.com/adityasah15/skillshift/issues) to ensure it hasn't already been reported.
-2. Open a new issue with a clear title and detailed description, including:
-   - Steps to reproduce the issue
-   - Expected vs. actual behavior
-   - Node/npm versions and OS environment details
-
-### 2. Suggesting Enhancements
-
-Feature requests are always welcome! When creating a feature request issue, please include:
-
-- The problem or use case you are trying to solve
-- Your proposed solution or desired behavior
-
-### 3. Submitting Pull Requests (PRs)
-
-1. **Create a Branch**  
-   Create a dedicated branch for your work off the `main` branch:
    ```bash
-   git checkout -b feature/your-feature-name
-   # or for bug fixes:
+   cd frontend
+   npm install
+   ```
+
+   Create `frontend/.env.local`:
+
+   ```bash
+   SKILLSHIFT_API_URL=http://localhost:3000
+   NEXT_PUBLIC_API_URL=http://localhost:3000
+   ```
+
+   ```bash
+   npm run dev -- -p 3001
+   ```
+
+The web app must run on port 3001 to match the backend's `FRONTEND_URL` origin. The README covers environment variables, demo data, and deployment in more detail.
+
+## Reporting bugs
+
+1. Check the existing [issues](https://github.com/adityasah15/skillshift/issues) first.
+2. Open an issue with a clear title and enough detail to reproduce:
+   - steps to reproduce
+   - expected vs. actual behaviour
+   - Node/npm versions and OS details
+
+## Suggesting enhancements
+
+Open an issue describing the problem or use case and the behaviour you would like to see. Explain why it belongs in SkillShift before proposing an implementation.
+
+## Pull requests
+
+1. Branch from `main`:
+
+   ```bash
+   git checkout -b feature/your-feature
+   # or
    git checkout -b fix/your-bug-fix
    ```
 
-2. **Make Changes & Test**  
-   Write clean, readable code and verify that local build and lint steps pass:
+2. Make the change, keeping it focused on one concern.
+3. Run the relevant checks.
+
+   **Backend**
+
    ```bash
-   # Run linter
+   cd backend
    npm run lint
-
-   # Run tests
    npm run test
+   npm run test:e2e   # requires PostgreSQL and Redis
    ```
 
-3. **Commit Changes**  
-   Write clear, descriptive commit messages following conventional commit style:
+   **Frontend**
+
    ```bash
-   git commit -m "feat: add user skill verification endpoint"
+   cd frontend
+   npm run lint
+   npx tsc --noEmit
+   npm run build
    ```
 
-4. **Push & Open PR**  
-   Push your branch to GitHub and create a Pull Request targeting `main`:
-   ```bash
-   git push origin feature/your-feature-name
+4. Commit with a conventional message:
+
+   ```text
+   feat: add service availability filter
+   fix: keep escrow state on cancelled orders
+   docs: clarify upload limits
    ```
 
-5. Fill in the PR description template with relevant details and reference any related issue numbers (e.g., `Closes #12`).
+5. Push your branch and open a pull request against `main`. Describe what changed, why, and reference related issues (for example `Closes #12`).
 
----
+## Coding standards
 
-## Coding Standards
-
-- **TypeScript**: Follow strict typing standards and avoid using `any` where explicit types or interfaces can be defined.
-- **Code Style**: Ensure code conforms to the project's ESLint and Prettier rules.
-- **Commits**: Follow clean, conventional commit messages (`feat:`, `fix:`, `docs:`, `refactor:`, etc.).
-
----
+- TypeScript strictness: prefer explicit types; avoid `any`.
+- Follow the ESLint configuration in each package.
+- Keep controllers thin and put business rules in services.
+- Never introduce an order or escrow status transition outside the service layer.
+- Add tests for behaviour changes in the backend.
 
 ## License
 
-By contributing to SkillShift, you agree that your contributions will be licensed under the project's [MIT License](LICENSE).
+By contributing, you agree that your contributions are licensed under the project's [MIT License](LICENSE).

@@ -1,62 +1,63 @@
 # SkillShift Architecture
 
-## Current Architecture
+SkillShift is a two-sided marketplace for project-based freelance work: clients order services, the platform holds payment in escrow, and funds are released only when the work is approved. This document explains how the system is put together — the overall topology, backend modules, the money model, order and escrow flows, service listing infrastructure, realtime chat, uploads, and the production deployment.
 
-SkillShift is implemented as a **NestJS monolith**.
+## System Overview
 
-The backend is structured into domain modules while running within a single NestJS application.
+SkillShift runs as a **modular NestJS monolith**: one deployable API application with explicit domain modules. A Next.js web app consumes it over HTTP for REST calls and Socket.IO for realtime chat.
 
 ```text
-                    ┌──────────────────────┐
-                    │   Next.js Frontend   │
-                    │      (later)         │
-                    └──────────┬───────────┘
-                               │
-                         HTTP / WebSocket
-                               │
-                    ┌──────────▼───────────┐
-                    │     NestJS API       │
-                    │       Monolith       │
-                    │                      │
-                    │ Auth │ User │ Wallet │
-                    │ Service │ Order │ ...│
-                    └───────┬───────┬──────┘
-                            │       │
-                 ┌──────────▼─┐   ┌▼──────────┐
-                 │ PostgreSQL │   │   Redis   │
-                 │ persistent │   │ cache /   │
-                 │   state    │   │ queues    │
-                 └────────────┘   └───────────┘
+┌─────────────────────────────────────────────────┐
+│              Next.js 16 · App Router            │
+│                     (Vercel)                    │
+└────────────────────────┬────────────────────────┘
+                         │  HTTP / WebSocket
+┌────────────────────────▼────────────────────────┐
+│                 NestJS 11 API                   │
+│                                                 │
+│     Auth · User · Service · Order · Escrow      │
+│     Wallet · Dispute · Review · Chat            │
+│     Notification · Search · Upload · Admin      │
+└────────┬─────────────────┬─────────────────┬────┘
+         │                 │                 │
+    ┌────▼─────┐      ┌────▼────┐      ┌─────▼─────┐
+    │PostgreSQL│      │  Redis  │      │  AWS S3   │
+    │  (data)  │      │cache +  │      │  (files)  │
+    └──────────┘      │ queue + │      └───────────┘
+                      │presence │
+                      └────┬────┘
+                       ┌───▼───┐
+                       │BullMQ │
+                       └───────┘
 ```
 
-PostgreSQL is the persistent source of truth.
+- **PostgreSQL** is the persistent source of truth for application, wallet, escrow, and audit data.
+- **Redis** is a performance and coordination layer: cache-aside storage, rate limiting, presence counters, and BullMQ-backed jobs.
+- **AWS S3** stores uploaded files; browsers upload directly with presigned URLs.
+- **Realtime chat** runs inside the API process (Socket.IO), scoped to order rooms.
 
-Redis is used according to the Blueprint for caching, rate limiting, presence, and BullMQ-backed background processing.
+## Backend Modules
 
-AWS S3 is used for presigned file uploads.
+| Module | Responsibility |
+| --- | --- |
+| Auth | Registration, email verification, JWT sessions, password reset |
+| User / Profile | Accounts, profiles, freelancer reputation fields |
+| Wallet | Balances, deposits, withdrawals, transaction history |
+| Service | Service listings, ownership, moderation states |
+| Search | PostgreSQL full-text search over services |
+| Order | Order lifecycle and status transitions |
+| Escrow | Fund holding, release, and refund |
+| Dispute | Conflict resolution and outcomes |
+| Review | Ratings on completed orders |
+| Notification | In-app notifications with queued email |
+| Chat | Socket.IO gateway and message history |
+| Upload | Presigned S3 uploads and confirmation |
+| Admin | Moderation, analytics, dispute resolution |
+| Infrastructure | Prisma and Redis modules, BullMQ processors |
 
-## Current Modules
+## Wallet & Financial State
 
-Implemented backend modules currently include:
-
-- Auth
-- User/Profile
-- Wallet
-- Service
-- Search
-- Order
-- Escrow
-- Notification
-- Dispute
-- Review
-- Chat
-- Upload
-- Admin
-- Prisma and Redis infrastructure modules
-
-## Wallet Architecture
-
-The Wallet module owns wallet-related operations:
+The Wallet module owns wallet operations:
 
 ```text
 Authenticated Request
@@ -68,33 +69,22 @@ Authenticated Request
     WalletService
         │
         ├── Wallet lookup
-        │
         ├── Balance operation
-        │
-        ├── Deposit
-        │      │
-        │      └── Prisma transaction
-        │             ├── Increment balance
-        │             └── Create DEPOSIT transaction
-        │
-        └── Transaction history
-                 │
-                 └── newest-first
+        ├── Deposit ──► Prisma transaction
+        │                 ├── Increment balance
+        │                 └── Create DEPOSIT transaction
+        └── Transaction history (newest first)
 ```
 
-### Financial Data Rules
+### Financial data rules
 
-Wallet balance and transaction data are stored in PostgreSQL and are not Redis-cached.
+- Wallet balances and transaction records live in PostgreSQL and are never cached in Redis; financial state is always read fresh.
+- Balances, service prices, order prices, escrow amounts, and transaction amounts are stored as **integers in minor units** (for example, `123` represents `1.23`). Fractional minor units are unsupported.
+- The API accepts and returns amounts in minor units; clients convert them for display. No currency code is stored — the platform runs in a single currency.
 
-The Blueprint requires wallet balance to remain fresh because it represents financial state.
+### Atomic deposits
 
-Wallet balances, service prices, order prices, escrow amounts, and transaction amounts are stored as integers in minor units (for example, 123 represents 1.23 units of a currency with two decimal places). API clients must convert displayed amounts to minor units. The currency code is not currently stored or configured, and fractional minor units are unsupported.
-
-### Atomic Deposit
-
-A wallet deposit changes both the wallet balance and transaction history.
-
-Therefore:
+A deposit changes both the wallet balance and the transaction history:
 
 ```text
 POST /wallet/deposit
@@ -103,17 +93,39 @@ POST /wallet/deposit
    Prisma $transaction
         │
         ├── Increment wallet balance
-        │
         └── Create DEPOSIT transaction
 ```
 
-Both operations succeed or fail together.
+Both writes commit together or not at all.
 
-## Order and Escrow Flow
+### Source-of-truth principle
 
-Order creation conditionally debits the client wallet inside the same database transaction that creates the order, ledger entry, audit event, and escrow hold. The conditional balance predicate prevents concurrent requests from overdrawing the wallet.
+Financial state remains in PostgreSQL. Redis is not used as the source of truth for wallet balances or transactions.
 
-The planned flow is:
+## Orders & Escrow
+
+Placing an order debits the client wallet in the same database transaction that creates the order, the ledger entry, the audit event, and the escrow hold. A conditional balance predicate prevents concurrent requests from overdrawing the wallet.
+
+### Order creation
+
+```text
+Client
+  │  POST /orders
+  ▼
+OrderService
+  │
+  ├── verify Service
+  ├── verify client balance
+  ▼
+Prisma Transaction
+  │
+  ├── deduct Client Wallet
+  ├── create Order
+  ├── create Escrow HOLDING
+  └── create ESCROW_HOLD transaction
+```
+
+### Escrow lifecycle
 
 ```text
 Client Wallet
@@ -127,19 +139,101 @@ Client Wallet
      └── ESCROW_REFUND ───► Client Wallet
 ```
 
-Completion releases escrow to the freelancer; cancellation or client-favoring dispute resolution refunds the client. These financial state changes use Prisma transactions.
+Completion releases escrow to the freelancer; cancellation or a client-favouring dispute resolution refunds the client. Every financial state change runs in a Prisma transaction.
 
-## Design Principle
+### Delivery & completion
 
-Financial state remains in PostgreSQL.
+```text
+Client
+  │  POST /orders/:id/complete
+  ▼
+OrderService
+  │
+  ▼
+Prisma Transaction
+  │
+  ├── verify DELIVERED state
+  ├── release Escrow
+  ├── credit Freelancer Wallet
+  ├── create ESCROW_RELEASE transaction
+  └── mark Order COMPLETED
+```
 
-Redis is not used as the source of truth for wallet balances or financial transactions.
+State transitions:
 
-# Phase 4 — Service Listings Architecture
+```text
+Order:  DELIVERED → COMPLETED
+Escrow: HOLDING   → RELEASED
+```
 
-## Service Module
+### Cancellation
 
-The Service module owns service listing operations:
+```text
+Client / Freelancer
+        │  POST /orders/:id/cancel
+        ▼
+   OrderService
+        │
+        ▼
+ Prisma Transaction
+        │
+        ├── verify cancellation rules
+        ├── refund Client Wallet
+        ├── update Escrow → REFUNDED
+        ├── create ESCROW_REFUND transaction
+        └── update Order state
+```
+
+The refund keeps wallet balances and transaction history consistent.
+
+### Disputes
+
+Opening a dispute moves the order into `DISPUTED`. An admin resolves it in favour of the client (`RESOLVED_CLIENT`, escrow refunded) or the freelancer (`RESOLVED_FREELANCER`, escrow released). Each resolution updates the dispute, order, escrow, wallet, transaction, and audit records in a single Prisma transaction, guarded by conditional state updates: a dispute can only be resolved while `OPEN` or `UNDER_REVIEW`, and escrow can only move while `HOLDING`.
+
+### Automatic completion
+
+Orders that remain delivered are completed automatically after a 7-day delay.
+
+```text
+Order delivered
+      │
+      ▼
+BullMQ delayed job
+      │  7 days
+      ▼
+OrderAutoCompleteProcessor
+      │
+      ├── re-check Order state
+      ├── release Escrow
+      ├── credit Freelancer Wallet
+      ├── create ESCROW_RELEASE
+      ├── mark Order COMPLETED
+      └── create system AuditLog (userId = null)
+```
+
+The job uses the deterministic ID `order-{orderId}`, so a re-queued order cannot schedule a duplicate completion.
+
+### Duplicate protection
+
+Auto-completion and manual completion perform conditional state checks before executing the financial transition, so an order that is already completed cannot be paid out twice. The database remains the authority for the current order and escrow state.
+
+### System vs user operations
+
+```text
+User request                        BullMQ job
+    ↓                                   ↓
+authenticated user                 system worker
+    ↓                                   ↓
+OrderService / financial op        OrderService / financial op
+    ↓                                   ↓
+AuditLog(userId)                   AuditLog(userId = null)
+```
+
+Audit records therefore distinguish user-triggered from system-triggered operations.
+
+## Service Listings
+
+The Service module owns listing operations:
 
 ```text
 Client Request
@@ -150,22 +244,15 @@ ServiceController
       ▼
 ServiceService
       │
-      ├── PostgreSQL
-      │
-      └── Redis
+      ├── PostgreSQL (source of truth)
+      └── Redis (read cache)
 ```
 
-PostgreSQL remains the source of truth.
+Redis is a performance layer only; PostgreSQL remains authoritative.
 
-Redis is used as a performance layer for service reads.
+### Ownership
 
----
-
-## Service Ownership
-
-Services belong to freelancers.
-
-For mutations:
+Services belong to freelancers. Mutations derive ownership from the authenticated identity, never from the request body:
 
 ```text
 JWT
@@ -176,65 +263,35 @@ ServiceService
  ↓
 verify freelancerId === userId
  ↓
-update/delete
+update / delete
 ```
 
-The client does not control the ownership identity through the request body.
+This separates authentication (who you are) from resource authorization (what you may change).
 
-This separates authentication from resource authorization.
+### List and detail caching
 
----
-
-## Service List Caching
-
-The service list uses versioned Redis keys based on the query:
+Versioned Redis keys:
 
 ```text
 services:v2:{query}
-```
-
-The individual service endpoint uses:
-
-```text
 service:v2:{serviceId}
 ```
 
-Only ACTIVE, non-deleted services are returned by public list and detail reads. Versioned keys avoid reusing pre-moderation cache entries. List responses are cached for 5 minutes and detail responses for 10 minutes.
+Only `ACTIVE`, non-deleted services are returned by public list and detail reads. Versioned keys avoid reusing pre-moderation cache entries. List responses are cached for 5 minutes and detail responses for 10 minutes.
 
----
+### Cache invalidation
 
-## Cache Invalidation
-
-Service mutations invalidate cached service data.
+Service mutations invalidate cached data:
 
 ```text
-Create
-   ↓
-invalidate services:*
-
-Update
-     ↓
-invalidate service:v2:{id}
-invalidate services:*
-
-Delete
-     ↓
-invalidate service:v2:{id}
-invalidate services:*
-
-Approve
-     ↓
-invalidate service:v2:{id}
-invalidate services:*
-
-Reject
-     ↓
-invalidate service:v2:{id}
-invalidate services:*
-invalidate search:services:*
+Create  → services:*
+Update  → service:v2:{id}, services:*
+Delete  → service:v2:{id}, services:*
+Approve → service:v2:{id}, services:*
+Reject  → service:v2:{id}, services:*, search:services:*
 ```
 
-A Redis `SCAN`-based helper performs pattern invalidation.
+Pattern invalidation uses a `SCAN`-based helper rather than `KEYS`:
 
 ```text
 delByPattern("services:*")
@@ -246,50 +303,37 @@ delByPattern("services:*")
  matching keys
         │
         ▼
-      DEL
+       DEL
 ```
 
-## Related Cache Policies
+`SCAN` avoids blocking the Redis keyspace during invalidation.
 
-- Search results use `search:services:{query}` with a 2-minute TTL. Service mutations and moderation invalidate `search:services:*`.
-- Public freelancer profiles use `profiles:freelancer:{userId}` with a 10-minute TTL. Profile edits and new reviews invalidate the profile key.
-- Admin analytics uses `admin:analytics:dashboard` with a 1-minute TTL. Successful order and dispute state changes delete the cached dashboard.
+### Related cache policies
 
-`SCAN` is used instead of `KEYS` so pattern-based invalidation does not depend on a blocking full-keyspace lookup.
+- **Search:** `search:services:{query}`, 2-minute TTL. Service mutations and moderation invalidate `search:services:*`.
+- **Public profiles:** `profiles:freelancer:{userId}`, 10-minute TTL. Profile edits and new reviews invalidate the key.
+- **Admin analytics:** `admin:analytics:dashboard`, 1-minute TTL. Successful order and dispute state changes delete the cached dashboard.
 
----
+### Cursor pagination
 
-## Cursor Pagination
-
-Service listing uses cursor pagination:
+Service listings use cursor pagination, never offset pagination:
 
 ```text
-Request
 GET /services?limit=20
-
-             ↓
-
-fetch 21 records
-             ↓
-21 records?
-   │
-   ├── yes → hasMore = true
-   │         remove 21st record
-   │
-   └── no  → hasMore = false
-
-last returned ID
-        ↓
-next cursor
+        │
+        ▼
+fetch limit + 1 records
+        │
+        ├── extra record → hasMore = true, drop it
+        └── none         → hasMore = false
+        │
+        ▼
+last returned ID → next cursor
 ```
 
-The implementation does not use offset pagination.
+### Full-text search
 
----
-
-## PostgreSQL Full-Text Search Infrastructure
-
-Phase 4 adds the database infrastructure required for future Service search.
+Search runs on PostgreSQL `tsvector` data maintained by a trigger:
 
 ```text
 Service
@@ -315,219 +359,11 @@ description → B
 skills      → C
 ```
 
-The trigger automatically updates the search vector when Service data is inserted or updated.
+The trigger updates the search vector whenever service data is inserted or updated; the `Search` module queries it.
 
-The actual search endpoint and SearchModule remain part of Phase 10.
+## Realtime Chat
 
----
-
-## Architectural Boundary
-
-Phase 4 establishes the database/search infrastructure without prematurely implementing the Phase 10 Search API.
-
-This keeps the implementation aligned with the Blueprint's phased architecture.
-
-# Phase 5 — Orders + Escrow Architecture
-
-## Order / Escrow Flow
-
-Phase 5 connects Services, client wallets, escrow, freelancer wallets, and transaction history.
-
-```text
-Client
-  │
-  │ POST /orders
-  ▼
-OrderService
-  │
-  ├── verify Service
-  ├── verify client balance
-  │
-  ▼
-Prisma Transaction
-  │
-  ├── deduct Client Wallet
-  ├── create Order
-  ├── create Escrow HOLDING
-  └── create ESCROW_HOLD transaction
-```
-
-The financial state remains persisted in PostgreSQL.
-
----
-
-## Completion Flow
-
-```text
-Client
-  │
-  │ POST /orders/:id/complete
-  ▼
-OrderService
-  │
-  ▼
-Prisma Transaction
-  │
-  ├── verify DELIVERED state
-  ├── release Escrow
-  ├── credit Freelancer Wallet
-  ├── create ESCROW_RELEASE transaction
-  └── mark Order COMPLETED
-```
-
-The state transition is:
-
-```text
-DELIVERED → COMPLETED
-```
-
-The escrow transition is:
-
-```text
-HOLDING → RELEASED
-```
-
----
-
-## Cancellation Flow
-
-```text
-Client / Freelancer
-        │
-        │ POST /orders/:id/cancel
-        ▼
-   OrderService
-        │
-        ▼
- Prisma Transaction
-        │
-        ├── verify cancellation rules
-        ├── refund Client Wallet
-        ├── update Escrow → REFUNDED
-        ├── create ESCROW_REFUND transaction
-        └── update Order state
-```
-
-The refund keeps the wallet and transaction history consistent.
-
----
-
-## Financial State
-
-The Phase 5 financial relationship is:
-
-```text
-Client Wallet
-     │
-     │ ESCROW_HOLD
-     ▼
-   Escrow
-     │
-     ├── ESCROW_RELEASE ──► Freelancer Wallet
-     │
-     └── ESCROW_REFUND ───► Client Wallet
-```
-
-PostgreSQL remains the source of truth.
-
-Financial wallet data is not Redis-cached.
-
----
-
-## BullMQ Auto-Completion
-
-Orders that remain delivered are automatically completed after the configured 7-day delay.
-
-```text
-Order delivered
-      │
-      ▼
-BullMQ delayed job
-      │
-      │ 7 days
-      ▼
-OrderAutoCompleteProcessor
-      │
-      ├── re-check Order state
-      │
-      ├── release Escrow
-      │
-      ├── credit Freelancer Wallet
-      │
-      ├── create ESCROW_RELEASE
-      │
-      ├── mark Order COMPLETED
-      │
-      └── create system AuditLog
-                   │
-                   └── userId = null
-```
-
-The job uses:
-
-```text
-order-{orderId}
-```
-
-as its deterministic BullMQ job ID.
-
----
-
-## Duplicate Protection
-
-The auto-completion flow performs conditional state checks before executing the financial transition.
-
-This prevents an already-completed Order from being completed and paid out again.
-
-The same principle applies to normal completion.
-
-The database remains the authority for the current Order and Escrow state.
-
----
-
-## System vs User Operations
-
-Normal Order operations originate from authenticated users.
-
-Automatic completion originates from the BullMQ worker.
-
-```text
-User request
-    ↓
-authenticated user
-    ↓
-OrderService
-    ↓
-financial operation
-    ↓
-AuditLog(userId)
-
-BullMQ job
-    ↓
-system worker
-    ↓
-OrderService / financial operation
-    ↓
-AuditLog(userId = null)
-```
-
-This provides an audit distinction between user-triggered and system-triggered operations.
-
----
-
-## Architectural Boundary
-
-Phase 5 introduces Order/Escrow financial flows and background auto-completion.
-
-Notifications remain a separate Phase 6 concern.
-
-Search remains a Phase 10 concern.
-
-The implementation continues to use the existing NestJS monolith, PostgreSQL, Redis, Prisma, and BullMQ architecture.
-
-## Chat Architecture
-
-SkillShift Chat is implemented inside the existing NestJS monolith using Socket.IO/WebSockets for real-time messaging.
+Chat runs inside the existing monolith using Socket.IO:
 
 ```text
 Authenticated Socket
@@ -536,17 +372,12 @@ Authenticated Socket
    ChatGateway
         │
         ├── JWT authentication
-        │
         ├── Order participant authorization
-        │
         ├── Order room
-        │
         ▼
    ChatService
         │
-        ├── PostgreSQL
-        │      └── persistent messages
-        │
+        ├── PostgreSQL ── persistent messages
         └── NotificationService
                └── BullMQ → MESSAGE_RECEIVED
 
@@ -555,17 +386,11 @@ Redis
  └── message rate limiting
 ```
 
-PostgreSQL remains the persistent source of truth for messages.
+PostgreSQL is the persistent source of truth for messages; Redis holds ephemeral chat state (presence counters and rate-limit windows). Notifications use the existing Notification/BullMQ pipeline. History is served over REST with cursor pagination, while WebSockets deliver messages in real time.
 
-Redis is used for ephemeral Chat concerns such as presence and rate limiting.
+## File Uploads
 
-The existing Notification/BullMQ infrastructure handles asynchronous `MESSAGE_RECEIVED` notification processing.
-
-Chat history is exposed through a REST endpoint with cursor-based pagination, while WebSockets provide real-time message delivery.
-
-## Upload Architecture
-
-SkillShift uses AWS S3 for file storage with presigned `PUT` URLs.
+Files are stored in AWS S3 and uploaded directly by the browser with presigned `PUT` URLs:
 
 ```text
 Authenticated Client
@@ -576,54 +401,37 @@ Authenticated Client
         ├── JWT authentication
         ├── ownership authorization
         ├── file validation
-        │
         ▼
- Presigned S3 PUT URL
+Presigned S3 PUT URL
         │
         ▼
        S3
         │
         ▼
- Upload confirmation
+Upload confirmation
         │
         ▼
  S3 HeadObject
         │
         ▼
- PostgreSQL metadata
+PostgreSQL metadata
 ```
 
-The NestJS backend does not act as the primary file-transfer path.
-
-S3 stores the actual uploaded objects while PostgreSQL stores application-level metadata and relationships.
-
-Resource-specific persistence:
+The API is not the file-transfer path: S3 stores object bytes, PostgreSQL stores application metadata and relationships. Resource-specific persistence:
 
 ```text
-Avatar / Portfolio
-        ↓
-Profile
-
-Service Images
-        ↓
-Service.imageUrls
-
-Delivery Files
-        ↓
-DeliveryFile
-        ↓
-Order
+Avatar / Portfolio  → Profile
+Service images      → Service.imageUrls
+Delivery files      → DeliveryFile → Order
 ```
 
-The backend remains responsible for authentication, authorization, validation, presigned URL generation, and upload confirmation.
+The backend remains responsible for authentication, authorization, validation, presigned URL generation, and upload confirmation via `HeadObject`.
 
-# Production Deployment Architecture
+## Production Deployment
 
-## Overview
+### Overview
 
-SkillShift remains a **NestJS monolith** deployed as a Dockerized application on a single AWS EC2 instance.
-
-The production deployment adds Nginx as the public reverse proxy and uses Docker Compose for the application infrastructure.
+The API is deployed as a Dockerized application on a single AWS EC2 instance, with Nginx as the public reverse proxy:
 
 ```text
                          Internet
@@ -643,61 +451,29 @@ The production deployment adds Nginx as the public reverse proxy and uses Docker
         PostgreSQL                  Redis
        persistent state       internal infrastructure
               │
-              │
               └──────────────┐
                              ▼
                             S3
                      uploaded files
 ```
 
-## Components
+The web app deploys independently to Vercel.
 
 ### AWS EC2
 
-EC2 provides the deployment host for the SkillShift backend infrastructure.
-
-The instance runs:
-
-- SkillShift API
-- PostgreSQL
-- Redis
-- Nginx on the host
-
-The NestJS application itself runs inside a Docker container.
+EC2 hosts the backend infrastructure. The instance runs the API container, PostgreSQL and Redis containers, and Nginx on the host. The NestJS application runs inside Docker.
 
 ### Docker
 
-Docker packages the SkillShift API as a production image.
-
-Docker Compose manages:
-
-```text
-postgres
-redis
-api
-```
-
-PostgreSQL uses a persistent Docker volume so database state is independent of the API container lifecycle.
+Docker packages the API as a production image. Docker Compose manages `postgres`, `redis`, and `api`. PostgreSQL uses a persistent volume, so database state is independent of the API container lifecycle.
 
 ### Nginx
 
-Nginx is the public entry point.
-
-It:
-
-- terminates HTTPS
-- receives traffic on ports 80/443
-- reverse-proxies requests to the NestJS API on port 3000
-
-The NestJS application therefore does not need to be directly exposed as the public HTTPS endpoint.
+Nginx is the public entry point: it terminates HTTPS, listens on ports 80/443, and reverse-proxies requests to the API on port 3000. The application container is not exposed directly.
 
 ### PostgreSQL
 
-PostgreSQL remains the persistent source of truth for application state.
-
-The production database runs as a Docker container with persistent storage.
-
-Production migrations are applied using:
+PostgreSQL is the persistent source of truth. The production database runs as a Docker container with persistent storage. Migrations are applied with:
 
 ```text
 prisma migrate deploy
@@ -705,29 +481,15 @@ prisma migrate deploy
 
 ### Redis
 
-Redis remains internal infrastructure for the existing SkillShift architecture.
-
-It is used for the application's existing caching, rate limiting, presence, and queue-related functionality.
-
-Redis is not intended to be a public endpoint.
+Redis stays internal: caching, rate limiting, presence, and queue state. It is not a public endpoint.
 
 ### AWS S3
 
-S3 stores uploaded files used by the Upload module.
-
-The application accesses S3 through the AWS SDK.
-
-The EC2 instance uses an IAM instance profile instead of hard-coded AWS credentials.
+S3 stores files used by the Upload module. The application accesses it through the AWS SDK, using an EC2 IAM instance profile rather than hard-coded credentials.
 
 ### IAM
 
-The EC2 instance uses:
-
-```text
-SkillShiftEC2Role
-```
-
-The role receives only the S3 object operations required by the application:
+The EC2 instance assumes `SkillShiftEC2Role`, scoped to the S3 object operations the application needs:
 
 ```text
 s3:PutObject
@@ -735,14 +497,14 @@ s3:GetObject
 s3:DeleteObject
 ```
 
-The application does not require permission to enumerate all AWS buckets.
+Bucket enumeration (`s3:ListAllMyBuckets`) is not granted.
 
-## CI/CD Architecture
+### CI/CD
 
-GitHub Actions performs CI validation and container publishing.
+GitHub Actions validates every push and pull request and publishes the container image:
 
 ```text
-Git push main
+Git push / pull request
      │
      ▼
 GitHub Actions
@@ -750,11 +512,11 @@ GitHub Actions
      ├── npm ci
      ├── Prisma generate
      ├── ESLint
-     ├── Jest
+     ├── Unit tests (coverage)
+     ├── Integration tests
      ├── NestJS build
-     ├── Docker build
-     └── Docker Hub push
-             │
+     └── Docker build
+             │  (main branch only)
              ▼
         Docker Hub
              │
@@ -762,59 +524,19 @@ GitHub Actions
         SSH → EC2
              │
              ├── docker compose pull
-             └── docker compose up -d
+             ├── docker compose up -d
+             └── docker image prune
 ```
 
-The EC2 host therefore pulls the published application image rather than building the production image locally.
+The host pulls the published image instead of building it locally.
 
-## HTTPS
+### HTTPS
 
-The project uses:
+HTTPS uses DuckDNS, Let's Encrypt, Certbot, and Nginx. The hostname is `skillshift-api.duckdns.org`; certificate renewal is automated.
 
-```text
-DuckDNS
-+
-Let's Encrypt
-+
-Certbot
-+
-Nginx
-```
+- Live API: `https://skillshift-api.duckdns.org`
+- Swagger UI: `https://skillshift-api.duckdns.org/api/docs`
 
-The current project hostname is:
+### Non-goals
 
-```text
-skillshift-api.duckdns.org
-```
-
-Live API:
-
-```text
-https://skillshift-api.duckdns.org
-```
-
-Swagger:
-
-```text
-https://skillshift-api.duckdns.org/api/docs
-```
-
-Certificate renewal was tested using Certbot's dry-run mechanism.
-
-## Architectural Boundaries
-
-Phase 13 does **not** introduce:
-
-- microservices
-- Kubernetes
-- AWS ECS/EKS
-- managed PostgreSQL
-- managed Redis
-- load balancing
-- autoscaling
-- multi-region deployment
-- infrastructure-as-code
-- CDN
-- WAF
-
-The deployment therefore remains intentionally simple and aligned with the project's NestJS monolith architecture and current Blueprint scope.
+The deployment intentionally avoids microservices, Kubernetes, ECS/EKS, managed PostgreSQL/Redis, load balancing, autoscaling, multi-region deployment, infrastructure-as-code, a CDN, and a WAF. The goal is a realistic production-style deployment that matches the application's scale.

@@ -5,10 +5,10 @@ SkillShift deploys as two independent pieces:
 | Piece | Where | Live URL |
 | --- | --- | --- |
 | API (NestJS, Postgres, Redis) | AWS EC2 + Nginx + Docker Compose | `https://skillshift-api.duckdns.org` (Swagger: `/api/docs`) |
-| Web app (Next.js) | Vercel | add the project URL here after the first deploy |
+| Web app (Next.js) | Vercel | `https://skillshift-live.vercel.app` |
 
-See `docs/architecture.md` ("Production Deployment Architecture") for the
-topology diagram and rationale.
+See `docs/architecture.md` ("Production Deployment") for the topology diagram
+and rationale.
 
 ## Backend (EC2 + Nginx + Docker Compose)
 
@@ -47,7 +47,7 @@ Compose reads these variables from `.env` next to `docker-compose.yml`:
 | Variable | Notes |
 | --- | --- |
 | `JWT_SECRET`, `JWT_EXPIRES_IN` | strong secret; `15m` access tokens |
-| `FRONTEND_URL`, `APP_URL` | public web-app origin — used for API CORS, the chat origin allowlist, and email links. **Update to the Vercel URL after the frontend deploy.** |
+| `FRONTEND_URL`, `APP_URL` | public web-app origin — used for API CORS, the chat origin allowlist, and email links. Currently `https://skillshift-live.vercel.app`. |
 | `AWS_REGION`, `AWS_S3_BUCKET` | S3 auth comes from the EC2 IAM role (`SkillShiftEC2Role`) — no keys in `.env` |
 | `MAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` | Gmail SMTP + App Password (see "Mail" below) |
 
@@ -86,7 +86,7 @@ DATABASE_URL="postgresql://postgres:password@127.0.0.1:5432/skillshift" npx pris
 From a laptop, tunnel first: `ssh -L 5432:127.0.0.1:5432 <ec2-user>@<host>`,
 then run the last command locally.
 
-### Demo data (portfolio showcase)
+### Demo data (showcase dataset)
 
 The deterministic demo dataset (see `docs/demo-data.md` for the local flow):
 
@@ -99,9 +99,9 @@ docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U postgres -d skillshif
 ```
 
 The seed upserts fixed IDs and never touches `passwordHash`, so it is safe to
-re-run — but note the demo admin credentials (`admin@skillshift.demo` /
-`Demo1234!`) are public in this repository. On a public deployment, change the
-admin password once after seeding:
+re-run. The demo admin credentials (`admin@skillshift.demo` / `Demo1234!`) are
+published with the seed in this repository, so change the admin password once
+after seeding a public deployment:
 
 ```bash
 # 1) Generate a bcrypt hash (any machine with backend deps installed):
@@ -133,10 +133,10 @@ Demo client/freelancer logins (`Demo1234!`) can stay public — they are the
 | --- | --- | --- |
 | `SKILLSHIFT_API_URL` | `https://skillshift-api.duckdns.org` | server-side proxy (`/api/backend/*`) + server components (runtime env) |
 | `NEXT_PUBLIC_API_URL` | `https://skillshift-api.duckdns.org` | chat socket in the browser (**build-time**) |
-| `NEXT_PUBLIC_SITE_URL` | `https://<project>.vercel.app` | metadata, sitemap, robots (**build-time**) |
+| `NEXT_PUBLIC_SITE_URL` | `https://skillshift-live.vercel.app` | metadata, sitemap, robots (**build-time**) |
 | `NEXT_PUBLIC_S3_PUBLIC_BASE` | optional | public bucket/CDN base for uploaded images; without it the UI renders its designed fallbacks |
 
-4. Deploy. **Pick the final project name first** — the resulting URL must be
+4. Deploy. The project name determines the resulting URL, which must be
    mirrored in the backend env and S3 CORS. If a build-time value changes
    later, redeploy for it to take effect.
 
@@ -152,6 +152,7 @@ Demo client/freelancer logins (`Demo1234!`) can stay public — they are the
      FRONTEND_URL: ${FRONTEND_URL}
      APP_URL: ${APP_URL}
      ```
+
    - Verify: `docker compose exec -T api printenv FRONTEND_URL`
 2. Add the web-app origin to the **S3 bucket CORS** (the browser uploads
    directly to S3 with a presigned PUT):
@@ -159,7 +160,7 @@ Demo client/freelancer logins (`Demo1234!`) can stay public — they are the
 ```json
 [
   {
-    "AllowedOrigins": ["https://<project>.vercel.app"],
+    "AllowedOrigins": ["https://skillshift-live.vercel.app"],
     "AllowedMethods": ["PUT", "GET", "HEAD"],
     "AllowedHeaders": ["*"],
     "ExposeHeaders": ["ETag"],
@@ -170,9 +171,9 @@ Demo client/freelancer logins (`Demo1234!`) can stay public — they are the
 
 3. Refreshing sessions uses an HttpOnly cookie set through the frontend's
    same-origin proxy — `secure: true` requires HTTPS, which Vercel provides.
-   If a custom domain replaces `<project>.vercel.app`, update `FRONTEND_URL`,
-   `APP_URL`, the S3 CORS origin, and `NEXT_PUBLIC_SITE_URL` (then redeploy
-   the frontend).
+   If a custom domain replaces `skillshift-live.vercel.app`, update
+   `FRONTEND_URL`, `APP_URL`, the S3 CORS origin, and `NEXT_PUBLIC_SITE_URL`
+   (then redeploy the frontend).
 
 ## Mail (production)
 
@@ -200,7 +201,7 @@ on top of the per-account resend cooldown.
 - [ ] Live order cockpit shows the chat as connected (socket.io over HTTPS)
 - [ ] Live avatar/service upload works (presigned PUT through bucket CORS)
 - [ ] Demo seed applied; demo admin password changed
-- [ ] This file and the README updated with the frontend URL
+- [ ] Frontend URL recorded in this file and the README
 
 ## Known gotchas
 

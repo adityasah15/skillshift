@@ -1,530 +1,244 @@
 # Engineering Decisions Log
 
-Format: Decision → Why → Alternatives considered → Trade-offs
+The notable engineering decisions behind SkillShift, grouped by area. Each entry records the decision and why it was made, plus alternatives and trade-offs where they were meaningful.
 
----
+## Development Environment
 
-## [D-001] WSL 2 as development environment on Windows
+### Linux-based development environment
 
-**Decision:** Use WSL 2 (Ubuntu) as the primary terminal, not PowerShell.
+**Decision:** Use WSL 2 (Ubuntu) on Windows as the primary development environment.
 
 **Why:**
 - Production servers run Linux
 - Docker Desktop uses WSL 2 as its backend anyway
-- Eliminates Windows-specific bugs (line endings, path separators,
-  shell script compatibility)
+- Avoids Windows-specific issues with line endings, path separators, and shell scripts
 
 **Alternatives considered:**
-- PowerShell: Works for most things but causes friction with
-  shell scripts and some npm packages
-- Git Bash: Lighter but incomplete Linux emulation
+- PowerShell — works for most tasks but causes friction with shell scripts and some npm packages
+- Git Bash — lighter, but incomplete Linux emulation
 
-**Trade-offs:**
-- Small learning curve for WSL file system paths
-- `code .` requires manual PATH setup in `.bashrc`
+**Trade-offs:** A small learning curve for WSL file-system paths.
 
----
+### Databases in Docker, application on the host
 
-## [D-002] NestJS monolith over microservices
-
-**Decision:** Single NestJS application, not microservices.
+**Decision:** PostgreSQL and Redis run in Docker containers during development; the NestJS application runs directly on the host with `npm run start:dev`.
 
 **Why:**
-- Complexity of microservices (service discovery, network calls,
-  distributed tracing) is not justified at this scale
-- Monolith is easier to develop, debug, and deploy solo
-- Can be split later if needed
+- No local PostgreSQL or Redis installation or version management
+- Containers are isolated and reproducible; `docker compose up` provides the database environment
+- Direct process access keeps hot reload fast and debugging simple
 
 **Alternatives considered:**
-- Microservices: Over-engineered for a portfolio project
-- Express: Less structure, no DI container, more boilerplate
+- Everything in Docker, including the API — slower development loop and hot-reload complexity
+- Native PostgreSQL/Redis installs — version conflicts and harder resets
 
-**Trade-offs:**
-- Scaling individual modules independently is harder
-- Single point of failure
+**Trade-offs:** Docker must be running, and ports 5432/6379 can conflict with other local services. The Dockerfile is a deployment artifact; the API is containerized in production, not during development.
 
----
+## Architecture
 
-## [D-003] PostgreSQL + Redis in Docker, NestJS local
+### NestJS monolith over microservices
 
-**Decision:** Run databases in Docker containers, NestJS directly on WSL.
+**Decision:** A single NestJS application with explicit domain-module boundaries, not microservices.
 
 **Why:**
-- No need to install/manage PostgreSQL or Redis versions locally
-- Containers are isolated and reproducible
-- docker compose up = instant database environment
-- NestJS runs locally for faster hot-reload during development
+- Microservice overhead — service discovery, network calls, distributed tracing — is not justified at this scale
+- A monolith is easier to develop, debug, and deploy
+- Module boundaries leave room to split later if needed
 
 **Alternatives considered:**
-- Everything in Docker including NestJS: Slower dev loop,
-  hot-reload complexity
-- Install PostgreSQL/Redis directly: Version conflicts,
-  harder to reset/wipe
+- Microservices — over-engineered at this scale
+- Express — less structure, no dependency-injection container, more boilerplate
 
-**Trade-offs:**
-- Must have Docker Desktop running during development
-- Port conflicts possible if something else uses 5432 or 6379
+**Trade-offs:** Modules cannot be scaled independently, and the application is a single deployment unit.
 
+## Orders, Disputes & Reviews
 
+### Atomic dispute resolution
 
+**Decision:** Dispute resolution updates the dispute, order, escrow, wallet, transaction, and audit records inside a single Prisma transaction.
 
+**Why:** A resolution is one financial decision; partial completion could leave the system with inconsistent financial state.
 
-## [D-004] NestJS runs locally during development, not in Docker
+### Conditional state updates for resolution
 
-**Decision:** Only PostgreSQL and Redis run in Docker during development.
-NestJS runs directly on WSL with `npm run start:dev`.
+**Decision:** Dispute and escrow updates are conditional at the database level. A dispute can only be resolved while `OPEN` or `UNDER_REVIEW`; escrow can only be released or refunded while `HOLDING`.
 
-**Why:**
-- Faster hot reload (no volume mount overhead)
-- Simpler debugging (direct process access)
-- Dockerfile is a deployment artifact, not a development requirement
-- Reduces cognitive load while learning NestJS architecture
+**Why:** This prevents concurrent resolution requests and duplicate financial operations.
 
-**When does NestJS get containerized?**
-Phase 13 (Deployment). The Dockerfile is written then, tested,
-and used in the GitHub Actions CI/CD pipeline.
+### Notifications after committed transactions
 
-**Alternatives considered:**
-- Containerize everything from Day 1: More reproducible but
-  significantly slower dev loop and unnecessary complexity
-  while the core features are still being built.
+**Decision:** `DISPUTE_OPENED`, `DISPUTE_RESOLVED`, and `REVIEW_RECEIVED` notifications are queued only after the corresponding database transaction commits.
 
-**Trade-off:**
-- "Works on my machine" risk is slightly higher, but WSL
-  standardizes the environment enough to mitigate this.
+**Why:** Notifications describe committed state; queueing them earlier could announce operations that later roll back.
 
-  ## 2026-09-21 — Dispute Resolution and Notification Decisions
+### Individual admin notification fan-out
 
-### Atomic Dispute Financial Resolution
+**Decision:** `DISPUTE_OPENED` is delivered to every user with the `ADMIN` role as individual notification jobs.
 
-Dispute resolution changes multiple financial and domain records:
+**Why:** The notification model targets a single `userId`; a group-recipient abstraction was not warranted for this requirement.
 
-* Dispute
-* Order
-* Escrow
-* Wallet
-* Transaction
-* AuditLog
+### Existing audit log structure
 
-These changes are executed inside a single Prisma transaction.
+**Decision:** No `disputeId` field was added to `AuditLog`; dispute events use the existing order/user-based audit structure.
 
-**Reason:** A dispute resolution represents one financial decision. Partial completion could leave the system with inconsistent financial state.
+**Why:** The current audit model records the relevant state transitions without expanding the schema.
 
----
+### One review per order
 
-### Conditional State Updates for Resolution
+**Decision:** `Review.orderId` keeps its `@unique` constraint: each order can be reviewed once.
 
-Dispute and Escrow state updates use conditional database updates.
+**Why:** One review per order is the intended business rule, and the schema models it explicitly.
 
-A Dispute can only be resolved while it is `OPEN` or `UNDER_REVIEW`.
+### Review direction: client → freelancer
 
-Escrow can only be released/refunded while it is `HOLDING`.
+**Decision:** Only the client reviews the freelancer. The reviewer and reviewee are derived from the authenticated user and the order.
 
-**Reason:** This provides protection against concurrent resolution requests and prevents duplicate financial operations.
+**Why:** This matches the marketplace workflow and prevents clients from choosing reviewer or reviewee identities through the request body.
 
----
+### Transactional review and profile update
 
-### Notifications After Successful Transactions
+**Decision:** Review creation and the freelancer profile's `rating` / `totalReviews` statistics are updated in one Prisma transaction.
 
-`DISPUTE_OPENED` and `DISPUTE_RESOLVED` notifications are queued only after their corresponding database transactions successfully complete.
+**Why:** The review and the reputation numbers must stay consistent.
 
-**Reason:** Notifications describe committed state changes. Queueing them before the transaction succeeds could produce notifications for operations that later roll back.
+## Realtime Chat
 
----
+### Reuse of existing infrastructure
 
-### Individual Admin Notification Fan-Out
+**Decision:** The Chat module reuses the project's JWT authentication, Redis service, PostgreSQL persistence, and Notification/BullMQ infrastructure.
 
-`DISPUTE_OPENED` is sent individually to every user with the `ADMIN` role.
+**Why:** Chat is a domain module inside the monolith and follows the established infrastructure boundaries; no parallel auth, cache, or notification system is needed.
 
-**Reason:** The current Notification model targets an individual `userId` and does not provide a notification-group recipient abstraction.
+### Order-participant authorization
 
-A new group-recipient model was not introduced because the current requirement can be satisfied with individual notification jobs.
+**Decision:** Chat access is restricted to participants of the relevant order. Identity comes from the JWT, and participation is verified before a socket may join the order room or read message history.
 
----
+**Why:** Authentication alone does not establish authorization to access a specific order conversation.
 
-### Existing AuditLog Structure Retained
+### Multi-socket presence counters
 
-No `disputeId` field was added to `AuditLog`.
+**Decision:** Presence is tracked with a counter rather than an online/offline flag.
 
-Dispute audit events continue using the existing order/user-based audit structure.
+**Why:** A user may have multiple simultaneous sockets; a boolean would mark the user offline when just one socket disconnects.
 
-**Reason:** The current audit model is sufficient to record the relevant Order and Dispute state transitions without expanding the database schema unnecessarily.
+### Message rate limiting
 
+**Decision:** A Redis counter limits each user to 30 messages per 60-second window; further messages are rejected with a WebSocket exception.
 
-## 2026-09-22 — Reviews/Ratings Scope and Review Direction
+**Why:** Redis provides shared, short-lived state and is already part of the infrastructure.
 
-### Reviews/Ratings as a Supplemental Feature
+### Cursor-based message history
 
-Reviews/Ratings is implemented as a supplemental Blueprint-gap feature rather than a new numbered phase.
+**Decision:** Chat history uses cursor-based pagination.
 
-**Reason:** The Blueprint defines the Review model, business rules, Profile rating fields, and `REVIEW_RECEIVED` notification type, but does not define a dedicated Reviews implementation phase.
+**Why:** Message streams receive new records while users page through history; cursors avoid the shifting behavior of offset pagination.
 
-The official phase sequence therefore remains:
+### Notification separation
 
-```text
-Phase 7 — Disputes
-        ↓
-Supplemental Reviews/Ratings
-        ↓
-Phase 8 — Chat
-```
+**Decision:** `MESSAGE_RECEIVED` notifications use the existing Notification/BullMQ system rather than a second realtime mechanism.
 
----
+**Why:** Realtime delivery and asynchronous application notifications have different responsibilities, and the queue already provides the processing pipeline.
 
-### One Review Per Order
+### Safe WebSocket lifecycle handling
 
-The existing:
+**Decision:** Socket lifecycle handlers tolerate connections that never authenticated.
 
-```text
-Review.orderId @unique
-```
+**Why:** A socket can disconnect before JWT authentication completes; the disconnect handler must not assume authenticated state exists.
 
-constraint is retained.
+## File Uploads
 
-**Reason:** The Blueprint's review rule requires no existing Review for the Order, and the schema explicitly models `orderId` as unique.
+### Direct client-to-S3 uploads
 
-The implementation therefore treats one Review per Order as the intended business rule.
+**Decision:** File uploads use presigned S3 `PUT` URLs, so file bytes travel directly between the client and S3 rather than through the API server.
 
----
+**Why:** Large payloads stay off the API process, while the backend still owns authentication, authorization, validation, URL generation, and confirmation.
 
-### Client → Freelancer Review Direction
+### Upload confirmation via HeadObject
 
-The current implementation supports:
+**Decision:** An upload is persisted in the database only after the backend confirms the object with S3 `HeadObject`.
 
-```text
-Client
-  ↓
-Freelancer
-```
+**Why:** A presigned URL alone does not prove the upload succeeded; confirmation prevents records for missing objects.
 
-The reviewer and reviewee are derived from the authenticated user and Order.
+### Resource-specific ownership
 
-**Reason:** This matches the implemented marketplace workflow while preventing clients from choosing arbitrary reviewer/reviewee identities through the request body.
+**Decision:** Upload authorization is evaluated per resource. Service and delivery uploads require ownership checks against the related records.
 
-The Blueprint does not explicitly define the review direction, so this is documented as an implementation decision rather than a direct Blueprint requirement.
+**Why:** Authentication identifies the user; the resource determines whether that user may modify the associated data.
 
----
+### Delivery file persistence
 
-### Transactional Review/Profile Update
+**Decision:** Delivery uploads create `DeliveryFile` records linked to orders; service image uploads update `Service.imageUrls`.
 
-Review creation and freelancer Profile rating statistics are updated within one Prisma transaction.
+**Why:** Delivery files and service images have different domain semantics and persistence requirements.
 
-**Reason:** A successful Review and its corresponding `rating` / `totalReviews` statistics should remain consistent.
+### DeliveryFile schema addition
 
----
+**Decision:** The `DeliveryFile` model and the `Order.deliveryFiles` relation were added in migration `20260926140735_add_delivery_file`.
 
-### Notification After Review Commit
+**Why:** Delivery files need structured metadata and an explicit relationship with the order.
 
-`REVIEW_RECEIVED` is created/queued only after the Review/Profile transaction successfully commits.
+## Deployment & Operations
 
-**Reason:** The notification represents a persisted Review and should not be generated for a transaction that rolls back.
+### Docker Hub as the container registry
 
-## Phase 8 — Chat Architecture Decisions
+**Decision:** GitHub Actions publishes the production image to `adityasah15/skillshift-api` on Docker Hub, and EC2 pulls it.
 
-### Reuse Existing Infrastructure
+**Why:** Image creation is separated from the runtime host, so deployments do not build on the server.
 
-The Chat module reuses the project's existing:
+### GitHub Actions CI/CD
 
-* JWT authentication
-* Redis service
-* PostgreSQL persistence
-* Notification/BullMQ infrastructure
+**Decision:** GitHub Actions runs the pipeline on every push and pull request: install dependencies, generate Prisma Client, lint, unit tests, integration tests, build the app, and build the Docker image. Pushes to `main` additionally publish the image and deploy it to EC2 over SSH.
 
-No separate authentication, Redis, or notification infrastructure was introduced.
+**Why:** One automated, repeatable path from commit to running deployment.
 
-**Reason:** Chat is a domain module inside the existing NestJS monolith and should follow the project's established infrastructure boundaries.
+### Single EC2 host with Docker Compose
 
----
+**Decision:** The monolith runs on a single EC2 instance; Docker Compose manages PostgreSQL, Redis, and the API.
 
-### Order-Participant Authorization
+**Why:** This matches the application's architecture and provides a realistic production-style environment without infrastructure the scale does not require. PostgreSQL uses persistent storage so container replacement does not remove data.
 
-Chat access is restricted to participants of the relevant Order.
+### Nginx as reverse proxy
 
-The authenticated user identity comes from the JWT, and the Chat service verifies participation before allowing the user to join the Order room or retrieve its message history.
+**Decision:** Nginx is the public HTTPS entry point, reverse-proxying to the API on port 3000.
 
-**Reason:** Authentication alone does not establish authorization to access a specific Order conversation.
+**Why:** The application container stays behind a dedicated HTTP/TLS boundary.
 
----
+### DuckDNS hostname
 
-### Multi-Socket Redis Presence
+**Decision:** The API uses `skillshift-api.duckdns.org`.
 
-Presence is tracked using a counter rather than a simple online/offline flag.
+**Why:** DuckDNS provides a free, stable hostname for this deployment; it is treated as a project hostname rather than a commercial domain.
 
-**Reason:** One user can have multiple simultaneous sockets. A boolean would incorrectly mark the user offline when only one of several active sockets disconnects.
+### HTTPS with Let's Encrypt and Certbot
 
----
+**Decision:** Let's Encrypt certificates are issued and renewed with Certbot for the Nginx host.
 
-### Redis Chat Rate Limiting
+**Why:** HTTPS is required for secure cookies and browser uploads; renewal is automated.
 
-Redis is used for Chat message rate limiting.
+### EC2 IAM role
 
-The manually tested limit is:
+**Decision:** The application uses the `SkillShiftEC2Role` instance profile instead of hard-coded AWS credentials.
 
-```text
-10 messages / 10 seconds / user
-```
+**Why:** Credentials come from the EC2 environment, so no long-lived AWS keys live in application configuration.
 
-**Reason:** Redis provides shared short-lived state and is already part of the project's infrastructure.
+### S3 least privilege
 
----
+**Decision:** The instance role grants only `s3:PutObject`, `s3:GetObject`, and `s3:DeleteObject`.
 
-### Cursor-Based Message History
+**Why:** Bucket enumeration permissions such as `s3:ListAllMyBuckets` are not needed by the application.
 
-Chat history uses cursor-based pagination.
+### Production Prisma migrations
 
-**Reason:** Message streams can receive new records while users are paging through history. Cursor pagination avoids the shifting-offset behavior associated with offset pagination.
+**Decision:** Production migrations run with `prisma migrate deploy`, never `prisma migrate dev`.
 
----
+**Why:** This separates development migration workflows from deliberate production deployment.
 
-### Notification Separation
+### Security boundary
 
-`MESSAGE_RECEIVED` notifications continue to use the existing Notification/BullMQ system rather than being implemented as a second real-time notification mechanism.
+**Decision:** PostgreSQL and Redis stay internal, port 3000 stays behind Nginx, production secrets stay out of Git, and AWS credentials come from IAM.
 
-**Reason:** WebSocket Chat delivery and asynchronous application notifications have different responsibilities, while the existing notification infrastructure already provides queueing and processing.
+**Why:** Nginx over HTTPS remains the only public entry point.
 
----
+### Non-goals
 
-### Safe WebSocket Lifecycle Handling
-
-Socket lifecycle handlers must support connections that never successfully authenticate.
-
-**Reason:** A socket can disconnect before JWT authentication completes. Assuming authentication state exists in `handleDisconnect()` caused a runtime error during manual testing and was subsequently fixed.
-
-## Phase 9 — S3 Upload Architecture
-
-### Direct Client-to-S3 Uploads
-
-SkillShift uses S3 presigned `PUT` URLs for file uploads.
-
-**Reason:** Large file contents can be transferred directly between the client and S3 instead of passing through the NestJS application server.
-
-The backend remains responsible for authentication, authorization, validation, URL generation, and upload confirmation.
-
----
-
-### Upload Confirmation Through `HeadObject`
-
-An upload is not considered successfully persisted merely because a presigned URL was generated.
-
-The backend confirms the uploaded object using S3 `HeadObject` before persisting the corresponding application metadata.
-
-**Reason:** This prevents application records from being created for objects that were never successfully uploaded.
-
----
-
-### Resource-Specific Ownership
-
-Upload authorization is evaluated according to the requested resource.
-
-Service and delivery uploads require the appropriate ownership checks.
-
-**Reason:** Authentication identifies the user, but the upload resource determines whether that user is authorized to modify the associated application data.
-
----
-
-### Delivery File Persistence
-
-Delivery uploads create `DeliveryFile` records and are associated with Orders.
-
-Service image uploads instead update `Service.imageUrls`.
-
-**Reason:** Delivery files and service images have different domain semantics and persistence requirements.
-
----
-
-### DeliveryFile Schema Addition
-
-Phase 9 introduced the `DeliveryFile` model and `Order.deliveryFiles` relation.
-
-Migration:
-
-```text
-20260926140735_add_delivery_file
-```
-
-**Reason:** Delivery files require structured application metadata and an explicit relationship with the corresponding Order.
-
-# Phase 13 — Deployment Decisions
-
-## Docker Hub as Container Registry
-
-Docker Hub is used as the container registry for the current SkillShift deployment.
-
-GitHub Actions builds the production Docker image and publishes it to:
-
-```text
-adityasah15/skillshift-api
-```
-
-The EC2 deployment then pulls the published image.
-
-This separates image creation from the runtime deployment host.
-
----
-
-## Single AWS EC2 Deployment
-
-The SkillShift NestJS monolith is deployed to a single AWS EC2 instance.
-
-No microservices architecture was introduced.
-
-This keeps the deployment aligned with the existing application architecture while providing a realistic production-style deployment environment.
-
----
-
-## Docker Compose
-
-Docker Compose is used on EC2 to manage:
-
-```text
-PostgreSQL
-Redis
-SkillShift API
-```
-
-PostgreSQL uses persistent storage so application container replacement does not remove database state.
-
----
-
-## Nginx as Reverse Proxy
-
-Nginx is used as the public reverse proxy and HTTPS entry point.
-
-The deployment flow is:
-
-```text
-Internet
-   ↓
-Nginx :443
-   ↓
-NestJS API :3000
-```
-
-This keeps the application container behind a dedicated HTTP/TLS boundary.
-
----
-
-## DuckDNS
-
-DuckDNS is used as the project's current hostname:
-
-```text
-skillshift-api.duckdns.org
-```
-
-It is treated as a free project/development hostname rather than a commercial production domain.
-
----
-
-## Let's Encrypt + Certbot
-
-Let's Encrypt and Certbot provide HTTPS for the project hostname.
-
-Certbot automatic renewal is configured and renewal was verified using a dry-run.
-
----
-
-## EC2 IAM Role
-
-The application uses an EC2 instance profile rather than hard-coded AWS credentials.
-
-The instance uses:
-
-```text
-SkillShiftEC2Role
-```
-
-This allows the application to obtain AWS credentials through the EC2 environment without storing long-lived AWS access keys in application configuration.
-
----
-
-## S3 Least Privilege
-
-The EC2 role receives only the S3 object operations required by SkillShift:
-
-```text
-s3:PutObject
-s3:GetObject
-s3:DeleteObject
-```
-
-Bucket enumeration permissions such as:
-
-```text
-s3:ListAllMyBuckets
-```
-
-are intentionally not granted because the application does not require them.
-
----
-
-## GitHub Actions CI/CD
-
-GitHub Actions is responsible for:
-
-1. installing dependencies
-2. generating Prisma Client
-3. linting
-4. running Jest tests
-5. building the NestJS application
-6. building the Docker image
-7. publishing the image to Docker Hub
-8. deploying the updated image to EC2
-
-The deployment is triggered by changes pushed to `main`.
-
-An initial SSH connectivity issue was resolved through the EC2 Security Group configuration, after which the complete automated deployment workflow succeeded.
-
----
-
-## Production Prisma Migrations
-
-Production database migrations use:
-
-```text
-prisma migrate deploy
-```
-
-rather than:
-
-```text
-prisma migrate dev
-```
-
-This separates development migration workflows from production migration deployment.
-
----
-
-## Security Boundary
-
-The deployment intentionally keeps:
-
-* PostgreSQL internal
-* Redis internal
-* application port 3000 behind Nginx
-* production secrets outside Git
-* AWS credentials supplied through IAM
-
-The public entry point is Nginx over HTTPS.
-
----
-
-## Scope Boundary
-
-The Phase 13 deployment does not include:
-
-* Kubernetes
-* ECS/EKS
-* Terraform/IaC
-* multi-region infrastructure
-* load balancing
-* autoscaling
-* blue/green deployment
-* managed PostgreSQL
-* managed Redis
-* CDN
-* WAF
-* dedicated commercial domain
-* production observability platform
-
-These remain outside the completed Phase 13 scope.
+The deployment intentionally excludes Kubernetes, ECS/EKS, Terraform/IaC, multi-region infrastructure, load balancing, autoscaling, blue/green deployment, managed PostgreSQL/Redis, a CDN, a WAF, a commercial domain, and a production observability platform.
