@@ -145,6 +145,14 @@ Demo client/freelancer logins (`Demo1234!`) can stay public — they are the
 1. On EC2: set `FRONTEND_URL` and `APP_URL` in `~/skillshift/.env` to the
    deployed web-app origin, then `docker compose up -d api`. This drives API
    CORS, the chat-origin allowlist, and email links.
+   - If the host's `docker-compose.yml` does not map them yet (the EC2 copy
+     historically did not), add these under `api.environment` first:
+
+     ```yaml
+     FRONTEND_URL: ${FRONTEND_URL}
+     APP_URL: ${APP_URL}
+     ```
+   - Verify: `docker compose exec -T api printenv FRONTEND_URL`
 2. Add the web-app origin to the **S3 bucket CORS** (the browser uploads
    directly to S3 with a presigned PUT):
 
