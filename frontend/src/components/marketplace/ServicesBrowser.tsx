@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MOCK_SERVICES, MOCK_SKILLS } from "@/lib/mock-services";
+import { MOCK_SERVICES } from "@/lib/mock-services";
 import { ServiceCard } from "@/components/marketplace/ServiceCard";
 import { EmptyState, ErrorState, SkeletonGrid } from "@/components/ui/States";
 import { ApiRequestError } from "@/lib/api-client";
 import { searchApi, servicesApi } from "@/lib/api/services";
+import { useCatalogSkills } from "@/lib/use-catalog-skills";
 import type { Service } from "@/lib/types";
 
 type Source = "live" | "preview";
@@ -95,6 +96,8 @@ export function ServicesBrowser() {
     });
   }, [debouncedQ, skill]);
 
+  const catalogSkills = useCatalogSkills(8);
+
   const liveCount = services?.length ?? 0;
   const shown = source === "live" && services ? liveCount : preview.length;
 
@@ -144,7 +147,7 @@ export function ServicesBrowser() {
         >
           All
         </button>
-        {MOCK_SKILLS.map((s) => (
+        {catalogSkills.map((s) => (
           <button
             key={s}
             type="button"

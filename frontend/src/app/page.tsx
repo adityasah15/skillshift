@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { MOCK_SERVICES, MOCK_SKILLS } from "@/lib/mock-services";
+import { MOCK_SERVICES } from "@/lib/mock-services";
+import { PopularSkills } from "@/components/marketplace/PopularSkills";
 import { ServiceCard } from "@/components/marketplace/ServiceCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Reveal } from "@/components/ui/Reveal";
@@ -107,17 +108,7 @@ export default function Home() {
 
       <section className="mx-auto max-w-[1280px] px-4 pb-4 sm:px-6 lg:px-8" aria-label="Popular skills">
         <Reveal>
-          <div className="flex flex-wrap gap-2">
-            {MOCK_SKILLS.map((s) => (
-              <Link
-                key={s}
-                href={`/services?skills=${encodeURIComponent(s)}`}
-                className="inline-flex min-h-[44px] items-center rounded-full border border-border bg-surface px-5 text-sm font-semibold text-text transition hover:border-primary hover:text-primary"
-              >
-                {s}
-              </Link>
-            ))}
-          </div>
+          <PopularSkills />
         </Reveal>
       </section>
 
