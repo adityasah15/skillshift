@@ -24,9 +24,23 @@ interface AuthenticatedSocket extends Socket {
   user: JwtPayload;
 }
 
+/**
+ * socket.io consumes this metadata during bootstrap, before ConfigModule has
+ * loaded `.env`, so the allowed origin must be read lazily at handshake time.
+ * No Origin header (non-browser clients) and no configured FRONTEND_URL both
+ * pass — matching the HTTP CORS stance in main.ts.
+ */
+function allowedOrigin(
+  origin: string | undefined,
+  callback: (err: Error | null, allow?: boolean) => void,
+): void {
+  const configured = process.env.FRONTEND_URL;
+  callback(null, !configured || !origin || origin === configured);
+}
+
 @WebSocketGateway({
   namespace: '/chat',
-  cors: { origin: process.env.FRONTEND_URL },
+  cors: { origin: allowedOrigin },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly presenceTtlSeconds = 30;
