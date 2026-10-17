@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Ip,
   Post,
   Query,
   Req,
@@ -54,8 +55,9 @@ export class AuthController {
   @Post('resend-verification')
   async resendVerification(
     @Body() resendVerificationDto: ResendVerificationDto,
+    @Ip() ip: string,
   ) {
-    return this.authService.resendVerification(resendVerificationDto);
+    return this.authService.resendVerification(resendVerificationDto, ip);
   }
 
   @Public()
@@ -126,8 +128,11 @@ export class AuthController {
 
   @Public()
   @Post('forgot-password')
-  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(forgotPasswordDto);
+  async forgotPassword(
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+    @Ip() ip: string,
+  ) {
+    return this.authService.forgotPassword(forgotPasswordDto, ip);
   }
 
   @Public()

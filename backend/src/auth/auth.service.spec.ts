@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -11,6 +13,7 @@ import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NotificationService } from 'src/notification/notification.service';
+import { RedisService } from 'src/redis/redis.service';
 import { Role } from 'generated/prisma/enums';
 import { Prisma } from 'generated/prisma/client';
 
@@ -51,6 +54,10 @@ describe('AuthService', () => {
     enqueueEmail: jest.fn(),
   };
 
+  const redisService = {
+    incrWithTtl: jest.fn().mockResolvedValue(1),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -68,6 +75,10 @@ describe('AuthService', () => {
         {
           provide: NotificationService,
           useValue: notificationService,
+        },
+        {
+          provide: RedisService,
+          useValue: redisService,
         },
       ],
     }).compile();
@@ -269,6 +280,25 @@ describe('AuthService', () => {
       message:
         'If an account exists for this email and it is not verified yet, a new verification link has been sent.',
     };
+
+    it('should reject requests over the per-IP limit', async () => {
+      redisService.incrWithTtl.mockResolvedValueOnce(11);
+
+      const error = await service
+        .resendVerification(dto, '203.0.113.7')
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+      expect(redisService.incrWithTtl).toHaveBeenCalledWith(
+        'ratelimit:resend-verification:203.0.113.7',
+        expect.any(Number) as unknown,
+      );
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+      expect(notificationService.enqueueEmail).not.toHaveBeenCalled();
+    });
 
     it('should return the generic response when user does not exist', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
@@ -673,6 +703,25 @@ describe('AuthService', () => {
     const dto = {
       email: 'user@example.com',
     };
+
+    it('should reject requests over the per-IP limit', async () => {
+      redisService.incrWithTtl.mockResolvedValueOnce(6);
+
+      const error = await service
+        .forgotPassword(dto, '203.0.113.7')
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+      expect(redisService.incrWithTtl).toHaveBeenCalledWith(
+        'ratelimit:forgot-password:203.0.113.7',
+        expect.any(Number) as unknown,
+      );
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+      expect(notificationService.enqueueEmail).not.toHaveBeenCalled();
+    });
 
     it('should return the same response when user does not exist', async () => {
       prisma.user.findUnique.mockResolvedValue(null);

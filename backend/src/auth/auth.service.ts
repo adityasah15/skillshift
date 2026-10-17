@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -15,6 +17,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { NotificationService } from 'src/notification/notification.service';
+import { RedisService } from 'src/redis/redis.service';
 
 // Verification links live 24h. Resends are throttled to one per hour by
 // reusing the expiry column: a token expiring more than 23h out was sent
@@ -22,13 +25,38 @@ import { NotificationService } from 'src/notification/notification.service';
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 60 * 1000;
 
+// Per-IP throttles for the two public endpoints that send email. The
+// per-account cooldown above still applies; this one blocks a single
+// source from mail-bombing accounts (and exhausting the SMTP quota).
+const MAIL_RATE_LIMIT_WINDOW_SECONDS = 60 * 60;
+const FORGOT_PASSWORD_RATE_LIMIT_PER_IP = 5;
+const RESEND_VERIFICATION_RATE_LIMIT_PER_IP = 10;
+
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
     private readonly notificationService: NotificationService,
+    private readonly redisService: RedisService,
   ) {}
+
+  private async enforceMailRateLimit(
+    scope: string,
+    ip: string | undefined,
+    limit: number,
+  ): Promise<void> {
+    const attempts = await this.redisService.incrWithTtl(
+      `ratelimit:${scope}:${ip ?? 'unknown'}`,
+      MAIL_RATE_LIMIT_WINDOW_SECONDS,
+    );
+    if (attempts > limit) {
+      throw new HttpException(
+        'Too many requests. Please try again later.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
 
   async register(registerDto: RegisterDto) {
     const existingUser = await this.prismaService.user.findUnique({
@@ -118,7 +146,15 @@ export class AuthService {
     };
   }
 
-  async resendVerification(resendVerificationDto: ResendVerificationDto) {
+  async resendVerification(
+    resendVerificationDto: ResendVerificationDto,
+    ip?: string,
+  ) {
+    await this.enforceMailRateLimit(
+      'resend-verification',
+      ip,
+      RESEND_VERIFICATION_RATE_LIMIT_PER_IP,
+    );
     const generic = {
       message:
         'If an account exists for this email and it is not verified yet, a new verification link has been sent.',
@@ -284,7 +320,12 @@ export class AuthService {
     };
   }
 
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto, ip?: string) {
+    await this.enforceMailRateLimit(
+      'forgot-password',
+      ip,
+      FORGOT_PASSWORD_RATE_LIMIT_PER_IP,
+    );
     const user = await this.prismaService.user.findUnique({
       where: { email: forgotPasswordDto.email },
     });

@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import type { StringValue } from 'ms';
 import { JwtStrategy } from './strategies/jwt.strategy/jwt.strategy';
 import { NotificationModule } from 'src/notification/notification.module';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { NotificationModule } from 'src/notification/notification.module';
       }),
     }),
     NotificationModule,
+    RedisModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
