@@ -102,7 +102,9 @@ describe('WalletService', () => {
         } as unknown as Prisma.TransactionClient),
       );
 
-      await expect(service.withdraw('user-1', 100)).resolves.toBe(updatedWallet);
+      await expect(service.withdraw('user-1', 100)).resolves.toBe(
+        updatedWallet,
+      );
 
       expect(updateMany).toHaveBeenCalledWith({
         where: { id: 'wallet-1', balance: { gte: 100 } },

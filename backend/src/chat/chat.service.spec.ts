@@ -33,45 +33,47 @@ describe('ChatService', () => {
     expect(service).toBeDefined();
   });
 
-  it.each([
-    OrderStatus.COMPLETED,
-    OrderStatus.CANCELLED,
-    OrderStatus.REFUNDED,
-  ])('rejects new messages for %s orders', async (status) => {
-    prisma.order.findUnique.mockResolvedValue({
-      id: 'order-1',
-      clientId: 'client-1',
-      freelancerId: 'freelancer-1',
-      status,
-    });
+  it.each([OrderStatus.COMPLETED, OrderStatus.CANCELLED, OrderStatus.REFUNDED])(
+    'rejects new messages for %s orders',
+    async (status) => {
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'order-1',
+        clientId: 'client-1',
+        freelancerId: 'freelancer-1',
+        status,
+      });
 
-    await expect(
-      service.saveMessage('order-1', 'client-1', 'Hello'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(prisma.conversation.upsert).not.toHaveBeenCalled();
-    expect(prisma.message.create).not.toHaveBeenCalled();
-  });
+      await expect(
+        service.saveMessage('order-1', 'client-1', 'Hello'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.conversation.upsert).not.toHaveBeenCalled();
+      expect(prisma.message.create).not.toHaveBeenCalled();
+    },
+  );
 
-  it.each([
-    OrderStatus.COMPLETED,
-    OrderStatus.CANCELLED,
-    OrderStatus.REFUNDED,
-  ])('allows history reads for %s orders', async (status) => {
-    const messages = [{ id: 'message-1', content: 'Previous message' }];
-    prisma.order.findUnique.mockResolvedValue({
-      id: 'order-1',
-      clientId: 'client-1',
-      freelancerId: 'freelancer-1',
-      status,
-    });
-    prisma.conversation.findUnique.mockResolvedValue({ id: 'conversation-1' });
-    prisma.message.findMany.mockResolvedValue(messages);
+  it.each([OrderStatus.COMPLETED, OrderStatus.CANCELLED, OrderStatus.REFUNDED])(
+    'allows history reads for %s orders',
+    async (status) => {
+      const messages = [{ id: 'message-1', content: 'Previous message' }];
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'order-1',
+        clientId: 'client-1',
+        freelancerId: 'freelancer-1',
+        status,
+      });
+      prisma.conversation.findUnique.mockResolvedValue({
+        id: 'conversation-1',
+      });
+      prisma.message.findMany.mockResolvedValue(messages);
 
-    await expect(service.getMessages('order-1', 'client-1')).resolves.toEqual({
-      messages,
-      nextCursor: null,
-    });
-  });
+      await expect(service.getMessages('order-1', 'client-1')).resolves.toEqual(
+        {
+          messages,
+          nextCursor: null,
+        },
+      );
+    },
+  );
 
   it('allows participants to continue messaging on disputed orders', async () => {
     const message = { id: 'message-1', content: 'Let us resolve this' };
