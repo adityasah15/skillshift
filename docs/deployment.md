@@ -118,6 +118,24 @@ SQL
 Demo client/freelancer logins (`Demo1234!`) can stay public — they are the
 "try it yourself" experience. The admin console must not be.
 
+### First admin
+
+The seed ships a demo admin, but for a real deployment use your own account:
+register normally on the live site, then promote it in the database. Role
+changes are deliberately not exposed in the product — registration accepts
+only CLIENT or FREELANCER, and the admin panel cannot promote users.
+
+```bash
+# On the EC2 host (same pattern as the seed command above):
+docker compose exec -T postgres psql -U postgres -d skillshift <<'SQL'
+UPDATE "User" SET role = 'ADMIN' WHERE email = 'you@example.com';
+SQL
+```
+
+Log out and back in afterwards: the access token carries the role, and a token
+refresh re-reads it from the database. A real mailbox on the account also means
+its password can be rotated later through the normal forgot-password flow.
+
 ## Frontend (Vercel)
 
 ### First deploy
