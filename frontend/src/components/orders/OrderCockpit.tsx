@@ -14,7 +14,7 @@ import {
   DisputeDialog,
   ReviewDialog,
 } from "@/components/orders/ActionDialogs";
-import { OrderStatusTimeline } from "@/components/orders/OrderStatusTimeline";
+import { EscrowTracker, escrowLabel } from "@/components/orders/EscrowTracker";
 import { ApiRequestError } from "@/lib/api-client";
 import { authApi } from "@/lib/api/auth";
 import { ordersApi } from "@/lib/api/orders";
@@ -39,14 +39,6 @@ const OrderChat = dynamic(
 );
 
 type Dialog = "deliver" | "complete" | "cancel" | "dispute" | "review" | null;
-
-function escrowLine(status: string, price: number): { text: string; tone: string } {
-  if (status === "COMPLETED")
-    return { text: `${formatINR(price)} released to the freelancer`, tone: "bg-success-soft text-success" };
-  if (status === "CANCELLED" || status === "REFUNDED")
-    return { text: `${formatINR(price)} refunded to the client`, tone: "bg-surface-soft text-text-muted" };
-  return { text: `${formatINR(price)} protected in escrow`, tone: "bg-warning-soft text-warning" };
-}
 
 function countdown(to: string): string {
   const ms = new Date(to).getTime() - Date.now();
@@ -164,7 +156,7 @@ export function OrderCockpit({ id }: { id: string }) {
   }
 
   const isClient = me.sub === order.clientId;
-  const escrow = escrowLine(order.status, order.price);
+  const moneyLabel = escrowLabel(order.status);
   const refetch = () => {
     setDialog(null);
     setAttempt((n) => n + 1);
@@ -201,7 +193,11 @@ export function OrderCockpit({ id }: { id: string }) {
       <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
           <section aria-label="Progress" className="rounded-[18px] border border-border bg-surface p-6">
-            <OrderStatusTimeline status={order.status} />
+            <EscrowTracker
+              status={order.status}
+              price={order.price}
+              viewer={isClient ? "client" : "freelancer"}
+            />
             {order.status === "DELIVERED" && order.autoCompleteAt && (
               <p className="mt-3 text-sm font-medium text-warning">{countdown(order.autoCompleteAt)}</p>
             )}
@@ -275,9 +271,15 @@ export function OrderCockpit({ id }: { id: string }) {
         <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           <section aria-label="Payment" className="rounded-[18px] border border-border bg-surface p-6">
             <p className="text-[13px] text-text-subtle">Order value</p>
-            <p className="font-mono text-2xl font-bold">{formatINR(order.price)}</p>
-            <p className={`mt-2 rounded-[12px] px-3 py-2 text-[13px] font-medium ${escrow.tone}`}>
-              {order.status === "COMPLETED" ? "Released" : order.status === "CANCELLED" || order.status === "REFUNDED" ? "Refunded" : "Held in escrow"} · {escrow.text}
+            <p className="tabular text-2xl font-bold">{formatINR(order.price)}</p>
+            <p
+              className={`mt-2 rounded-[12px] px-3 py-2 text-[13px] font-medium ${
+                moneyLabel === "Held in escrow"
+                  ? "bg-warning-soft text-warning"
+                  : "bg-success-soft text-success"
+              }`}
+            >
+              {moneyLabel}
             </p>
           </section>
 
