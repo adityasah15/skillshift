@@ -23,6 +23,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
+  applicationName: "SkillShift",
+  formatDetection: { telephone: false },
   title: {
     default: "SkillShift — Find the right skills",
     template: "%s · SkillShift",
