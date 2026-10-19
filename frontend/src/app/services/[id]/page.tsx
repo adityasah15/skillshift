@@ -50,7 +50,7 @@ export default async function ServicePage({
   const { id } = await params;
   return (
     <main className="bg-bg">
-      <div className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6 lg:px-8">
         <Link
           href="/services"
           className="mb-5 inline-flex min-h-[44px] items-center text-sm font-semibold text-primary hover:underline"
