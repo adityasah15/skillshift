@@ -32,7 +32,6 @@ export default function AboutPage() {
               <li><strong className="text-text">Released on approval.</strong> Accept the delivery and funds go to the freelancer.</li>
               <li><strong className="text-text">Refunded on dispute.</strong> If a dispute resolves your way, money returns to your wallet.</li>
             </ul>
-            <p className="mt-4 text-sm text-text-muted">Test mode — no real money moves.</p>
           </section>
         </Reveal>
         <Reveal delay={120}>

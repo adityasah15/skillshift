@@ -385,9 +385,6 @@ export function ServiceDetail({ id }: { id: string }) {
                 </Link>
               </div>
             )}
-            <p className="mt-3 text-[13px] leading-6 text-text-muted">
-              Test mode — no real money moves.
-            </p>
           </div>
         </aside>
       </div>

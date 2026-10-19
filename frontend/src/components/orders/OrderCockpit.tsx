@@ -279,9 +279,6 @@ export function OrderCockpit({ id }: { id: string }) {
             <p className={`mt-2 rounded-[12px] px-3 py-2 text-[13px] font-medium ${escrow.tone}`}>
               {order.status === "COMPLETED" ? "Released" : order.status === "CANCELLED" || order.status === "REFUNDED" ? "Refunded" : "Held in escrow"} · {escrow.text}
             </p>
-            <p className="mt-2 text-[13px] leading-6 text-text-muted">
-              Test mode — no real money moves.
-            </p>
           </section>
 
           <section aria-label="Actions" className="rounded-[18px] border border-border bg-surface p-6">

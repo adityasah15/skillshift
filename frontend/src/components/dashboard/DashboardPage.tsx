@@ -155,10 +155,9 @@ export function DashboardPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-[13px] text-text-subtle">Available in wallet</p>
-            <p className="font-mono text-2xl font-bold break-words">
+            <p className="tabular text-2xl font-bold break-words">
               {balance === null ? "—" : formatINR(balance)}
             </p>
-            <p className="mt-1 text-[13px] text-text-muted">Test mode — no real money moves.</p>
           </div>
           <Button variant="secondary" onClick={() => router.push("/wallet")}>
             Open wallet

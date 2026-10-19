@@ -42,9 +42,6 @@ export function Footer() {
           <p className="mt-3 max-w-xs text-sm leading-6 text-text-muted">
             Hire skilled freelancers with payments protected on every order.
           </p>
-          <p className="mt-3 inline-block rounded-full bg-surface-soft px-3 py-1 text-xs font-medium text-text-muted">
-            Test mode — no real money moves
-          </p>
         </div>
         {columns.map((col) => (
           <nav key={col.heading} aria-label={col.heading}>

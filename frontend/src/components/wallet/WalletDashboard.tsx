@@ -96,7 +96,7 @@ function MoneyDialog({
         />
         <p className="rounded-[14px] bg-surface-soft px-4 py-3 text-[13px] leading-6 text-text-muted">
           {kind === "deposit"
-            ? "Test mode — no real money moves. Funds appear as Available immediately."
+            ? "Added funds appear as Available immediately."
             : "Only available balance can be withdrawn — amounts held in escrow stay protected until orders complete."}
         </p>
         {error && (
@@ -241,13 +241,12 @@ export function WalletDashboard() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-[13px] text-text-subtle">Available in wallet</p>
-            <p className="text-3xl font-mono font-bold break-words sm:text-4xl">{formatINR(balance)}</p>
+            <p className="tabular text-3xl font-bold break-words sm:text-4xl">{formatINR(balance)}</p>
             {heldLine !== null && heldLine > 0 && (
               <p className="mt-1.5 text-sm font-medium text-warning">
                 + {formatINR(heldLine)} held in escrow across open orders
               </p>
             )}
-            <p className="mt-2 text-[13px] text-text-muted">Test mode — no real money moves.</p>
           </div>
           <StatusBadge status="ACTIVE" />
         </div>

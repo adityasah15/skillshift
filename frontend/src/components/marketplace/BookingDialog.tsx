@@ -169,9 +169,8 @@ export function BookingDialog({
             maxLength={2000}
           />
           <p className="rounded-[14px] bg-warning-soft px-4 py-3 text-[13px] leading-6 text-warning">
-            {formatINR(price)} will be held in escrow after you approve — the
-            freelancer is paid only when you accept the delivery. Test mode — no
-            real money moves.
+            {formatINR(price)} is held in escrow when you place the order — the
+            freelancer is paid only when you accept the delivery.
           </p>
           {error && (
             <p role="alert" className="text-sm leading-6 text-danger">

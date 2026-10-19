@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { MOCK_SERVICES } from "@/lib/mock-services";
 import { PopularSkills } from "@/components/marketplace/PopularSkills";
 import { ServiceCard } from "@/components/marketplace/ServiceCard";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Reveal } from "@/components/ui/Reveal";
 
 export const metadata: Metadata = {
@@ -53,13 +52,7 @@ export default function Home() {
     <main className="bg-bg">
       <section className="mx-auto max-w-[1280px] px-4 pt-16 pb-12 text-center sm:px-6 lg:px-8 lg:pt-24 lg:pb-16">
         <div className="mx-auto max-w-3xl">
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <StatusBadge status="ACTIVE" />
-            <span className="text-[13px] text-text-muted">
-              Protected payments on every order
-            </span>
-          </div>
-          <h1 className="mt-5 text-5xl leading-[1.04] font-extrabold tracking-tight text-text sm:text-6xl lg:text-7xl">
+          <h1 className="text-5xl leading-[1.04] font-extrabold tracking-tight text-text sm:text-6xl lg:text-7xl">
             Find the right skills for your next project.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-text-muted sm:text-xl sm:leading-9">
@@ -180,10 +173,6 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <p className="mt-6 text-sm text-text-muted">
-              Test mode — no real money moves. Balances and payments here are for
-              demonstration.
-            </p>
           </div>
         </Reveal>
       </section>
