@@ -1,27 +1,71 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
 import { Drawer, Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState, ErrorState } from "@/components/ui/States";
+import { GeneratedCover } from "@/components/marketplace/GeneratedCover";
 import { RequireFreelancer } from "@/components/studio/RequireFreelancer";
 import { ServiceForm, type ServiceFormValues } from "@/components/studio/ServiceForm";
 import { ApiRequestError } from "@/lib/api-client";
 import { servicesApi } from "@/lib/api/services";
+import { usersApi } from "@/lib/api/users";
 import { formatINR } from "@/lib/format";
-import { resolvePublicImage } from "@/lib/images";
 import { uploadServiceImage } from "@/lib/upload";
 import type { Service } from "@/lib/types";
+
+type Filter = "ALL" | "ACTIVE" | "PENDING_REVIEW" | "ATTENTION";
+
+const FILTERS: Array<{ value: Filter; label: string }> = [
+  { value: "ALL", label: "All" },
+  { value: "ACTIVE", label: "Live" },
+  { value: "PENDING_REVIEW", label: "In review" },
+  { value: "ATTENTION", label: "Not approved" },
+];
+
+function matches(service: Service, filter: Filter): boolean {
+  if (filter === "ALL") return true;
+  if (filter === "ATTENTION") {
+    return service.status === "REJECTED" || service.status === "PAUSED";
+  }
+  return service.status === filter;
+}
+
+function statusNote(status: string): string | null {
+  if (status === "PENDING_REVIEW") {
+    return "In review — goes live once an admin approves it.";
+  }
+  if (status === "REJECTED") {
+    return "Hidden from clients. Fixing it here doesn't resubmit — an admin restores visibility after review.";
+  }
+  if (status === "PAUSED") return "Paused — not visible to clients.";
+  return null;
+}
+
+function Thumb({ service }: { service: Service }) {
+  return (
+    <GeneratedCover
+      title={service.title}
+      imageUrls={service.imageUrls}
+      chip={false}
+      imageAlt={service.title}
+      monogramClassName="text-lg"
+      className="h-12 w-16 shrink-0 rounded-[8px] border border-border"
+    />
+  );
+}
 
 function MineList() {
   const router = useRouter();
   const [services, setServices] = useState<Service[] | null>(null);
+  const [sellerName, setSellerName] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [filter, setFilter] = useState<Filter>("ALL");
   const [editing, setEditing] = useState<Service | null>(null);
   const [deleting, setDeleting] = useState<Service | null>(null);
   const [saving, setSaving] = useState(false);
@@ -34,8 +78,15 @@ function MineList() {
       setLoading(true);
       setFailed(null);
       try {
-        const { data } = await servicesApi.mine();
-        if (!cancelled) setServices(data);
+        const [mine, me] = await Promise.all([
+          servicesApi.mine(),
+          usersApi.me().catch(() => null),
+        ]);
+        if (cancelled) return;
+        setServices(mine.data);
+        if (me) {
+          setSellerName(me.data.profile?.displayName ?? me.data.email);
+        }
       } catch (err) {
         if (cancelled) return;
         if (err instanceof ApiRequestError) setFailed(err.message);
@@ -93,11 +144,22 @@ function MineList() {
     }
   }
 
+  const counts = useMemo(() => {
+    const list = services ?? [];
+    const count = (f: Filter) => list.filter((s) => matches(s, f)).length;
+    return {
+      ALL: count("ALL"),
+      ACTIVE: count("ACTIVE"),
+      PENDING_REVIEW: count("PENDING_REVIEW"),
+      ATTENTION: count("ATTENTION"),
+    } as Record<Filter, number>;
+  }, [services]);
+
   if (loading) {
     return (
-      <div className="grid gap-5 sm:grid-cols-2" aria-label="Loading your services">
-        {[0, 1].map((i) => (
-          <div key={i} className="skeleton-shimmer h-56 rounded-[16px]" />
+      <div className="space-y-3" aria-label="Loading your services">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="skeleton-shimmer h-20 rounded-[10px]" />
         ))}
       </div>
     );
@@ -123,78 +185,166 @@ function MineList() {
     );
   }
 
+  const visible = services.filter((s) => matches(s, filter));
+
   return (
     <>
-      <ul className="grid gap-5 sm:grid-cols-2">
-        {services.map((s) => {
-          const cover = resolvePublicImage(s.imageUrls?.[0]);
-          return (
-          <li
-            key={s.id}
-            className="flex flex-col overflow-hidden rounded-[16px] border border-border bg-surface"
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter services">
+        {FILTERS.map((f) => (
+          <Chip
+            key={f.value}
+            selected={filter === f.value}
+            count={counts[f.value]}
+            onClick={() => setFilter(f.value)}
           >
-            <div
-              className="relative aspect-[16/9] w-full overflow-hidden"
-              style={
-                cover
-                  ? undefined
-                  : { background: "linear-gradient(120deg, #e4e9ff 0%, #d3dcfb 100%)" }
-              }
-            >
-              {cover ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={cover}
-                  alt={s.title}
-                  loading="lazy"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span
-                  aria-hidden
-                  className="flex h-full items-center justify-center text-4xl font-extrabold text-white/70"
-                >
-                  {(s.title.trim().charAt(0).toUpperCase() || "S")}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-1 flex-col p-5">
-            <div className="flex items-start justify-between gap-3">
-              <h3 className="line-clamp-2 text-[17px] leading-6 font-semibold">{s.title}</h3>
-              <StatusBadge status={s.status} />
-            </div>
-            <p className="mt-2 font-mono text-[15px] font-bold">{formatINR(s.price)}</p>
-            {s.status === "REJECTED" && (
-              <p className="mt-2 rounded-[12px] bg-danger-soft px-3 py-2 text-[13px] leading-6 text-danger">
-                Not approved and hidden from clients. Edit the listing to fix flagged
-                issues — visibility needs a fresh review.
-              </p>
-            )}
-            {s.status === "PENDING_REVIEW" && (
-              <p className="mt-2 text-[13px] leading-6 text-text-muted">
-                In review — visible to clients once approved. Status changes are
-                handled by review, not from here.
-              </p>
-            )}
-            <div className="mt-4 flex gap-2 border-t border-border pt-4">
-              <Button variant="secondary" size="sm" onClick={() => { setFormError(null); setEditing(s); }}>
-                Edit
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setDeleting(s)}>
-                Delete
-              </Button>
-            </div>
-            </div>
-          </li>
-          );
-        })}
-      </ul>
+            {f.label}
+          </Chip>
+        ))}
+      </div>
+
+      {visible.length === 0 ? (
+        <div className="mt-3">
+          <EmptyState
+            title="Nothing in this filter"
+            body="Try another filter — your other listings are still here."
+          />
+        </div>
+      ) : (
+        <>
+          <div className="mt-3 hidden overflow-hidden rounded-[10px] border border-border bg-surface md:block">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-[13px] text-text-muted">
+                  <th scope="col" className="px-5 py-3 font-medium">Service</th>
+                  <th scope="col" className="px-5 py-3 font-medium">Price</th>
+                  <th scope="col" className="px-5 py-3 font-medium">Delivery</th>
+                  <th scope="col" className="px-5 py-3 font-medium">Status</th>
+                  <th scope="col" className="px-5 py-3 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {visible.map((s) => {
+                  const note = statusNote(s.status);
+                  return (
+                    <tr key={s.id} className="align-middle">
+                      <td className="max-w-[380px] px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <Thumb service={s} />
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-text">{s.title}</p>
+                            <p className="mt-0.5 truncate text-[12px] text-text-subtle">
+                              {s.skills.slice(0, 3).join(" · ") || "No skills listed"}
+                            </p>
+                            {note && (
+                              <p
+                                className={`mt-0.5 line-clamp-2 text-[12px] leading-4 ${
+                                  s.status === "REJECTED" ? "text-danger" : "text-text-subtle"
+                                }`}
+                              >
+                                {note}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="tabular px-5 py-4 font-semibold text-text">
+                        {formatINR(s.price)}
+                      </td>
+                      <td className="px-5 py-4 text-text-muted">
+                        {s.deliveryDays} day{s.deliveryDays === 1 ? "" : "s"}
+                      </td>
+                      <td className="px-5 py-4">
+                        <StatusBadge status={s.status} />
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setFormError(null);
+                              setEditing(s);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleting(s)}>
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <ul className="mt-3 space-y-3 md:hidden">
+            {visible.map((s) => {
+              const note = statusNote(s.status);
+              return (
+                <li key={s.id} className="rounded-[10px] border border-border bg-surface p-4">
+                  <div className="flex items-start gap-3">
+                    <Thumb service={s} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="line-clamp-2 text-[15px] font-semibold text-text">
+                          {s.title}
+                        </p>
+                        <StatusBadge status={s.status} />
+                      </div>
+                      <p className="tabular mt-1 text-sm font-semibold text-text">
+                        {formatINR(s.price)}
+                      </p>
+                      <p className="mt-0.5 text-[12px] text-text-subtle">
+                        {s.deliveryDays}-day delivery
+                      </p>
+                    </div>
+                  </div>
+                  {note && (
+                    <p
+                      className={`mt-3 rounded-[8px] px-3 py-2 text-[13px] leading-5 ${
+                        s.status === "REJECTED"
+                          ? "bg-danger-soft text-danger"
+                          : "bg-surface-soft text-text-muted"
+                      }`}
+                    >
+                      {note}
+                    </p>
+                  )}
+                  <div className="mt-3 flex gap-2 border-t border-border pt-3">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setFormError(null);
+                        setEditing(s);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setDeleting(s)}>
+                      Delete
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
 
       <Drawer
         open={editing !== null}
         onClose={() => setEditing(null)}
         title="Edit service"
-        description="Changes apply immediately to the live listing."
+        description={
+          editing?.status === "ACTIVE"
+            ? "Changes apply immediately to the live listing."
+            : "Changes are saved; visibility is handled by the admin review queue."
+        }
+        size="lg"
       >
         {editing && (
           <ServiceForm
@@ -211,6 +361,8 @@ function MineList() {
             submitting={saving}
             busyNote={busyNote}
             serverError={formError}
+            showPreview
+            previewName={sellerName}
             onSubmit={(v) => saveEdit(editing, v)}
           />
         )}
@@ -241,14 +393,6 @@ function MineList() {
 export function MyServicesPage() {
   return (
     <RequireFreelancer>
-      <div className="mb-5 flex justify-end">
-        <Link
-          href="/services/new"
-          className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
-        >
-          + New service
-        </Link>
-      </div>
       <MineList />
     </RequireFreelancer>
   );

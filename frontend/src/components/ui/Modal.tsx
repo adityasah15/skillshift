@@ -107,7 +107,14 @@ export function Modal({ open, onClose, title, description, children }: ModalProp
   );
 }
 
-export function Drawer({ open, onClose, title, description, children }: ModalProps) {
+export function Drawer({
+  open,
+  onClose,
+  title,
+  description,
+  children,
+  size = "md",
+}: ModalProps & { size?: "md" | "lg" }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const descId = useId();
   useDialogBehavior(open, panelRef, onClose);
@@ -127,7 +134,9 @@ export function Drawer({ open, onClose, title, description, children }: ModalPro
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="absolute top-0 right-0 flex h-full w-full max-w-md flex-col border-l border-border bg-surface p-6 shadow-lg outline-none"
+        className={`absolute top-0 right-0 flex h-full w-full flex-col border-l border-border bg-surface p-6 shadow-lg outline-none ${
+          size === "lg" ? "max-w-2xl" : "max-w-md"
+        }`}
       >
         <div className="mb-1 flex items-start justify-between gap-4">
           <div>

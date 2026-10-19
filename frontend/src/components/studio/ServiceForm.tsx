@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { ImagePicker } from "@/components/studio/ImagePicker";
+import { ServiceCard } from "@/components/marketplace/ServiceCard";
 import { resolvePublicImage } from "@/lib/images";
 
 export interface ServiceFormValues {
@@ -22,6 +23,8 @@ export function ServiceForm({
   submitting,
   busyNote,
   serverError,
+  showPreview = false,
+  previewName,
   onSubmit,
 }: {
   initial?: {
@@ -36,6 +39,8 @@ export function ServiceForm({
   submitting: boolean;
   busyNote?: string | null;
   serverError: string | null;
+  showPreview?: boolean;
+  previewName?: string;
   onSubmit: (values: ServiceFormValues) => void;
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -85,8 +90,49 @@ export function ServiceForm({
     });
   }
 
+  const previewPaise = Math.max(0, Math.round((Number(rupees) || 0) * 100));
+  const parsedSkills = skillsText.split(",").map((s) => s.trim()).filter(Boolean);
+  const draft = {
+    id: "preview",
+    title: title.trim() || "Your service title",
+    price: previewPaise,
+    deliveryDays: Number(days) >= 1 ? Math.round(Number(days)) : 1,
+    skills: parsedSkills.length > 0 ? parsedSkills : ["Your top skill"],
+    status: "ACTIVE" as const,
+    imageUrls: files.length > 0 ? [] : kept,
+  };
+
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <form
+      onSubmit={submit}
+      className={showPreview ? "@container grid gap-6" : ""}
+    >
+      {showPreview && (
+        <aside
+          aria-label="Listing preview"
+          className="min-w-0 @3xl:order-2 @3xl:sticky @3xl:top-6 @3xl:self-start"
+        >
+          <p className="mb-2 text-[13px] font-semibold text-text-subtle">
+            Card preview
+          </p>
+          <div inert className="pointer-events-none select-none">
+            <ServiceCard
+              service={draft}
+              freelancerName={previewName ?? "Freelancer"}
+            />
+          </div>
+          <p className="mt-2 text-[12px] leading-5 text-text-muted">
+            {files.length > 0
+              ? "How your card will look — new images upload when you save."
+              : "How your card will look in browse."}
+          </p>
+        </aside>
+      )}
+      <div
+        className={`flex min-w-0 flex-col gap-4 ${
+          showPreview ? "@3xl:order-1" : ""
+        }`}
+      >
       <Input
         label="Title"
         name="title"
@@ -198,6 +244,7 @@ export function ServiceForm({
       <Button type="submit" loading={submitting} size="lg" className="w-full sm:w-auto">
         {submitLabel}
       </Button>
+      </div>
     </form>
   );
 }

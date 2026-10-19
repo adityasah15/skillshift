@@ -86,7 +86,7 @@ function CreateService() {
 
   if (phase.name === "done") {
     return (
-      <div className="rounded-[18px] border border-border bg-surface p-6 sm:p-8">
+      <div className="rounded-[10px] border border-border bg-surface p-6 sm:p-8">
         <h2 className="text-xl font-bold">Sent for review</h2>
         <p className="mt-2 max-w-[68ch] text-[15px] leading-7 text-text-muted">
           Your service is now <strong className="text-text">in review</strong>. It
@@ -110,7 +110,7 @@ function CreateService() {
 
   if (phase.name === "upload-failed") {
     return (
-      <div className="rounded-[18px] border border-border bg-surface p-6 sm:p-8">
+      <div className="rounded-[10px] border border-border bg-surface p-6 sm:p-8">
         <h2 className="text-xl font-bold">Published — images need attention</h2>
         <p className="mt-2 max-w-[68ch] text-[15px] leading-7 text-text-muted">
           Good news: your service was created and is{" "}
@@ -142,13 +142,14 @@ function CreateService() {
         : null;
 
   return (
-    <div className="rounded-[18px] border border-border bg-surface p-6 sm:p-8">
+    <div className="rounded-[10px] border border-border bg-surface p-6 sm:p-8">
       <ServiceForm
         key={formKey}
         submitLabel="Publish service"
         submitting={busy}
         busyNote={busyNote}
         serverError={serverError}
+        showPreview
         onSubmit={createOnce}
       />
     </div>
