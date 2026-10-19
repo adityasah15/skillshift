@@ -6,6 +6,7 @@ const SIZES = {
   sm: "h-8 w-8 text-[12px]",
   md: "h-10 w-10 text-sm",
   lg: "h-12 w-12 text-base",
+  xl: "h-20 w-20 text-2xl",
 } as const;
 
 function colorFor(name: string): string {
