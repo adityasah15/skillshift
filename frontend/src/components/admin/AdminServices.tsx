@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState, ErrorState } from "@/components/ui/States";
@@ -49,15 +50,15 @@ function ServiceDetail({ row }: { row: AdminServiceRow }) {
         <p className="text-[13px] font-semibold text-text-muted">Delivery</p>
         <p className="mt-1 text-text">
           {row.deliveryDays} day{row.deliveryDays === 1 ? "" : "s"} ·{" "}
-          <span className="font-mono">{formatINR(row.price)}</span>
+          <span className="tabular">{formatINR(row.price)}</span>
         </p>
         <p className="mt-3 text-[13px] font-semibold text-text-muted">Seller</p>
         <p className="mt-1 break-all text-text-muted">{row.freelancer.email}</p>
       </div>
       <div>
         <p className="text-[13px] font-semibold text-text-muted">Submitted</p>
-        <p className="mt-1 font-mono text-[13px] text-text-muted">
-          {new Date(row.createdAt).toLocaleString("en-IN", {
+        <p className="tabular mt-1 text-[13px] text-text-muted">
+          {new Date(row.createdAt).toLocaleDateString("en-IN", {
             day: "numeric",
             month: "short",
             year: "numeric",
@@ -196,10 +197,18 @@ export function AdminServices() {
     });
   }, [rows, filter]);
 
-  const pendingCount = useMemo(
-    () => rows?.filter((r) => r.status === "PENDING_REVIEW").length ?? 0,
-    [rows],
-  );
+  const filterCounts = useMemo(() => {
+    const list = rows ?? [];
+    const count = (status: Filter) =>
+      status === "ALL" ? list.length : list.filter((r) => r.status === status).length;
+    return {
+      PENDING_REVIEW: count("PENDING_REVIEW"),
+      ALL: count("ALL"),
+      ACTIVE: count("ACTIVE"),
+      REJECTED: count("REJECTED"),
+      PAUSED: count("PAUSED"),
+    } as Record<Filter, number>;
+  }, [rows]);
 
   async function confirm() {
     if (!target) return;
@@ -222,7 +231,7 @@ export function AdminServices() {
     return (
       <div className="space-y-3" aria-label="Loading services">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="skeleton-shimmer h-24 rounded-[16px]" />
+          <div key={i} className="skeleton-shimmer h-24 rounded-[10px]" />
         ))}
       </div>
     );
@@ -242,20 +251,14 @@ export function AdminServices() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter services">
         {filters.map((f) => (
-          <button
+          <Chip
             key={f.value}
-            type="button"
+            selected={filter === f.value}
+            count={filterCounts[f.value]}
             onClick={() => setFilter(f.value)}
-            aria-pressed={filter === f.value}
-            className={`min-h-[44px] rounded-full px-4 text-sm font-semibold transition ${
-              filter === f.value
-                ? "bg-text text-white"
-                : "border border-border bg-surface text-text-muted hover:border-border-strong hover:text-text"
-            }`}
           >
             {f.label}
-            {f.value === "PENDING_REVIEW" && pendingCount > 0 ? ` · ${pendingCount}` : ""}
-          </button>
+          </Chip>
         ))}
       </div>
 
@@ -271,13 +274,14 @@ export function AdminServices() {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden overflow-hidden rounded-[16px] border border-border bg-surface md:block">
+          <div className="hidden overflow-hidden rounded-[10px] border border-border bg-surface md:block">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-[13px] text-text-muted">
                   <th scope="col" className="px-5 py-3 font-medium">Service</th>
                   <th scope="col" className="px-5 py-3 font-medium">Seller</th>
                   <th scope="col" className="px-5 py-3 font-medium">Price</th>
+                  <th scope="col" className="px-5 py-3 font-medium">Submitted</th>
                   <th scope="col" className="px-5 py-3 font-medium">Status</th>
                   <th scope="col" className="px-5 py-3 text-right font-medium">Actions</th>
                 </tr>
@@ -299,7 +303,13 @@ export function AdminServices() {
                         <p className="mt-1 font-mono text-xs text-text-subtle">{r.id.slice(0, 8)}</p>
                       </td>
                       <td className="px-5 py-4 text-text-muted">{r.freelancer.email}</td>
-                      <td className="px-5 py-4 font-mono text-text">{formatINR(r.price)}</td>
+                      <td className="tabular px-5 py-4 text-text">{formatINR(r.price)}</td>
+                      <td className="px-5 py-4 text-[13px] text-text-muted">
+                        {new Date(r.createdAt).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </td>
                       <td className="px-5 py-4"><StatusBadge status={r.status} /></td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-2">
@@ -309,7 +319,7 @@ export function AdminServices() {
                           {moderationsFor(r.status).map((m) => (
                             <Button
                               key={m.label}
-                              variant={m.action === "REJECTED" ? "danger" : "secondary"}
+                              variant={m.action === "REJECTED" ? "danger" : "primary"}
                               size="sm"
                               onClick={() => setTarget({ row: r, action: m.action })}
                             >
@@ -326,7 +336,7 @@ export function AdminServices() {
                     </tr>
                     {expanded[r.id] && (
                       <tr className="bg-surface-soft/40">
-                        <td colSpan={5} className="px-5 py-4">
+                        <td colSpan={6} className="px-5 py-4">
                           <ServiceDetail row={r} />
                         </td>
                       </tr>
@@ -340,14 +350,22 @@ export function AdminServices() {
           {/* Mobile stacked cards */}
           <ul className="space-y-3 md:hidden">
             {visible.map((r) => (
-              <li key={r.id} className="rounded-[16px] border border-border bg-surface p-4">
+              <li key={r.id} className="rounded-[10px] border border-border bg-surface p-4">
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-[15px] font-semibold text-text">{r.title}</p>
                   <StatusBadge status={r.status} />
                 </div>
                 <p className="mt-1 line-clamp-3 text-sm leading-6 text-text-muted">{r.description}</p>
-                <p className="mt-2 text-[13px] text-text-muted">{r.freelancer.email}</p>
-                <p className="mt-1 font-mono text-sm text-text">{formatINR(r.price)}</p>
+                <p className="mt-1 text-[13px] text-text-muted">
+                  {r.freelancer.email} · submitted{" "}
+                  {new Date(r.createdAt).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </p>
+                <p className="tabular mt-1 text-sm font-semibold text-text">
+                  {formatINR(r.price)}
+                </p>
                 <button
                   type="button"
                   onClick={() => toggle(r.id)}
@@ -365,7 +383,7 @@ export function AdminServices() {
                   {moderationsFor(r.status).map((m) => (
                     <Button
                       key={m.label}
-                      variant={m.action === "REJECTED" ? "danger" : "secondary"}
+                      variant={m.action === "REJECTED" ? "danger" : "primary"}
                       size="sm"
                       onClick={() => setTarget({ row: r, action: m.action })}
                     >
@@ -392,9 +410,9 @@ export function AdminServices() {
       >
         {target && (
           <div className="space-y-4">
-            <div className="rounded-[12px] border border-border bg-surface-soft/60 p-4">
+            <div className="rounded-[10px] border border-border bg-surface-soft/60 p-4">
               <p className="text-sm font-semibold text-text">{target.row.title}</p>
-              <p className="mt-1 font-mono text-[13px] text-text-muted">
+              <p className="tabular mt-1 text-[13px] text-text-muted">
                 {formatINR(target.row.price)} · {target.row.freelancer.email}
               </p>
             </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
 import { Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -99,7 +100,7 @@ export function AdminDisputes() {
     return (
       <div className="space-y-3" aria-label="Loading disputes">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="skeleton-shimmer h-44 rounded-[16px]" />
+          <div key={i} className="skeleton-shimmer h-44 rounded-[10px]" />
         ))}
       </div>
     );
@@ -118,26 +119,20 @@ export function AdminDisputes() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter disputes">
-        <button
-          type="button"
+        <Chip
+          selected={!showResolved}
+          count={open.length}
           onClick={() => setShowResolved(false)}
-          aria-pressed={!showResolved}
-          className={`min-h-[44px] rounded-full px-4 text-sm font-semibold transition ${
-            !showResolved ? "bg-text text-white" : "border border-border bg-surface text-text-muted hover:text-text"
-          }`}
         >
-          Open · {open.length}
-        </button>
-        <button
-          type="button"
+          Open
+        </Chip>
+        <Chip
+          selected={showResolved}
+          count={resolved.length}
           onClick={() => setShowResolved(true)}
-          aria-pressed={showResolved}
-          className={`min-h-[44px] rounded-full px-4 text-sm font-semibold transition ${
-            showResolved ? "bg-text text-white" : "border border-border bg-surface text-text-muted hover:text-text"
-          }`}
         >
-          Resolved · {resolved.length}
-        </button>
+          Resolved
+        </Chip>
       </div>
 
       {visible.length === 0 ? (
@@ -152,20 +147,20 @@ export function AdminDisputes() {
       ) : (
         <ul className="space-y-4">
           {visible.map((d) => (
-            <li key={d.id} className="rounded-[16px] border border-border bg-surface p-5 sm:p-6">
+            <li key={d.id} className="rounded-[10px] border border-border bg-surface p-5 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[15px] font-semibold text-text">
                     Order <span className="font-mono text-[13px] text-text-muted">{d.orderId.slice(0, 8)}</span>
                   </p>
                   <p className="mt-1 text-sm text-text-muted">
-                    {d.client.email} · <span className="font-mono">{formatINR(d.order.price)}</span>
+                    {d.client.email} · <span className="tabular">{formatINR(d.order.price)}</span>
                   </p>
                 </div>
                 <StatusBadge status={d.status} />
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-4 rounded-[12px] border border-border bg-surface-soft/50 p-4 text-sm leading-6 md:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-4 rounded-[10px] border border-border bg-surface-soft/50 p-4 text-sm leading-6 md:grid-cols-2">
                 <div>
                   <p className="text-[13px] font-semibold text-text-muted">Client reason</p>
                   <p className="mt-1 text-text">{d.reason}</p>
@@ -217,25 +212,25 @@ export function AdminDisputes() {
                 {!showResolved && (
                   <>
                     <Button variant="secondary" size="sm" onClick={() => openResolve(d, "RESOLVED_FREELANCER")}>
-                      Resolve for freelancer
+                      Release to freelancer
                     </Button>
                     <Button variant="secondary" size="sm" onClick={() => openResolve(d, "RESOLVED_CLIENT")}>
-                      Resolve for client
+                      Refund client
                     </Button>
                   </>
                 )}
               </div>
 
               {expanded[d.id] && (
-                <div className="mt-3 rounded-[12px] border border-border bg-surface-soft/50 p-4 text-sm leading-6">
+                <div className="mt-3 rounded-[10px] border border-border bg-surface-soft/50 p-4 text-sm leading-6">
                   <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <dt className="text-[13px] font-semibold text-text-muted">Service</dt>
                       <dd className="text-text">{orderMeta[d.orderId]?.serviceTitle ?? "—"}</dd>
                     </div>
                     <div>
-                      <dt className="text-[13px] font-semibold text-text-muted">Amount held</dt>
-                      <dd className="font-mono text-text">{formatINR(d.order.price)}</dd>
+                      <dt className="text-[13px] font-semibold text-text-muted">Held in escrow</dt>
+                      <dd className="tabular text-text">{formatINR(d.order.price)}</dd>
                     </div>
                     <div>
                       <dt className="text-[13px] font-semibold text-text-muted">Client</dt>
@@ -253,7 +248,7 @@ export function AdminDisputes() {
                     </div>
                     <div>
                       <dt className="text-[13px] font-semibold text-text-muted">Dispute filed</dt>
-                      <dd className="font-mono text-[13px] text-text-muted">
+                      <dd className="tabular text-[13px] text-text-muted">
                         {new Date(d.createdAt).toLocaleString("en-IN", {
                           day: "numeric",
                           month: "short",
@@ -276,18 +271,18 @@ export function AdminDisputes() {
       <Modal
         open={target !== null}
         onClose={() => (acting ? null : setTarget(null))}
-        title={target?.resolution === "RESOLVED_FREELANCER" ? "Resolve for freelancer?" : "Resolve for client?"}
+        title={target?.resolution === "RESOLVED_FREELANCER" ? "Release funds to the freelancer?" : "Refund the client?"}
         description={
           target?.resolution === "RESOLVED_FREELANCER"
-            ? "Order completes and held funds release to the freelancer. This cannot be undone."
-            : "Order refunds and held funds return to the client wallet. This cannot be undone."
+            ? "The order completes and the held amount is released to the freelancer. This cannot be undone."
+            : "The order is refunded and the held amount returns to the client's wallet. This cannot be undone."
         }
       >
         {target && (
           <div className="space-y-4">
-            <div className="rounded-[12px] border border-border bg-surface-soft/60 p-4 text-sm">
+            <div className="rounded-[10px] border border-border bg-surface-soft/60 p-4 text-sm">
               <p className="font-semibold text-text">Order <span className="font-mono text-[13px]">{target.dispute.orderId.slice(0, 8)}</span></p>
-              <p className="mt-1 font-mono text-text-muted">{formatINR(target.dispute.order.price)}</p>
+              <p className="mt-1 tabular text-text-muted">{formatINR(target.dispute.order.price)}</p>
             </div>
             <Textarea
               label="Decision note (optional)"
