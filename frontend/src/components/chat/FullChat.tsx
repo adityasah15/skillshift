@@ -124,7 +124,7 @@ export function FullChat({ orderId }: { orderId: string }) {
         <StatusBadge status={order.status} />
         <span className="font-mono text-xs text-text-subtle">#{order.id.slice(0, 8)}</span>
       </div>
-      <section aria-label="Discussion" className="mt-4 rounded-[18px] border border-border bg-surface p-6">
+      <section aria-label="Discussion" className="mt-4 rounded-[14px] border border-border bg-surface p-6">
         <OrderChat
           orderId={order.id}
           myId={me.sub}
@@ -133,9 +133,12 @@ export function FullChat({ orderId }: { orderId: string }) {
       </section>
       <Link
         href={`/orders/${order.id}`}
-        className="mt-4 inline-flex min-h-[44px] items-center text-sm font-semibold text-primary hover:underline"
+        className="mt-4 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
       >
-        Open in Order Cockpit →
+        Open in Order Cockpit
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+          <path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </Link>
     </div>
   );

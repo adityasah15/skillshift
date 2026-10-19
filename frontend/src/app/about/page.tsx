@@ -25,7 +25,7 @@ export default function AboutPage() {
           </p>
         </Reveal>
         <Reveal delay={90}>
-          <section aria-label="How money moves" className="mt-10 rounded-[18px] border border-border bg-surface p-6 sm:p-8">
+          <section aria-label="How money moves" className="mt-10 rounded-[14px] border border-border bg-surface p-6 sm:p-8">
             <h2 className="text-xl font-bold">How money moves</h2>
             <ul className="mt-3 space-y-3 text-[15px] leading-7 text-text-muted">
               <li><strong className="text-text">Held in escrow.</strong> When an order starts, the payment is set aside — visible to both sides.</li>
@@ -38,13 +38,13 @@ export default function AboutPage() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/services"
-              className="inline-flex min-h-[48px] items-center justify-center rounded-[12px] bg-text px-6 text-sm font-semibold text-white transition hover:opacity-85"
+              className="inline-flex min-h-[48px] items-center justify-center rounded-[10px] bg-primary px-6 text-sm font-semibold text-white transition hover:bg-primary-hover"
             >
               Browse services
             </Link>
             <Link
               href="/contact"
-              className="inline-flex min-h-[48px] items-center justify-center rounded-[12px] border border-border bg-surface px-6 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
+              className="inline-flex min-h-[48px] items-center justify-center rounded-[10px] border border-border bg-surface px-6 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
             >
               Contact us
             </Link>

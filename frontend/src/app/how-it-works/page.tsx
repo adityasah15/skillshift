@@ -35,7 +35,7 @@ const steps = [
 export default function HowItWorksPage() {
   return (
     <main className="bg-bg">
-      <div className="mx-auto max-w-[1180px] px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6 lg:px-8">
         <p className="text-sm font-medium text-text-muted">How it works</p>
         <h1 className="mt-1 max-w-xl text-3xl font-bold tracking-tight sm:text-4xl">
           Discover, order, and get the work — without the anxiety.
@@ -44,7 +44,7 @@ export default function HowItWorksPage() {
           {steps.map((s, i) => (
             <article
               key={s.title}
-              className="rounded-[18px] border border-border bg-surface p-6"
+              className="rounded-[14px] border border-border bg-surface p-6"
             >
               <p className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary">
                 {i + 1}
@@ -57,13 +57,13 @@ export default function HowItWorksPage() {
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link
             href="/services"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] bg-primary px-6 text-sm font-semibold text-white transition hover:bg-primary-hover"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-[10px] bg-primary px-6 text-sm font-semibold text-white transition hover:bg-primary-hover"
           >
             Browse services
           </Link>
           <Link
             href="/auth/register"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] border border-border bg-surface px-6 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-[10px] border border-border bg-surface px-6 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
           >
             Create an account
           </Link>

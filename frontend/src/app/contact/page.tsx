@@ -22,7 +22,7 @@ export default function ContactPage() {
           </p>
         </Reveal>
         <Reveal delay={90}>
-          <section aria-label="Contact details" className="mt-10 rounded-[18px] border border-border bg-surface p-6 sm:p-8">
+          <section aria-label="Contact details" className="mt-10 rounded-[14px] border border-border bg-surface p-6 sm:p-8">
             <h2 className="text-xl font-bold">Support</h2>
             <p className="mt-2 text-[15px] leading-7 text-text-muted">
               Email us at{" "}
