@@ -18,14 +18,15 @@ export const metadata: Metadata = {
 export default function ServicesPage() {
   return (
     <main className="bg-bg">
-      <div className="mx-auto max-w-[1280px] px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6 lg:px-8">
         <div className="max-w-2xl">
           <p className="text-sm font-medium text-text-muted">Marketplace</p>
-          <h1 className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
+          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
             Browse services
           </h1>
-          <p className="mt-3 max-w-xl text-base leading-7 text-text-muted sm:text-lg sm:leading-8">
-            Compare real offers side by side — every price includes delivery and payment protection.
+          <p className="mt-3 max-w-xl text-base leading-7 text-text-muted">
+            Compare real offers side by side — clear prices, tracked delivery,
+            and protected payments on every order.
           </p>
         </div>
 
