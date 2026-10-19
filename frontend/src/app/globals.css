@@ -1,40 +1,62 @@
 @import "tailwindcss";
 
 @theme {
+  /*
+   * Blueprint token mapping (values follow docs/skillshift blueprints):
+   * ink -> text · indigo -> primary · surface -> bg · card -> surface
+   * line -> border · muted -> text-muted · protect -> success
+   * wait -> warning · star -> star (new)
+   * Success/warning/info text values are darkened slightly from the
+   * blueprint so badge text clears 4.5:1 on its soft background.
+   */
+
   /* Surfaces */
-  --color-bg: #f7f8fb;
+  --color-bg: #f6f7fb;
   --color-surface: #ffffff;
   --color-surface-soft: #f0f2f7;
   --color-surface-strong: #e7eaf2;
 
   /* Text */
-  --color-text: #141824;
-  --color-text-muted: #667085;
-  --color-text-subtle: #98a2b3;
+  --color-text: #14172b;
+  --color-text-muted: #5b6178;
+  --color-text-subtle: #667085;
 
   /* Brand */
   --color-primary: #3f4fe0;
   --color-primary-hover: #3342c5;
-  --color-primary-soft: #eef0ff;
+  --color-primary-soft: #eceefd;
   --color-accent: #7357ff;
   --color-accent-soft: #f1edff;
 
   /* Semantic */
-  --color-success: #16875d;
+  --color-success: #137a55;
   --color-success-soft: #eaf8f2;
-  --color-warning: #b76a1f;
+  --color-warning: #8a5a13;
   --color-warning-soft: #fff5e7;
-  --color-danger: #c94242;
+  --color-danger: #c23b3b;
   --color-danger-soft: #fff0f0;
-  --color-info: #2478d4;
+  --color-info: #1c6bbf;
   --color-info-soft: #edf5ff;
 
   /* Structure */
-  --color-border: #e4e7ec;
-  --color-border-strong: #d0d5dd;
+  --color-border: #e3e6f0;
+  --color-border-strong: #cfd4e3;
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* Ratings only */
+  --color-star: #f2a900;
+
+  /* Shape */
+  --radius-input: 6px;
+  --radius-card: 10px;
+  --radius-panel: 14px;
+
+  /* Elevation — borders first; this is the only shadow */
+  --shadow-lift: 0 8px 24px rgba(20, 23, 43, 0.08);
+
+  /* Typography */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 html {
@@ -45,7 +67,25 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+/* Prices and counters align in tables and cards. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 /* Visible focus for keyboard users */

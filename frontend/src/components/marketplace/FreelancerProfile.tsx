@@ -98,7 +98,7 @@ export function FreelancerProfile({ id }: { id: string }) {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">{profile.displayName}</h1>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-text-muted">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden className="text-warning">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden className="text-star">
               <path d="M7 1.2l1.7 3.5 3.9.6-2.8 2.7.7 3.9L7 10.1 3.5 11.9l.7-3.9L1.4 5.3l3.9-.6L7 1.2z" fill="currentColor" />
             </svg>
             <strong className="font-semibold text-text">{profile.rating.toFixed(1)}</strong>

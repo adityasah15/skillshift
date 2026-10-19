@@ -259,7 +259,7 @@ export function OrderCockpit({ id }: { id: string }) {
               <h2 className="text-lg font-semibold">
                 {order.review.reviewerId === me.sub ? "Your review" : "Client review"}
               </h2>
-              <p className="mt-2 text-lg tracking-wider text-warning" role="img" aria-label={`${order.review.rating} out of 5 stars`}>
+              <p className="mt-2 text-lg tracking-wider text-star" role="img" aria-label={`${order.review.rating} out of 5 stars`}>
                 {"★".repeat(order.review.rating)}{"☆".repeat(Math.max(0, 5 - order.review.rating))}
               </p>
               {order.review.comment && (

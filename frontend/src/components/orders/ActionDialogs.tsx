@@ -411,7 +411,7 @@ export function ReviewDialog({
                 onClick={() => setRating(n)}
                 aria-label={`${n} star${n > 1 ? "s" : ""}`}
                 className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-[12px] transition ${
-                  n <= rating ? "text-warning" : "text-border-strong hover:text-text-muted"
+                  n <= rating ? "text-star" : "text-border-strong hover:text-text-muted"
                 }`}
               >
                 <svg width="22" height="22" viewBox="0 0 14 14" fill="none" aria-hidden>

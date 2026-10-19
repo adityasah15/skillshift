@@ -29,7 +29,7 @@ function Stars({ value }: { value: number }) {
           viewBox="0 0 14 14"
           fill="none"
           aria-hidden
-          className={i < Math.round(value) ? "text-warning" : "text-border-strong"}
+          className={i < Math.round(value) ? "text-star" : "text-border-strong"}
         >
           <path
             d="M7 1.2l1.7 3.5 3.9.6-2.8 2.7.7 3.9L7 10.1 3.5 11.9l.7-3.9L1.4 5.3l3.9-.6L7 1.2z"

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Inter } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -7,14 +7,18 @@ import { OfflineBanner } from "@/components/layout/OfflineBanner";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Display voice for headings; Inter carries UI, body and prices.
+// Prices use `.tabular` (Inter) so the ₹ glyph and digit grouping are safe.
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -52,7 +56,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      className={`${bricolage.variable} ${inter.variable} antialiased`}
     >
       <body className="flex min-h-screen flex-col">
         <a
