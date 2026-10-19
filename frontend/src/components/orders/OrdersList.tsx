@@ -13,14 +13,19 @@ import type { OrderListItem } from "@/lib/types";
 export function OrdersList() {
   const router = useRouter();
   const token = useSessionToken();
-  const { role } = useCurrentUser();
+  const { role, loading: roleLoading } = useCurrentUser();
   const [orders, setOrders] = useState<OrderListItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
+  // Orders are only for clients and freelancers; admins belong in /admin.
   useEffect(() => {
-    if (token === null) return;
+    if (role === "ADMIN") router.replace("/admin");
+  }, [role, router]);
+
+  useEffect(() => {
+    if (token === null || roleLoading || role === "ADMIN") return;
     let cancelled = false;
     async function run() {
       setLoading(true);
@@ -40,7 +45,7 @@ export function OrdersList() {
     return () => {
       cancelled = true;
     };
-  }, [token, attempt]);
+  }, [token, role, roleLoading, attempt]);
 
   if (token === null) {
     return (
@@ -52,7 +57,10 @@ export function OrdersList() {
     );
   }
 
-  if (loading) return <SkeletonGrid count={6} />;
+  // Redirecting an admin — don't flash the "no orders" empty state.
+  if (role === "ADMIN") return <SkeletonGrid count={2} />;
+
+  if (loading || roleLoading) return <SkeletonGrid count={6} />;
 
   if (failed) {
     return (

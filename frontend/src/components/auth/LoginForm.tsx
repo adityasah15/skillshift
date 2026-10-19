@@ -10,7 +10,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import { authApi } from "@/lib/api/auth";
 import { setAccessToken } from "@/lib/session";
 
-export function LoginForm({ next }: { next: string }) {
+export function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +24,20 @@ export function LoginForm({ next }: { next: string }) {
     try {
       const { data } = await authApi.login({ email: email.trim(), password });
       setAccessToken(data.accessToken);
-      router.push(next.startsWith("/") && !next.startsWith("//") ? next : "/orders");
+
+      let destination: string;
+      if (next?.startsWith("/") && !next.startsWith("//")) {
+        destination = next;
+      } else {
+        try {
+          const me = await authApi.me();
+          destination = me.data.role === "ADMIN" ? "/admin" : "/orders";
+        } catch {
+          destination = "/orders";
+        }
+      }
+
+      router.push(destination);
       router.refresh();
     } catch (err) {
       setError(

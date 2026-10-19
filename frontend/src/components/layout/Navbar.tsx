@@ -95,7 +95,7 @@ function AccountMenu({
   const initial = name.trim().charAt(0).toUpperCase() || "?";
   const items = [
     { href: "/profile", label: "Profile" },
-    { href: "/orders", label: "Orders" },
+    ...(showAdmin ? [] : [{ href: "/orders", label: "Orders" }]),
     { href: "/wallet", label: "Wallet" },
     ...(showStudio ? [{ href: "/services/mine", label: "My services" }] : []),
     ...(showSell ? [{ href: "/auth/register", label: "Want to sell? Join as a freelancer" }] : []),

@@ -359,9 +359,13 @@ export function ProfilePage() {
       <section aria-label="Your workspace" className="rounded-[18px] border border-border bg-surface p-6">
         <h2 className="text-lg font-semibold">Your workspace</h2>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Button variant="secondary" onClick={() => router.push("/orders")}>Your orders</Button>
+          {account.role === "ADMIN" ? (
+            <Button variant="secondary" onClick={() => router.push("/admin")}>Admin dashboard</Button>
+          ) : (
+            <Button variant="secondary" onClick={() => router.push("/orders")}>Your orders</Button>
+          )}
           <Button variant="secondary" onClick={() => router.push("/wallet")}>Wallet</Button>
-          {account.role !== "CLIENT" && (
+          {account.role === "FREELANCER" && (
             <Button variant="secondary" onClick={() => router.push("/services/mine")}>Your services</Button>
           )}
         </div>
