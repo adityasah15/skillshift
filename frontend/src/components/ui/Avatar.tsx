@@ -34,14 +34,17 @@ export function Avatar({
   src,
   size = "md",
   className = "",
+  color: colorOverride,
 }: {
   name: string;
   src?: string | null;
   size?: keyof typeof SIZES;
   className?: string;
+  /** Optional tint override (used by listing surfaces that carry an avatar colour). */
+  color?: string;
 }) {
   const image = resolvePublicImage(src);
-  const color = colorFor(name);
+  const color = colorOverride ?? colorFor(name);
 
   if (image) {
     return (

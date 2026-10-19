@@ -2,42 +2,27 @@
 
 import Link from "next/link";
 import { ServiceCard } from "@/components/marketplace/ServiceCard";
+import { GeneratedCover } from "@/components/marketplace/GeneratedCover";
 import { Price } from "@/components/ui/Money";
 import { Reveal } from "@/components/ui/Reveal";
-import { resolvePublicImage } from "@/lib/images";
 import { useServicesFeed, type FeedService } from "@/lib/use-services-feed";
 
 function CompactCard({ service }: { service: FeedService }) {
-  const image = resolvePublicImage(service.imageUrls?.[0]);
-  const hue = service.preview?.hue ?? 232;
-
   return (
     <Link
       href={`/services/${service.id}`}
       className="group flex items-center gap-3 rounded-[10px] border border-border bg-surface p-3 transition hover:border-border-strong hover:shadow-lift"
     >
-      <span
-        aria-hidden
-        className="relative h-14 w-20 shrink-0 overflow-hidden rounded-[6px]"
-        style={
-          image
-            ? undefined
-            : {
-                background: `linear-gradient(120deg, hsl(${hue} 62% 90%) 0%, hsl(${(hue + 36) % 360} 64% 80%) 100%)`,
-              }
-        }
-      >
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
-        ) : (
-          <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-white/80">
-            {service.title.trim().charAt(0).toUpperCase()}
-          </span>
-        )}
-      </span>
+      <GeneratedCover
+        title={service.title}
+        hue={service.preview?.hue}
+        imageUrls={service.imageUrls}
+        className="h-14 w-20 shrink-0 rounded-[6px]"
+        monogramClassName="text-xl"
+        chip={false}
+      />
       <span className="min-w-0 flex-1">
-        <span className="line-clamp-2 text-sm font-semibold leading-5 text-text group-hover:underline">
+        <span className="line-clamp-2 text-sm leading-5 font-semibold text-text group-hover:underline">
           {service.title}
         </span>
         <span className="mt-1 block text-[12px] text-text-muted">
