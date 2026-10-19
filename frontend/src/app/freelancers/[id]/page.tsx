@@ -48,7 +48,7 @@ export default async function FreelancerPage({
   const { id } = await params;
   return (
     <main className="bg-bg">
-      <div className="mx-auto max-w-[1180px] px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6 lg:px-8">
         <Suspense
           fallback={
             <div className="flex items-center gap-4" aria-label="Loading profile">

@@ -68,7 +68,7 @@ export function VerifyEmail() {
       {state === "done" ? (
         <Link
           href="/auth/login"
-          className="inline-flex min-h-[44px] w-full items-center justify-center rounded-[12px] bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+          className="inline-flex min-h-[44px] w-full items-center justify-center rounded-[10px] bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
         >
           Log in to continue
         </Link>
@@ -81,13 +81,13 @@ export function VerifyEmail() {
           )}
           <Link
             href="/auth/register"
-            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-[12px] border border-border px-5 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
+            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-[10px] border border-border px-5 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
           >
             Back to registration
           </Link>
         </div>
       ) : (
-        <div className="skeleton-shimmer h-12 rounded-[12px]" aria-hidden />
+        <div className="skeleton-shimmer h-12 rounded-[10px]" aria-hidden />
       )}
     </AuthCard>
   );

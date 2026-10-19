@@ -14,7 +14,7 @@ export function AuthCard({
 }) {
   return (
     <div className="mx-auto w-full max-w-md">
-      <div className="rounded-[22px] border border-border bg-surface p-6 sm:p-8">
+      <div className="rounded-[14px] border border-border bg-surface p-6 sm:p-8">
         <Link href="/" className="flex items-center gap-2.5" aria-label="SkillShift home">
           <BrandMark className="shrink-0" />
           <span className="text-[17px] font-bold tracking-tight">SkillShift</span>

@@ -111,7 +111,7 @@ export function FullChat({ orderId }: { orderId: string }) {
     return (
       <div className="space-y-3" aria-label="Loading discussion">
         <div className="skeleton-shimmer h-7 w-1/2 rounded-full" />
-        <div className="skeleton-shimmer h-64 rounded-[18px]" />
+        <div className="skeleton-shimmer h-64 rounded-[14px]" />
       </div>
     );
   }

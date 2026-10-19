@@ -1,5 +1,5 @@
 /**
- * S3 presigned upload pipeline (frontend-context §2 / blueprint §10):
+ * S3 presigned upload pipeline (presigned PUT, then confirm):
  *   POST /upload/presigned → raw PUT to S3 (no auth header) → POST /upload/confirm
  * Delivery downloads use GET /upload/download-url?key= (short-lived).
  */

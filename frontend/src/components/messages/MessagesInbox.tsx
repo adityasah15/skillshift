@@ -123,7 +123,7 @@ export function MessagesInbox() {
         <li key={order.id}>
           <Link
             href={`/chat/${order.id}`}
-            className="lift flex items-center gap-4 rounded-[16px] border border-border bg-surface p-5"
+            className="lift flex items-center gap-4 rounded-[10px] border border-border bg-surface p-5"
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-3">

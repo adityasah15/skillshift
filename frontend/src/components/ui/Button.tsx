@@ -38,7 +38,7 @@ export function Button({
     <button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-[12px] font-semibold transition duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-[10px] font-semibold transition duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${sizes[size]} ${className}`}
       {...rest}
     >
       {loading && (

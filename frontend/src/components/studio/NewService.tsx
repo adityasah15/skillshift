@@ -96,7 +96,7 @@ function CreateService() {
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
           <Link
             href="/services/mine"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] bg-primary px-6 text-sm font-semibold text-white transition hover:bg-primary-hover"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-[10px] bg-primary px-6 text-sm font-semibold text-white transition hover:bg-primary-hover"
           >
             Go to My services
           </Link>
@@ -125,7 +125,7 @@ function CreateService() {
           <Button onClick={retryUpload}>Retry remaining images</Button>
           <Link
             href="/services/mine"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] border border-border px-6 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-[10px] border border-border px-6 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
           >
             Finish later from My services
           </Link>

@@ -198,7 +198,7 @@ export function ServiceForm({
               return (
                 <li
                   key={u}
-                  className="relative overflow-hidden rounded-[12px] border border-border"
+                  className="relative overflow-hidden rounded-[10px] border border-border"
                 >
                   {src ? (
                     // eslint-disable-next-line @next/next/no-img-element

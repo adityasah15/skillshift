@@ -37,7 +37,7 @@ export function NotificationsBell() {
     <Link
       href="/notifications"
       aria-label={count > 0 ? `Notifications, ${count} unread` : "Notifications"}
-      className="relative flex h-11 w-11 items-center justify-center rounded-[12px] text-text-muted transition hover:bg-surface-soft hover:text-text"
+      className="relative flex h-11 w-11 items-center justify-center rounded-[10px] text-text-muted transition hover:bg-surface-soft hover:text-text"
     >
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
         <path

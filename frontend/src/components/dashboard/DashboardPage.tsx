@@ -110,8 +110,8 @@ export function DashboardPage() {
   if (!me || orders === null) {
     return (
       <div className="space-y-4" aria-label="Loading dashboard">
-        <div className="skeleton-shimmer h-44 rounded-[18px]" />
-        <div className="skeleton-shimmer h-32 rounded-[18px]" />
+        <div className="skeleton-shimmer h-44 rounded-[10px]" />
+        <div className="skeleton-shimmer h-32 rounded-[10px]" />
       </div>
     );
   }

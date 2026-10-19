@@ -13,7 +13,7 @@ export function EmptyState({
   action?: { label: string; onClick: () => void };
 }) {
   return (
-    <div className="flex flex-col items-center rounded-[18px] border border-border bg-surface px-6 py-14 text-center">
+    <div className="flex flex-col items-center rounded-[14px] border border-border bg-surface px-6 py-14 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-soft text-text-muted">
         {icon ?? (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -43,7 +43,7 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center rounded-[18px] border border-danger/30 bg-danger-soft/40 px-6 py-14 text-center">
+    <div className="flex flex-col items-center rounded-[14px] border border-danger/30 bg-danger-soft/40 px-6 py-14 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft text-danger">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
           <path d="M10 2.5L18.5 17h-17L10 2.5z" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" />
@@ -64,7 +64,7 @@ export function ErrorState({
 
 export function CardSkeleton() {
   return (
-    <div aria-hidden className="overflow-hidden rounded-[16px] border border-border bg-surface">
+    <div aria-hidden className="overflow-hidden rounded-[10px] border border-border bg-surface">
       <div className="skeleton-shimmer aspect-[4/3] w-full" />
       <div className="space-y-3 p-5">
         <div className="skeleton-shimmer h-4 w-3/4 rounded-full" />

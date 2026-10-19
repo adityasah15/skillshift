@@ -191,7 +191,7 @@ export function DeliverDialog({
               {files.map((f, i) => (
                 <li
                   key={`${f.name}-${f.size}`}
-                  className="flex items-center justify-between gap-3 rounded-[12px] bg-surface-soft/70 px-3.5 py-2.5"
+                  className="flex items-center justify-between gap-3 rounded-[10px] bg-surface-soft/70 px-3.5 py-2.5"
                 >
                   <span className="min-w-0 truncate text-sm font-medium">
                     {f.name}
@@ -410,7 +410,7 @@ export function ReviewDialog({
                 aria-checked={rating === n}
                 onClick={() => setRating(n)}
                 aria-label={`${n} star${n > 1 ? "s" : ""}`}
-                className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-[12px] transition ${
+                className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-[10px] transition ${
                   n <= rating ? "text-star" : "text-border-strong hover:text-text-muted"
                 }`}
               >

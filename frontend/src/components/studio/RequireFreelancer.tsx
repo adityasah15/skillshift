@@ -61,7 +61,7 @@ export function RequireFreelancer({ children }: { children: React.ReactNode }) {
     return (
       <div className="space-y-3" aria-label="Checking account">
         <div className="skeleton-shimmer h-8 w-56 rounded-full" />
-        <div className="skeleton-shimmer h-40 rounded-[18px]" />
+        <div className="skeleton-shimmer h-40 rounded-[10px]" />
       </div>
     );
   }
