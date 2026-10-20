@@ -28,7 +28,7 @@ export default function AboutPage() {
           <section aria-label="How money moves" className="mt-10 rounded-[14px] border border-border bg-surface p-6 sm:p-8">
             <h2 className="text-xl font-bold">How money moves</h2>
             <ul className="mt-3 space-y-3 text-[15px] leading-7 text-text-muted">
-              <li><strong className="text-text">Held in escrow.</strong> When an order starts, the payment is set aside — visible to both sides.</li>
+              <li><strong className="text-text">Held in escrow.</strong> When an order starts, the payment is set aside and visible to both sides.</li>
               <li><strong className="text-text">Released on approval.</strong> Accept the delivery and funds go to the freelancer.</li>
               <li><strong className="text-text">Refunded on dispute.</strong> If a dispute resolves your way, money returns to your wallet.</li>
             </ul>

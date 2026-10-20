@@ -15,7 +15,7 @@ export default function NotFound() {
         </h1>
         <p className="mt-3 max-w-md text-[15px] leading-7 text-text-muted">
           The link may be broken or the page may have moved. Nothing was
-          charged — head back to safety.
+          charged. Head back to safety.
         </p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <Link

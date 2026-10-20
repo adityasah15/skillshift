@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   applicationName: "SkillShift",
   formatDetection: { telephone: false },
   title: {
-    default: "SkillShift — Find the right skills",
+    default: "SkillShift · Find the right skills",
     template: "%s · SkillShift",
   },
   description:
@@ -34,13 +34,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "SkillShift",
-    title: "SkillShift — Find the right skills",
+    title: "SkillShift · Find the right skills",
     description:
       "Browse services with clear pricing, order confidently, and pay only when the work lands.",
   },
   twitter: {
     card: "summary",
-    title: "SkillShift — Find the right skills",
+    title: "SkillShift · Find the right skills",
     description:
       "Browse services with clear pricing, order confidently, and pay only when the work lands.",
   },

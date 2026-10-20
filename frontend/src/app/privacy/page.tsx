@@ -22,7 +22,7 @@ const sections: Array<{ heading: string; body: string[] }> = [
     heading: "How we use it",
     body: [
       "To run the marketplace: matching clients with freelancers, holding escrow, resolving disputes, and keeping both sides informed through notifications.",
-      "We do not sell personal data. The other party in your order can see your discussion, delivery, and public profile — that is how the work gets done.",
+      "We do not sell personal data. The other party in your order can see your discussion, delivery, and public profile. That is how the work gets done.",
       "Admins can view order context, including messages and files, when resolving a dispute.",
     ],
   },

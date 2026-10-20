@@ -11,7 +11,7 @@ export default function NewServiceRoute() {
         <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Publish a service</h1>
         <p className="mt-2 max-w-2xl text-[15px] leading-7 text-text-muted">
           Clear scope and honest pricing get ordered. Images upload straight from
-          this form — no links to paste.
+          this form, with no links to paste.
         </p>
         <div className="mt-6">
           <NewServicePage />

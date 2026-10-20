@@ -25,7 +25,7 @@ export default function AppError({
           This page hit an unexpected error.
         </h1>
         <p className="mt-3 max-w-md text-[15px] leading-7 text-text-muted">
-          Nothing was charged and your data is safe. Try again — if this keeps
+          Nothing was charged and your data is safe. Try again. If this keeps
           happening, contact support with the reference below.
         </p>
         {error.digest && (

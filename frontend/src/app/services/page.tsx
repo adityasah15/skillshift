@@ -25,7 +25,7 @@ export default function ServicesPage() {
             Browse services
           </h1>
           <p className="mt-3 max-w-xl text-base leading-7 text-text-muted">
-            Compare real offers side by side — clear prices, tracked delivery,
+            Compare real offers side by side: clear prices, tracked delivery,
             and protected payments on every order.
           </p>
         </div>

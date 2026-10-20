@@ -19,10 +19,10 @@ const sections: Array<{ heading: string; body: string[] }> = [
   {
     heading: "Ordering and escrow",
     body: [
-      "When a client places an order, the full price is held in escrow — visible to both sides, owned by neither until the order resolves.",
+      "When a client places an order, the full price is held in escrow, visible to both sides, owned by neither until the order resolves.",
       "Accepting a delivery releases the payment to the freelancer. Cancelling before delivery refunds it to the client.",
       "Delivered orders auto-complete 7 days after delivery if the client takes no action.",
-      "Test mode — no real money moves. Balances and escrow on SkillShift are demonstration funds.",
+      "Payments run in test mode: no real money moves. Balances and escrow on SkillShift are demonstration funds.",
     ],
   },
   {

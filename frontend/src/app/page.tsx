@@ -10,12 +10,12 @@ import { RatingStars } from "@/components/ui/RatingStars";
 import { Reveal } from "@/components/ui/Reveal";
 
 export const metadata: Metadata = {
-  title: "SkillShift — Find the right skills",
+  title: "SkillShift · Find the right skills",
   description:
     "Hire freelancers with clear prices and delivery times. Your payment stays in escrow until you approve the work.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "SkillShift — Find the right skills",
+    title: "SkillShift · Find the right skills",
     description:
       "Hire freelancers with clear prices and delivery times. Your payment stays in escrow until you approve the work.",
   },
@@ -87,7 +87,7 @@ const faqs = [
   {
     title: "What does it cost?",
     content:
-      "Clients pay the price shown on the service — no hidden platform fee. Freelancers list services for free.",
+      "Clients pay the price shown on the service, with no hidden platform fee. Freelancers list services for free.",
   },
   {
     title: "Who can leave a review?",
@@ -266,7 +266,7 @@ export default function Home() {
               Built for the awkward parts of hiring.
             </h2>
             <p className="mt-2 text-text-muted">
-              Not just a profile and a message thread — the money, the deadline,
+              Not just a profile and a message thread. The money, the deadline,
               and the handover all have a place.
             </p>
           </div>
@@ -295,7 +295,7 @@ export default function Home() {
             <article className="rounded-[10px] border border-border bg-surface p-5">
               <h3 className="text-lg font-semibold">Delivery you can track</h3>
               <p className="mt-2 text-sm leading-6 text-text-muted">
-                Requirements, delivery notes, and deadlines live on the order — not
+                Requirements, delivery notes, and deadlines live on the order, not
                 in scattered messages.
               </p>
               <ol className="mt-4 space-y-2 rounded-[6px] border border-border bg-bg p-3">
@@ -387,7 +387,7 @@ export default function Home() {
                   {[
                     "Set your own price and delivery time",
                     "Payment released when the client approves",
-                    "Free to list — no subscription",
+                    "Free to list, no subscription",
                   ].map((item) => (
                     <li key={item} className="flex items-center gap-2">
                       <CheckIcon />

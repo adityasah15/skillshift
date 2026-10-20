@@ -8,7 +8,7 @@ export default function MyServicesRoute() {
   return (
     <WorkspaceShell
       title="My services"
-      description="Everything you sell — status, pricing, and listing controls in one place."
+      description="Status, pricing, and listing controls for everything you sell."
       action={<WorkspaceActionLink href="/services/new">New service</WorkspaceActionLink>}
     >
       <MyServicesPage />
