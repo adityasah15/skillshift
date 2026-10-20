@@ -9,8 +9,9 @@ import { walletApi } from "@/lib/api/wallet";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { BrandMark } from "@/components/layout/BrandMark";
 import { clearAccessToken, useSessionToken } from "@/lib/session";
-import { useCatalogSkills } from "@/lib/use-catalog-skills";
+import { useCatalog } from "@/lib/use-services-feed";
 import { formatINR } from "@/lib/format";
+import { lockBodyScroll, unlockBodyScroll } from "@/lib/scroll-lock";
 import type { Role } from "@/lib/types";
 
 const navLinks = [
@@ -54,28 +55,41 @@ function HeaderSearch({
   );
 }
 
+/**
+ * Popular skills from the live catalog. While the feed loads, placeholder
+ * pills keep the strip height stable so the header never jumps.
+ */
 function CategoryStrip() {
-  const skills = useCatalogSkills(10);
-  if (skills.length === 0) return null;
+  const { categories, loading } = useCatalog(10);
+  const skills = categories.map((category) => category.skill);
+  if (!loading && skills.length === 0) return null;
 
   return (
     <div className="hidden border-t border-border bg-surface md:block">
       <nav
         aria-label="Categories"
-        className="mx-auto flex max-w-[1200px] items-center gap-1 overflow-x-auto px-4 [scrollbar-width:none] sm:px-6 lg:px-8"
+        className="mx-auto flex h-[38px] max-w-[1200px] items-center gap-1 overflow-x-auto px-4 [scrollbar-width:none] sm:px-6 lg:px-8"
       >
         <span className="shrink-0 py-2 pr-1 text-xs font-medium text-text-subtle">
           Popular
         </span>
-        {skills.map((skill) => (
-          <Link
-            key={skill}
-            href={`/services?skills=${encodeURIComponent(skill)}`}
-            className="shrink-0 rounded-full px-3 py-2 text-[13px] font-medium text-text-muted transition hover:bg-surface-soft hover:text-text"
-          >
-            {skill}
-          </Link>
-        ))}
+        {loading
+          ? Array.from({ length: 8 }).map((_, index) => (
+              <span
+                key={index}
+                aria-hidden
+                className="h-5 w-20 shrink-0 rounded-full bg-surface-soft"
+              />
+            ))
+          : skills.map((skill) => (
+              <Link
+                key={skill}
+                href={`/services?skills=${encodeURIComponent(skill)}`}
+                className="inline-flex h-[30px] shrink-0 items-center whitespace-nowrap rounded-full px-3 text-[13px] font-medium text-text-muted transition hover:bg-surface-soft hover:text-text"
+              >
+                {skill}
+              </Link>
+            ))}
       </nav>
     </div>
   );
@@ -114,7 +128,7 @@ function NavLink({
       href={href}
       onClick={onClick}
       aria-current={active ? "page" : undefined}
-      className={`relative inline-flex min-h-[44px] items-center px-3 text-sm font-medium transition ${
+      className={`relative inline-flex min-h-[44px] shrink-0 items-center px-3 text-sm font-medium whitespace-nowrap transition ${
         active ? "text-text" : "text-text-muted hover:text-text"
       }`}
     >
@@ -129,16 +143,14 @@ function NavLink({
 function AccountMenu({
   name,
   email,
-  showStudio,
-  showSell,
-  showAdmin,
+  isAdmin,
+  isFreelancer,
   onLogout,
 }: {
   name: string;
   email: string;
-  showStudio: boolean;
-  showSell: boolean;
-  showAdmin: boolean;
+  isAdmin: boolean;
+  isFreelancer: boolean;
   onLogout: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -163,25 +175,29 @@ function AccountMenu({
   }, [menuOpen]);
 
   const initial = name.trim().charAt(0).toUpperCase() || "?";
+  // Admins moderate the marketplace; they don't have a wallet, inbox, or
+  // personal orders of their own.
   const items = [
     { href: "/profile", label: "Profile" },
-    ...(showStudio ? [{ href: "/services/mine", label: "My services" }] : []),
-    { href: "/orders", label: "Orders" },
-    { href: "/messages", label: "Messages" },
-    { href: "/wallet", label: "Wallet" },
-    ...(showSell ? [{ href: "/auth/register", label: "Want to sell? Join as a freelancer" }] : []),
-    ...(showAdmin ? [{ href: "/admin", label: "Admin" }] : []),
+    ...(isFreelancer ? [{ href: "/services/mine", label: "My services" }] : []),
+    ...(isAdmin
+      ? [{ href: "/admin", label: "Admin" }]
+      : [
+          { href: "/orders", label: "Orders" },
+          { href: "/messages", label: "Messages" },
+          { href: "/wallet", label: "Wallet" },
+        ]),
   ];
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div ref={wrapRef} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setMenuOpen((v) => !v)}
         aria-expanded={menuOpen}
         aria-haspopup="menu"
         aria-label={`Account: ${name}`}
-        className="flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-[10px] border border-border py-1 pr-3 pl-1 transition hover:border-border-strong hover:bg-surface-soft"
+        className="flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-[10px] border border-border py-1 pr-3 pl-1 whitespace-nowrap transition hover:border-border-strong hover:bg-surface-soft"
       >
         <span
           aria-hidden
@@ -230,12 +246,9 @@ function AccountMenu({
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
-  const [hideStrip, setHideStrip] = useState(false);
-  const [pastHero, setPastHero] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const token = useSessionToken();
-  const isHome = pathname === "/";
 
   const [roleEntry, setRoleEntry] = useState<{ forToken: string; role: Role | null } | null>(null);
   const [acct, setAcct] = useState<{ forToken: string; displayName: string; email: string } | null>(null);
@@ -243,7 +256,6 @@ export function Navbar() {
 
   const menuRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
-  const lastY = useRef(0);
 
   // Best-effort role lookup — nav renders for any valid token regardless.
   useEffect(() => {
@@ -285,7 +297,7 @@ export function Navbar() {
     };
   }, [token, acct?.forToken]);
 
-  // Best-effort balance for the wallet chip.
+  // Best-effort balance for the wallet chip. Admins have no wallet.
   useEffect(() => {
     if (!token || wallet?.forToken === token) return;
     let cancelled = false;
@@ -302,23 +314,6 @@ export function Navbar() {
     };
   }, [token, wallet?.forToken]);
 
-  // Header behaviour: strip hides on scroll down and returns on scroll up;
-  // the home page only reveals the header search after the hero.
-  useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY;
-      const delta = y - lastY.current;
-      if (Math.abs(delta) > 4) {
-        if (y > 140 && delta > 0) setHideStrip(true);
-        if (delta < 0 || y <= 140) setHideStrip(false);
-        lastY.current = y;
-      }
-      setPastHero(y > 520);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   // Mobile sheet: Escape closes; body scroll locks; focus moves into the sheet.
   useEffect(() => {
     if (!open) return;
@@ -329,12 +324,11 @@ export function Navbar() {
       }
     };
     document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    menuRef.current?.querySelector<HTMLElement>("input, a, button")?.focus();
+    lockBodyScroll();
+    menuRef.current?.querySelector<HTMLElement>("input, a, button")?.focus({ preventScroll: true });
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      unlockBodyScroll();
     };
   }, [open]);
 
@@ -355,35 +349,35 @@ export function Navbar() {
   const isAdmin = role === "ADMIN";
   const isFreelancer = role === "FREELANCER";
   const showStudio = authed && isFreelancer;
-  const showSell = authed && role === "CLIENT";
   const showAdmin = authed && isAdmin;
-  const showSearch = !isHome || pastHero;
   const balance = wallet?.forToken === token ? wallet.paise : null;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface">
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-2 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-3 px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="SkillShift home">
           <BrandMark className="shrink-0" />
-          <span className="font-display text-[17px] font-bold tracking-tight text-text">
+          <span className="font-display text-[17px] font-bold tracking-tight whitespace-nowrap text-text">
             SkillShift
           </span>
         </Link>
 
-        <div className={`mx-auto hidden w-full max-w-lg justify-center lg:flex ${showSearch ? "" : "invisible"}`}>
-          <HeaderSearch className="w-full" />
+        <div className="hidden min-w-0 flex-1 justify-center lg:flex">
+          <HeaderSearch className="w-full max-w-[460px]" />
         </div>
 
-        <nav aria-label="Primary" className="ml-auto hidden items-center gap-1 md:flex lg:ml-0">
+        <nav aria-label="Primary" className="ml-auto hidden shrink-0 items-center gap-0.5 md:flex lg:ml-2">
           {navLinks.map((l) => (
             <NavLink key={l.href} href={l.href} label={l.label} active={pathname === l.href} />
           ))}
           {showStudio && (
-            <NavLink
-              href="/services/mine"
-              label="My services"
-              active={pathname === "/services/mine"}
-            />
+            <span className="hidden xl:flex">
+              <NavLink
+                href="/services/mine"
+                label="My services"
+                active={pathname === "/services/mine"}
+              />
+            </span>
           )}
           {!authed && (
             <NavLink href="/auth/register" label="Sell on SkillShift" active={false} />
@@ -397,15 +391,19 @@ export function Navbar() {
           )}
         </nav>
 
-        <div className="ml-auto hidden items-center gap-2.5 md:flex lg:ml-4">
+        <div className="hidden shrink-0 items-center gap-2.5 md:flex lg:ml-2">
           {authed ? (
             <>
-              <NavLink href="/orders" label="Orders" active={pathname === "/orders"} />
+              {!isAdmin && (
+                <span className="hidden lg:flex">
+                  <NavLink href="/orders" label="Orders" active={pathname === "/orders"} />
+                </span>
+              )}
               <NotificationsBell />
               {!isAdmin && balance !== null && (
                 <Link
                   href="/wallet"
-                  className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[10px] border border-border px-3 text-sm transition hover:border-border-strong hover:bg-surface-soft"
+                  className="hidden min-h-[44px] items-center gap-1.5 rounded-[10px] border border-border px-3 text-sm whitespace-nowrap transition hover:border-border-strong hover:bg-surface-soft xl:inline-flex"
                 >
                   <span className="text-text-muted">Wallet</span>
                   <span className="tabular font-semibold text-text">{formatINR(balance)}</span>
@@ -414,9 +412,8 @@ export function Navbar() {
               <AccountMenu
                 name={acct?.forToken === token && acct ? acct.displayName : "Account"}
                 email={acct?.forToken === token && acct ? acct.email : ""}
-                showStudio={showStudio}
-                showSell={showSell}
-                showAdmin={showAdmin}
+                isAdmin={isAdmin}
+                isFreelancer={isFreelancer}
                 onLogout={logout}
               />
             </>
@@ -424,13 +421,13 @@ export function Navbar() {
             <>
               <Link
                 href="/auth/login"
-                className="inline-flex min-h-[44px] items-center rounded-[10px] px-4 text-sm font-semibold text-text-muted transition hover:bg-surface-soft hover:text-text"
+                className="inline-flex min-h-[44px] shrink-0 items-center rounded-[10px] px-4 text-sm font-semibold whitespace-nowrap text-text-muted transition hover:bg-surface-soft hover:text-text"
               >
                 Log in
               </Link>
               <Link
                 href="/auth/register"
-                className="inline-flex min-h-[44px] items-center rounded-[10px] bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+                className="inline-flex min-h-[44px] shrink-0 items-center rounded-[10px] bg-primary px-5 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-primary-hover"
               >
                 Join
               </Link>
@@ -452,7 +449,7 @@ export function Navbar() {
         </button>
       </div>
 
-      {!hideStrip && <CategoryStrip />}
+      <CategoryStrip />
 
       {open && (
         <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
@@ -541,10 +538,17 @@ export function Navbar() {
                     {acct?.forToken === token && acct ? acct.email : "Your account"}
                   </p>
                   {[
-                    { href: "/orders", label: "Orders" },
-                    { href: "/wallet", label: "Wallet" },
-                    { href: "/messages", label: "Messages" },
                     { href: "/profile", label: "Profile" },
+                    ...(isFreelancer
+                      ? [{ href: "/services/mine", label: "My services" }]
+                      : []),
+                    ...(isAdmin
+                      ? [{ href: "/admin", label: "Admin" }]
+                      : [
+                          { href: "/orders", label: "Orders" },
+                          { href: "/messages", label: "Messages" },
+                          { href: "/wallet", label: "Wallet" },
+                        ]),
                   ].map((l) => (
                     <NavLink
                       key={l.href}

@@ -61,6 +61,9 @@
 
 html {
   scroll-behavior: smooth;
+  /* Keep the classic scrollbar gutter reserved so overlays that lock body
+     scroll never shift the page sideways. */
+  scrollbar-gutter: stable;
 }
 
 body {

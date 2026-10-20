@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { lockBodyScroll, unlockBodyScroll } from "@/lib/scroll-lock";
 
 interface ModalProps {
   open: boolean;
@@ -43,15 +44,14 @@ function useDialogBehavior(open: boolean, panelRef: React.RefObject<HTMLDivEleme
       }
     };
     document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    lockBodyScroll();
     if (panel && !panel.contains(document.activeElement)) {
-      panel.focus();
+      panel.focus({ preventScroll: true });
     }
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-      previouslyFocused?.focus?.();
+      unlockBodyScroll();
+      previouslyFocused?.focus?.({ preventScroll: true });
     };
   }, [open, panelRef]);
 }
