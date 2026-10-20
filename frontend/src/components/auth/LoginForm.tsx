@@ -2,20 +2,37 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { ApiRequestError } from "@/lib/api-client";
 import { authApi } from "@/lib/api/auth";
-import { setAccessToken } from "@/lib/session";
+import { setAccessToken, useSessionToken } from "@/lib/session";
 
 export function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
+  const token = useSessionToken();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : null;
+
+  // Already signed in? Login has nothing to offer — go where the session
+  // was headed instead of showing the form again.
+  useEffect(() => {
+    if (token !== null && !submitting) router.replace(safeNext ?? "/dashboard");
+  }, [token, submitting, safeNext, router]);
+
+  if (token !== null) {
+    return (
+      <AuthCard title="You're already logged in" subtitle="Taking you to your dashboard.">
+        <div className="skeleton-shimmer h-24 rounded-[10px]" aria-label="Redirecting" />
+      </AuthCard>
+    );
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,14 +43,14 @@ export function LoginForm({ next }: { next?: string }) {
       setAccessToken(data.accessToken);
 
       let destination: string;
-      if (next?.startsWith("/") && !next.startsWith("//")) {
-        destination = next;
+      if (safeNext) {
+        destination = safeNext;
       } else {
         try {
           const me = await authApi.me();
-          destination = me.data.role === "ADMIN" ? "/admin" : "/orders";
+          destination = me.data.role === "ADMIN" ? "/admin" : "/dashboard";
         } catch {
-          destination = "/orders";
+          destination = "/dashboard";
         }
       }
 
