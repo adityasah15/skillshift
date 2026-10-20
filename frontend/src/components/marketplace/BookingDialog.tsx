@@ -151,7 +151,7 @@ export function BookingDialog({
         <div className="flex flex-col gap-4">
           <p className="rounded-[10px] bg-warning-soft px-4 py-3 text-sm leading-6 text-warning">
             You’re logged in as a freelancer. Ordering needs a separate client
-            account — one account holds one role.
+            account; one account holds one role.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Link
@@ -228,7 +228,7 @@ export function BookingDialog({
           {insufficient && shortfall !== null && (
             <div className="rounded-[10px] bg-warning-soft px-4 py-3">
               <p className="text-[13px] leading-6 text-warning">
-                Your wallet has {formatINR(knownBalance ?? 0)} — add{" "}
+                Your wallet has {formatINR(knownBalance ?? 0)}. Add{" "}
                 {formatINR(shortfall)} to fund this order.
               </p>
               <Link
@@ -243,12 +243,12 @@ export function BookingDialog({
           {balanceState === "unavailable" && (
             <p className="text-[12px] leading-5 text-text-muted">
               We couldn&apos;t read your wallet balance. You can still place the
-              order — the server checks funds before holding escrow.
+              order. The server checks funds before holding escrow.
             </p>
           )}
 
           <p className="rounded-[10px] bg-surface-soft px-4 py-3 text-[13px] leading-6 text-text-muted">
-            {formatINR(price)} is held in escrow when you place the order — the
+            {formatINR(price)} is held in escrow when you place the order. The
             freelancer is paid only when you accept the delivery.
           </p>
 

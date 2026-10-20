@@ -36,12 +36,12 @@ function matches(service: Service, filter: Filter): boolean {
 
 function statusNote(status: string): string | null {
   if (status === "PENDING_REVIEW") {
-    return "In review — goes live once an admin approves it.";
+    return "In review. Goes live once an admin approves it.";
   }
   if (status === "REJECTED") {
-    return "Hidden from clients. Fixing it here doesn't resubmit — an admin restores visibility after review.";
+    return "Hidden from clients. Fixing it here doesn't resubmit; an admin restores visibility after review.";
   }
-  if (status === "PAUSED") return "Paused — not visible to clients.";
+  if (status === "PAUSED") return "Paused. Not visible to clients.";
   return null;
 }
 
@@ -179,7 +179,7 @@ function MineList() {
     return (
       <EmptyState
         title="No services yet"
-        body="Publish your first service — clear scope and honest pricing get ordered."
+        body="Publish your first service. Clear scope and honest pricing get ordered."
         action={{ label: "Publish a service", onClick: () => router.push("/services/new") }}
       />
     );
@@ -206,7 +206,7 @@ function MineList() {
         <div className="mt-3">
           <EmptyState
             title="Nothing in this filter"
-            body="Try another filter — your other listings are still here."
+            body="Try another filter. Your other listings are still here."
           />
         </div>
       ) : (

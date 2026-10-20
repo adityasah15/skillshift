@@ -75,7 +75,7 @@ export function ServiceForm({
       return;
     }
     if (kept.length + files.length === 0) {
-      setLocalError("Add at least one image — listings with photos get ordered more.");
+      setLocalError("Add at least one image. Listings with photos get ordered more.");
       return;
     }
     setLocalError(null);
@@ -123,7 +123,7 @@ export function ServiceForm({
           </div>
           <p className="mt-2 text-[12px] leading-5 text-text-muted">
             {files.length > 0
-              ? "How your card will look — new images upload when you save."
+              ? "How your card will look. New images upload when you save."
               : "How your card will look in browse."}
           </p>
         </aside>
@@ -230,7 +230,7 @@ export function ServiceForm({
             })}
           </ul>
           <p className="mt-1.5 text-[13px] text-text-subtle">
-            Stored on S3 — previews appear once public image hosting is configured.
+            Stored on S3. Previews appear once public image hosting is configured.
           </p>
         </div>
       )}

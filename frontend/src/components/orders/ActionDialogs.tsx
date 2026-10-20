@@ -143,7 +143,7 @@ export function DeliverDialog({
       open={open}
       onClose={onClose}
       title="Deliver this order"
-      description="The client reviews your delivery and releases payment — or auto-completes in 7 days."
+      description="The client reviews your delivery and releases payment, or it auto-completes in 7 days."
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Textarea
@@ -168,7 +168,7 @@ export function DeliverDialog({
             }`}
           >
             <span className="text-sm font-medium">Attach files or click to browse</span>
-            <span className="text-[13px] text-text-subtle">JPG, PNG, PDF, or ZIP — up to 5MB each, max 5</span>
+            <span className="text-[13px] text-text-subtle">JPG, PNG, PDF, or ZIP. Up to 5MB each, max 5</span>
             <input
               type="file"
               accept="image/jpeg,image/png,application/pdf,application/zip"
@@ -267,7 +267,7 @@ export function CompleteDialog({
       >
         <p className="rounded-[14px] bg-success-soft px-4 py-3 text-sm leading-6 text-success">
           {formatINR(price)} releases to the freelancer after you approve. This
-          cannot be undone — open a dispute instead if something is wrong.
+          cannot be undone. Open a dispute instead if something is wrong.
         </p>
         <ErrorNote error={error} />
         <Actions onClose={onClose} submitting={submitting} />
@@ -348,7 +348,7 @@ export function DisputeDialog({
           required
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Be specific — delivery quality, missing items, timeline…"
+          placeholder="Be specific: delivery quality, missing items, timeline…"
           maxLength={2000}
         />
         <p className="rounded-[14px] bg-warning-soft px-4 py-3 text-[13px] leading-6 text-warning">

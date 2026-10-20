@@ -51,7 +51,7 @@ export function OrdersList() {
     return (
       <EmptyState
         title="Log in to view your orders"
-        body="Orders live here once you're part of one — as client or freelancer."
+        body="Orders live here once you're part of one, as client or freelancer."
         action={{ label: "Log in", onClick: () => router.push("/auth/login?next=%2Forders") }}
       />
     );

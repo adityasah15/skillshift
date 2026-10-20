@@ -31,7 +31,7 @@ export default async function CheckEmailPage({
           }
         >
           <p className="rounded-[14px] bg-info-soft px-4 py-3 text-sm leading-6 text-info">
-            Log in stays locked until your email is verified — this keeps the
+            Log in stays locked until your email is verified. This keeps the
             marketplace free of throwaway accounts.
           </p>
           <div className="mt-4 border-t border-border pt-4">

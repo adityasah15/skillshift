@@ -163,7 +163,7 @@ export function OrderChat({
     }
     const socket = socketRef.current;
     if (!socket?.connected) {
-      setError("Not connected to chat — your message is kept below. Reconnect and send again.");
+      setError("Not connected to chat. Your message is kept below. Reconnect and send again.");
       if (effectiveConn === "offline") retry();
       return;
     }
@@ -200,7 +200,7 @@ export function OrderChat({
               ? "Connected"
               : effectiveConn === "connecting"
                 ? "Connecting…"
-                : "Offline — history still available"}
+                : "Offline. History still available"}
         </span>
         {effectiveConn === "offline" && (
           <button

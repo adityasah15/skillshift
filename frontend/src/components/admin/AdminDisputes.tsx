@@ -226,7 +226,7 @@ export function AdminDisputes() {
                   <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <dt className="text-[13px] font-semibold text-text-muted">Service</dt>
-                      <dd className="text-text">{orderMeta[d.orderId]?.serviceTitle ?? "—"}</dd>
+                      <dd className="text-text">{orderMeta[d.orderId]?.serviceTitle ?? "-"}</dd>
                     </div>
                     <div>
                       <dt className="text-[13px] font-semibold text-text-muted">Held in escrow</dt>
@@ -258,7 +258,7 @@ export function AdminDisputes() {
                     </div>
                   </dl>
                   <p className="mt-3 text-[13px] text-text-subtle">
-                    Admin view — participant chat and delivery files are not exposed to admins
+                    Admin view: participant chat and delivery files are not exposed to admins
                     by the current API, so decisions use the reason, requirements, and delivery note above.
                   </p>
                 </div>
@@ -289,7 +289,7 @@ export function AdminDisputes() {
               name="adminNote"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Why this side wins — visible in the record."
+              placeholder="Why this side wins. Visible in the record."
               maxLength={2000}
             />
             {actError && (

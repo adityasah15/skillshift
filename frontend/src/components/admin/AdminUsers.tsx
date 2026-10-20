@@ -199,7 +199,7 @@ export function AdminUsers() {
         title={target?.action === "disable" ? "Disable account?" : "Enable account?"}
         description={
           target?.action === "disable"
-            ? "The user loses access immediately. Use for spam, fraud, or abuse — you can re-enable them here later."
+            ? "The user loses access immediately. Use for spam, fraud, or abuse. You can re-enable them here later."
             : "The account regains access immediately."
         }
       >

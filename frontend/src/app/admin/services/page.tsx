@@ -12,7 +12,7 @@ export default function AdminServicesPage() {
     <AdminShell
       eyebrow="Admin · Moderation"
       title="Services"
-      description="Review new listings first — approve to go live, reject to keep hidden."
+      description="Review new listings first. Approve to go live, reject to keep hidden."
     >
       <AdminServices />
     </AdminShell>

@@ -190,7 +190,7 @@ export function AdminOverview() {
                     {f.profile ? (
                       <RatingStars value={f.profile.rating} count={f.profile.totalReviews} />
                     ) : (
-                      <span className="text-[13px] text-text-muted">—</span>
+                      <span className="text-[13px] text-text-muted">-</span>
                     )}
                   </div>
                 </li>

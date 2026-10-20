@@ -12,7 +12,7 @@ export default function AdminDisputesPage() {
     <AdminShell
       eyebrow="Admin · Operations"
       title="Disputes"
-      description="Full order context on every case — resolving releases or refunds held funds."
+      description="Full order context on every case. Resolving releases or refunds held funds."
     >
       <AdminDisputes />
     </AdminShell>

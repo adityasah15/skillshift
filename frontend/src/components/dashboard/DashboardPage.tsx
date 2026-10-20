@@ -195,7 +195,7 @@ export function DashboardPage() {
         <div className="flex flex-col rounded-[10px] border border-border bg-surface p-5">
           <p className="text-[13px] text-text-subtle">Available in wallet</p>
           <p className="tabular mt-1 text-2xl font-bold text-text">
-            {balance === null ? "—" : formatINR(balance)}
+            {balance === null ? "-" : formatINR(balance)}
           </p>
           <p className="mt-1 text-[12px] leading-5 text-text-muted">
             Ready to spend or withdraw.
