@@ -8,7 +8,6 @@ export default function Dashboard() {
   return (
     <WorkspaceShell
       title="Dashboard"
-      description="What needs you, your money, and your latest work — at a glance."
       action={<WorkspaceActionLink href="/services">Browse services</WorkspaceActionLink>}
     >
       <DashboardPage />

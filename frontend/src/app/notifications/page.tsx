@@ -6,10 +6,7 @@ export const metadata: Metadata = { title: "Notifications", robots: { index: fal
 
 export default function NotificationsPage() {
   return (
-    <WorkspaceShell
-      title="Notifications"
-      description="Order updates, dispute decisions, and payment alerts — grouped by when they happened."
-    >
+    <WorkspaceShell title="Notifications">
       <NotificationsList />
     </WorkspaceShell>
   );

@@ -8,7 +8,6 @@ export default function OrdersPage() {
   return (
     <WorkspaceShell
       title="Orders"
-      description="Track every order from booking to delivery, with payments protected throughout."
       action={<WorkspaceActionLink href="/services">Browse services</WorkspaceActionLink>}
     >
       <OrdersList />

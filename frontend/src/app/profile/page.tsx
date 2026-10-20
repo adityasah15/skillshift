@@ -9,10 +9,7 @@ export const metadata: Metadata = {
 
 export default function ProfileRoute() {
   return (
-    <WorkspaceShell
-      title="Profile"
-      description="How you appear to the marketplace, and the details behind your account."
-    >
+    <WorkspaceShell title="Profile">
       <ProfilePage />
     </WorkspaceShell>
   );

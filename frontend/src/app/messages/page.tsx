@@ -6,10 +6,7 @@ export const metadata: Metadata = { title: "Messages", robots: { index: false, f
 
 export default function MessagesPage() {
   return (
-    <WorkspaceShell
-      title="Messages"
-      description="One discussion per order — pick up right where you left off."
-    >
+    <WorkspaceShell title="Messages">
       <MessagesInbox />
     </WorkspaceShell>
   );

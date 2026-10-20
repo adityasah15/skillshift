@@ -6,10 +6,7 @@ export const metadata: Metadata = { title: "Wallet", robots: { index: false, fol
 
 export default function WalletPage() {
   return (
-    <WorkspaceShell
-      title="Wallet"
-      description="Your money, always labeled by where it sits."
-    >
+    <WorkspaceShell title="Wallet">
       <WalletDashboard />
     </WorkspaceShell>
   );
