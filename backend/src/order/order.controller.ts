@@ -31,7 +31,7 @@ export class OrderController {
     @Req() req: { user: JwtPayload },
     @Param('id') orderId: string,
   ) {
-    return this.orderService.findOne(req.user.sub, orderId);
+    return this.orderService.findOne(req.user.sub, orderId, req.user.role);
   }
 
   @Patch(':id/deliver')

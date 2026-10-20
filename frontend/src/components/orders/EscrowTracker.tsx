@@ -1,6 +1,6 @@
 import { formatINR } from "@/lib/format";
 
-type Viewer = "client" | "freelancer";
+type Viewer = "client" | "freelancer" | "admin";
 
 const STEPS = [
   { key: "funded", label: "Funded", hint: "Payment held" },
@@ -36,24 +36,28 @@ function resolveState(status: string, viewer: Viewer): {
         reached: 3,
         tone: "released",
         note:
-          viewer === "freelancer"
-            ? "Paid into your wallet."
-            : "The freelancer has been paid.",
+          viewer === "admin"
+            ? "The freelancer was paid."
+            : viewer === "freelancer"
+              ? "Paid into your wallet."
+              : "The freelancer has been paid.",
       };
     case "DELIVERED":
       return {
         reached: 2,
         tone: "held",
         note:
-          viewer === "client"
-            ? "Review the delivery — payment releases when you approve."
-            : "Waiting for the client to approve and release payment.",
+          viewer === "admin"
+            ? "Waiting for the client to approve and release payment."
+            : viewer === "client"
+              ? "Review the delivery. Payment releases when you approve."
+              : "Waiting for the client to approve and release payment.",
       };
     case "DISPUTED":
       return {
         reached: 2,
         tone: "dispute",
-        note: "Under review — funds stay held until an admin resolves it.",
+        note: "Under review. Funds stay held until an admin resolves it.",
       };
     case "CANCELLED":
     case "REFUNDED":
@@ -63,7 +67,9 @@ function resolveState(status: string, viewer: Viewer): {
         note:
           viewer === "freelancer"
             ? "The order was cancelled and the client was refunded."
-            : "Refunded to your wallet.",
+            : viewer === "admin"
+              ? "The order was cancelled and the client was refunded."
+              : "Refunded to your wallet.",
       };
     case "IN_PROGRESS":
       return {
@@ -72,7 +78,9 @@ function resolveState(status: string, viewer: Viewer): {
         note:
           viewer === "freelancer"
             ? "The client's payment is held while you work."
-            : "Payment is held while the freelancer works.",
+            : viewer === "admin"
+              ? "Payment is held while the freelancer works."
+              : "Payment is held while the freelancer works.",
       };
     default:
       return {

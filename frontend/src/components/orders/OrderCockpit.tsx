@@ -88,7 +88,13 @@ export function OrderCockpit({ id }: { id: string }) {
         if (cancelled) return;
         const o = orderRes.data;
         const user = meRes.data;
-        if (o.clientId !== user.sub && o.freelancerId !== user.sub) {
+        // Admins get read-only visibility into any order; participants keep
+        // the private path. Everyone else is denied.
+        if (
+          user.role !== "ADMIN" &&
+          o.clientId !== user.sub &&
+          o.freelancerId !== user.sub
+        ) {
           setDenied(true);
           return;
         }
@@ -165,6 +171,7 @@ export function OrderCockpit({ id }: { id: string }) {
   }
 
   const isClient = me.sub === order.clientId;
+  const isAdmin = me.role === "ADMIN";
   const moneyLabel = escrowLabel(order.status);
   const moneyNote =
     moneyLabel === "Held in escrow"
@@ -208,7 +215,11 @@ export function OrderCockpit({ id }: { id: string }) {
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge status={order.status} />
             <span className="rounded-full bg-surface-soft px-2.5 py-1 text-[12px] font-medium text-text-muted">
-              {isClient ? "You’re the client" : "You’re the freelancer"}
+              {isAdmin
+                ? "Admin view"
+                : isClient
+                  ? "You’re the client"
+                  : "You’re the freelancer"}
             </span>
             <span className="text-[12px] text-text-subtle">
               {order.deliveryDays}-day delivery
@@ -229,7 +240,7 @@ export function OrderCockpit({ id }: { id: string }) {
             <EscrowTracker
               status={order.status}
               price={order.price}
-              viewer={isClient ? "client" : "freelancer"}
+              viewer={isAdmin ? "admin" : isClient ? "client" : "freelancer"}
             />
             {order.status === "DELIVERED" && order.autoCompleteAt && (
               <p className="mt-3 text-sm font-medium text-warning">{countdown(order.autoCompleteAt)}</p>
@@ -272,16 +283,28 @@ export function OrderCockpit({ id }: { id: string }) {
             </section>
           )}
 
-          <section aria-label="Discussion" id="discussion" className="scroll-mt-28 rounded-[14px] border border-border bg-surface p-6">
-            <h2 className="text-lg font-semibold">Discussion</h2>
-            <div className="mt-2">
-              <OrderChat
-                orderId={order.id}
-                myId={me.sub}
-                peerId={isClient ? order.freelancerId : order.clientId}
-              />
-            </div>
-          </section>
+          {isAdmin ? (
+            <section
+              aria-label="Discussion"
+              className="rounded-[14px] border border-border bg-surface p-6"
+            >
+              <h2 className="text-lg font-semibold">Discussion</h2>
+              <p className="mt-2 text-sm leading-6 text-text-muted">
+                Participant chat stays private to the client and freelancer.
+              </p>
+            </section>
+          ) : (
+            <section aria-label="Discussion" id="discussion" className="scroll-mt-28 rounded-[14px] border border-border bg-surface p-6">
+              <h2 className="text-lg font-semibold">Discussion</h2>
+              <div className="mt-2">
+                <OrderChat
+                  orderId={order.id}
+                  myId={me.sub}
+                  peerId={isClient ? order.freelancerId : order.clientId}
+                />
+              </div>
+            </section>
+          )}
 
           {order.review && (
             <section aria-label="Review" className="rounded-[14px] border border-border bg-surface p-6">
@@ -316,11 +339,26 @@ export function OrderCockpit({ id }: { id: string }) {
           </section>
 
           <section aria-label="Actions" className="rounded-[14px] border border-border bg-surface p-6">
-            <h2 className="text-[15px] font-semibold">Your actions</h2>
+            <h2 className="text-[15px] font-semibold">
+              {isAdmin ? "Admin view" : "Your actions"}
+            </h2>
             <p className="mt-0.5 text-[13px] text-text-muted">
-              {isClient ? "You ordered this work" : "You're doing this work"}
+              {isAdmin
+                ? "Read-only. Order actions stay with the client and freelancer."
+                : isClient
+                  ? "You ordered this work"
+                  : "You're doing this work"}
             </p>
             <div className="mt-3 flex flex-col gap-2">
+              {isAdmin ? (
+                <Link
+                  href={order.status === "DISPUTED" ? "/admin/disputes" : "/admin/orders"}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-[10px] border border-border px-5 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
+                >
+                  {order.status === "DISPUTED" ? "Open in disputes" : "Back to admin orders"}
+                </Link>
+              ) : (
+              <>
               {order.status === "IN_PROGRESS" && !isClient && (
                 <Button onClick={() => setDialog("deliver")}>Deliver order</Button>
               )}
@@ -339,7 +377,7 @@ export function OrderCockpit({ id }: { id: string }) {
               )}
               {order.status === "DELIVERED" && !isClient && (
                 <p className="text-sm leading-6 text-text-muted">
-                  Waiting on client review{order.autoCompleteAt ? ` — ${countdown(order.autoCompleteAt).toLowerCase()}` : ""}.
+                  Waiting for the client to review{order.autoCompleteAt ? `. ${countdown(order.autoCompleteAt)}` : ""}.
                 </p>
               )}
               {order.status === "COMPLETED" && isClient && !order.review && (
@@ -358,15 +396,18 @@ export function OrderCockpit({ id }: { id: string }) {
               {order.status === "PENDING" && (
                 <p className="text-sm leading-6 text-text-muted">Waiting for the order to start.</p>
               )}
+              </>
+              )}
             </div>
           </section>
         </aside>
       </div>
 
       {/* Mobile sticky primary action — mirrors the sidebar on small screens. */}
-      {(order.status === "IN_PROGRESS" && !isClient) ||
-      (order.status === "DELIVERED" && isClient) ||
-      (order.status === "COMPLETED" && isClient && !order.review) ? (
+      {!isAdmin &&
+      ((order.status === "IN_PROGRESS" && !isClient) ||
+        (order.status === "DELIVERED" && isClient) ||
+        (order.status === "COMPLETED" && isClient && !order.review)) ? (
         <div className="sticky bottom-0 -mx-4 mt-6 border-t border-border bg-surface/95 p-4 backdrop-blur lg:hidden">
           {order.status === "IN_PROGRESS" && !isClient && (
             <Button size="lg" className="w-full" onClick={() => setDialog("deliver")}>
