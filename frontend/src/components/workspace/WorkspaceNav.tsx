@@ -81,20 +81,24 @@ export function WorkspaceNav() {
   const pathname = usePathname();
   const { role } = useCurrentUser();
 
-  const items: Item[] = [
-    { href: "/dashboard", label: "Overview", icon: ICONS.overview },
-    { href: "/orders", label: "Orders", icon: ICONS.orders },
-    { href: "/messages", label: "Messages", icon: ICONS.messages },
-    { href: "/wallet", label: "Wallet", icon: ICONS.wallet },
-    { href: "/notifications", label: "Notifications", icon: ICONS.notifications },
-    ...(role === "FREELANCER"
-      ? [{ href: "/services/mine", label: "My services", icon: ICONS.services }]
-      : []),
-    { href: "/profile", label: "Profile", icon: ICONS.profile },
-    ...(role === "ADMIN"
-      ? [{ href: "/admin", label: "Admin", icon: ICONS.admin }]
-      : []),
-  ];
+  const items: Item[] =
+    role === "ADMIN"
+      ? [
+          { href: "/notifications", label: "Notifications", icon: ICONS.notifications },
+          { href: "/profile", label: "Profile", icon: ICONS.profile },
+          { href: "/admin", label: "Admin", icon: ICONS.admin },
+        ]
+      : [
+          { href: "/dashboard", label: "Overview", icon: ICONS.overview },
+          { href: "/orders", label: "Orders", icon: ICONS.orders },
+          { href: "/messages", label: "Messages", icon: ICONS.messages },
+          { href: "/wallet", label: "Wallet", icon: ICONS.wallet },
+          { href: "/notifications", label: "Notifications", icon: ICONS.notifications },
+          ...(role === "FREELANCER"
+            ? [{ href: "/services/mine", label: "My services", icon: ICONS.services }]
+            : []),
+          { href: "/profile", label: "Profile", icon: ICONS.profile },
+        ];
 
   return (
     <>
