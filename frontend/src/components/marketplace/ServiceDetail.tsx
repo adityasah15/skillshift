@@ -31,20 +31,12 @@ function dateLabel(value: string): string {
   });
 }
 
-function ReviewSummary({
-  reviews,
-  fallbackRating,
-  fallbackCount,
-}: {
-  reviews: ServiceReview[];
-  fallbackRating: number | null;
-  fallbackCount: number;
-}) {
-  const count = reviews.length > 0 ? reviews.length : fallbackCount;
+function ReviewSummary({ reviews }: { reviews: ServiceReview[] }) {
+  const count = reviews.length;
   const average =
-    reviews.length > 0
-      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-      : (fallbackRating ?? 0);
+    count > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / count
+      : 0;
 
   if (count === 0) {
     return (
@@ -163,7 +155,6 @@ export function ServiceDetail({ id }: { id: string }) {
             });
             setReviews([]);
             setSeller({
-              id: `mock-${mock.id}`,
               displayName: mock.freelancer.name,
               bio: null,
               avatarUrl: null,
@@ -234,8 +225,10 @@ export function ServiceDetail({ id }: { id: string }) {
   const avg =
     reviews.length > 0
       ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-      : (seller?.rating ?? null);
-  const reviewCount = seller?.totalReviews ?? reviews.length;
+      : null;
+  // Service-level count: the freelancer's overall review total belongs to
+  // their profile card, not this listing's Reviews tab.
+  const reviewCount = reviews.length;
   const isOwn = userId !== null && service.freelancerId === userId;
   const isFreelancer = token !== null && role === "FREELANCER";
   const isAdmin = token !== null && role === "ADMIN";
@@ -364,11 +357,7 @@ export function ServiceDetail({ id }: { id: string }) {
             </TabPanel>
             <TabPanel id="reviews" value={tab} panelIdPrefix="service">
               <div className="pt-5">
-                <ReviewSummary
-                  reviews={reviews}
-                  fallbackRating={seller?.rating ?? null}
-                  fallbackCount={reviewCount}
-                />
+                <ReviewSummary reviews={reviews} />
                 <p className="mt-3 text-[12px] text-text-muted">
                   Only clients with completed orders can leave a review.
                 </p>
@@ -448,7 +437,8 @@ export function ServiceDetail({ id }: { id: string }) {
                       size="sm"
                     />
                     <span className="tabular">
-                      {seller.rating.toFixed(1)} ({seller.totalReviews})
+                      {seller.rating.toFixed(1)} ({seller.totalReviews}{" "}
+                      {seller.totalReviews === 1 ? "review" : "reviews"})
                     </span>
                   </span>
                 ) : (
@@ -465,7 +455,7 @@ export function ServiceDetail({ id }: { id: string }) {
             ) : isOwn ? (
               <div className="mt-4 flex flex-col gap-2">
                 <p className="rounded-[10px] bg-surface-soft px-4 py-3 text-[13px] leading-6 text-text-muted">
-                  This is your service — clients see this exact page before ordering.
+                  This is your service. Clients see this exact page before ordering.
                 </p>
                 <Link
                   href="/services/mine"
@@ -537,7 +527,7 @@ export function ServiceDetail({ id }: { id: string }) {
 
       {preview && (
         <p className="mt-6 rounded-[10px] border border-border bg-surface px-4 py-3 text-[13px] leading-6 text-text-muted">
-          Preview data — live details appear here once the backend is reachable.
+          Preview data. Live details appear here once the backend is reachable.
         </p>
       )}
 

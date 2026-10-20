@@ -139,7 +139,6 @@ export interface ServiceReview {
 }
 
 export interface PublicProfile {
-  id: string;
   displayName: string;
   bio: string | null;
   avatarUrl: string | null;

@@ -58,7 +58,9 @@ function SellerCard({ seller }: { seller: Seller }) {
 
 export function HomeSellers() {
   const { services, source, loading } = useServicesFeed(50);
-  const [profiles, setProfiles] = useState<PublicProfile[] | null>(null);
+  const [profiles, setProfiles] = useState<
+    Array<{ id: string; profile: PublicProfile }> | null
+  >(null);
 
   const liveIds = useMemo(() => {
     if (!services || source !== "live") return [];
@@ -72,13 +74,16 @@ export function HomeSellers() {
       liveIds.map((id) =>
         usersApi
           .publicProfile(id)
-          .then((response) => response.data)
+          .then((response) => ({ id, profile: response.data }))
           .catch(() => null),
       ),
     ).then((list) => {
       if (!cancelled) {
         setProfiles(
-          list.filter((profile): profile is PublicProfile => Boolean(profile)),
+          list.filter(
+            (entry): entry is { id: string; profile: PublicProfile } =>
+              Boolean(entry),
+          ),
         );
       }
     });
@@ -111,8 +116,8 @@ export function HomeSellers() {
   const sellers: Seller[] | null =
     source === "preview"
       ? previewSellers
-      : profiles?.map((profile) => ({
-          id: profile.id,
+      : profiles?.map(({ id, profile }) => ({
+          id,
           name: profile.displayName,
           avatarUrl: profile.avatarUrl,
           rating: profile.rating,
@@ -127,7 +132,10 @@ export function HomeSellers() {
   if (!waiting && (!sellers || sellers.length === 0)) return null;
 
   return (
-    <section aria-label="Top freelancers" className="mt-20">
+    <section
+      aria-label="Top freelancers"
+      className="mx-auto max-w-[1200px] px-4 pt-20 sm:px-6 lg:px-8"
+    >
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
