@@ -128,11 +128,6 @@ function MoneyDialog({
       open={open}
       onClose={onClose}
       title={kind === "deposit" ? "Add funds" : "Withdraw funds"}
-      description={
-        kind === "deposit"
-          ? "Top up your available balance instantly."
-          : "Move available balance out of SkillShift."
-      }
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Input
@@ -151,7 +146,7 @@ function MoneyDialog({
         <p className="rounded-[10px] bg-surface-soft px-4 py-3 text-[13px] leading-6 text-text-muted">
           {kind === "deposit"
             ? "Added funds are available immediately."
-            : "Only available balance can be withdrawn — amounts held in escrow stay protected until orders complete."}
+            : "Only available balance can be withdrawn. Amounts held in escrow stay protected until orders complete."}
         </p>
         {error && (
           <p role="alert" className="text-sm leading-6 text-danger">
@@ -206,7 +201,7 @@ function TransactionRow({ tx }: { tx: Transaction }) {
       </div>
       <p
         className={`tabular shrink-0 text-[15px] font-bold ${
-          outgoing ? "text-text-muted" : "text-success"
+          outgoing ? "text-danger" : "text-success"
         }`}
       >
         {outgoing ? "−" : "+"}
@@ -281,6 +276,10 @@ export function WalletDashboard() {
     };
   }, [token, attempt]);
 
+  useEffect(() => {
+    if (role === "ADMIN") router.replace("/admin");
+  }, [role, router]);
+
   if (token === null) {
     return (
       <EmptyState
@@ -300,6 +299,11 @@ export function WalletDashboard() {
         <div className="skeleton-shimmer h-16 rounded-[10px]" />
       </div>
     );
+  }
+
+  // Admins moderate the marketplace and never hold funds.
+  if (role === "ADMIN") {
+    return <div className="skeleton-shimmer h-40 rounded-[10px]" aria-label="Redirecting" />;
   }
 
   if (failed || balance === null) {
@@ -358,23 +362,16 @@ export function WalletDashboard() {
               {formatINR(balance)}
             </p>
             <p className="mt-1.5 text-[13px] text-text-muted">
-              Ready to spend or withdraw.
+              {role === "FREELANCER" ? "Ready to withdraw." : "Ready to spend or withdraw."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {role !== "ADMIN" && (
+            {role !== "FREELANCER" && (
               <Button onClick={() => setDialog("deposit")}>Add funds</Button>
             )}
-            {role !== "ADMIN" ? (
-              <Button variant="secondary" onClick={() => setDialog("withdraw")}>
-                Withdraw
-              </Button>
-            ) : (
-              <p className="max-w-xs self-center text-[13px] leading-5 text-text-muted">
-                Admin accounts don’t hold funds — balances live on client and
-                freelancer accounts.
-              </p>
-            )}
+            <Button variant="secondary" onClick={() => setDialog("withdraw")}>
+              Withdraw
+            </Button>
           </div>
         </div>
       </section>
@@ -385,7 +382,7 @@ export function WalletDashboard() {
             {role === "FREELANCER" ? "In escrow for your orders" : "Held in escrow"}
           </p>
           <p className="tabular mt-1 text-2xl font-bold">
-            {held === null ? "—" : formatINR(held)}
+            {held === null ? "-" : formatINR(held)}
           </p>
           <p className="mt-1 text-[12px] leading-5 text-text-muted">
             {role === "FREELANCER"
@@ -407,17 +404,12 @@ export function WalletDashboard() {
       </div>
 
       <section aria-label="Transactions" className="mt-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-lg font-semibold">History</h2>
-          <p className="text-[12px] text-text-subtle">
-            Deposits, holds, releases, and withdrawals — newest first.
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold">History</h2>
         {transactions.length === 0 ? (
           <div className="mt-3">
             <EmptyState
               title="No transactions yet"
-              body="Deposits, escrow holds, releases, and withdrawals will appear here with clear labels."
+              body="Your deposits, escrow holds, releases, and withdrawals will appear here."
             />
           </div>
         ) : (
