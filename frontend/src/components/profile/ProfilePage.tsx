@@ -104,6 +104,7 @@ export function ProfilePage() {
     (u) => !/^https?:\/\//i.test(u),
   );
   const roleLabel = account.role.charAt(0) + account.role.slice(1).toLowerCase();
+  const isFreelancer = account.role === "FREELANCER";
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -114,7 +115,7 @@ export function ProfilePage() {
     const portfolioUrls = portfolioText.split("\n").map((s) => s.trim()).filter(Boolean);
     const badUrl = portfolioUrls.find((u) => !/^https?:\/\//i.test(u));
     if (badUrl) {
-      setSaveError(`Portfolio links must start with http(s):// — check “${badUrl.slice(0, 40)}”.`);
+      setSaveError(`Portfolio links must start with http(s)://. Check “${badUrl.slice(0, 40)}”.`);
       setSaving(false);
       return;
     }
@@ -258,7 +259,7 @@ export function ProfilePage() {
                 </span>
               )}
             </div>
-            {profile && profile.totalReviews > 0 && (
+            {isFreelancer && profile && profile.totalReviews > 0 && (
               <div className="mt-3 flex justify-center">
                 <RatingStars value={profile.rating} count={profile.totalReviews} />
               </div>
@@ -276,19 +277,25 @@ export function ProfilePage() {
                 })}
               </dd>
             </div>
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-text-muted">Reviews</dt>
-              <dd className="tabular text-text">{profile?.totalReviews ?? 0}</dd>
-            </div>
+            {isFreelancer && (
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-text-muted">Reviews</dt>
+                <dd className="tabular text-text">{profile?.totalReviews ?? 0}</dd>
+              </div>
+            )}
           </dl>
         </section>
       </aside>
 
       <section aria-label="Edit profile" className="rounded-[10px] border border-border bg-surface p-6">
         <div>
-          <h2 className="text-lg font-semibold">Public profile</h2>
+          <h2 className="text-lg font-semibold">
+            {isFreelancer ? "Public profile" : "Profile details"}
+          </h2>
           <p className="mt-1 text-sm text-text-muted">
-            This is what clients and freelancers see.
+            {isFreelancer
+              ? "This is what clients see on your services and reviews."
+              : "Your name and photo appear to freelancers you work with."}
           </p>
         </div>
 
@@ -316,6 +323,8 @@ export function ProfilePage() {
             />
           </fieldset>
 
+          {isFreelancer && (
+          <>
           <fieldset className="min-w-0 space-y-4 border-t border-border pt-5">
             <legend className="text-[13px] font-semibold text-text-subtle">
               Skills
@@ -361,7 +370,7 @@ export function ProfilePage() {
                 />
               </label>
               <p className="mt-1.5 text-[13px] text-text-muted">
-                JPG, PNG, PDF, or ZIP — up to 5MB each, max 5 at a time. Uploaded files save immediately and appear below.
+                JPG, PNG, PDF, or ZIP. Up to 5MB each, max 5 at a time. Uploaded files save immediately and appear below.
               </p>
               {portfolioProgress && (
                 <p role="status" className="mt-1.5 text-[13px] font-medium text-primary">
@@ -392,6 +401,8 @@ export function ProfilePage() {
               )}
             </div>
           </fieldset>
+          </>
+          )}
 
           {saveError && (
             <p role="alert" className="text-sm text-danger">
@@ -405,7 +416,7 @@ export function ProfilePage() {
             </Button>
             {saved && (
               <p role="status" className="text-sm font-medium text-success">
-                Saved — your public profile is up to date.
+                Saved. Your profile is up to date.
               </p>
             )}
           </div>
