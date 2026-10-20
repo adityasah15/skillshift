@@ -90,7 +90,7 @@ function ServiceDetail({ row }: { row: AdminServiceRow }) {
         )}
         {row.imageUrls.length > 0 && !resolvePublicImage(row.imageUrls[0]) && (
           <p className="mt-1.5 text-[13px] text-text-subtle">
-            Keys stored — set NEXT_PUBLIC_S3_PUBLIC_BASE for previews.
+            Keys stored. Set NEXT_PUBLIC_S3_PUBLIC_BASE for previews.
           </p>
         )}
       </div>
@@ -274,48 +274,58 @@ export function AdminServices() {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden overflow-hidden rounded-[10px] border border-border bg-surface md:block">
+          <div className="hidden overflow-x-auto rounded-[10px] border border-border bg-surface md:block">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-[13px] text-text-muted">
-                  <th scope="col" className="px-5 py-3 font-medium">Service</th>
-                  <th scope="col" className="px-5 py-3 font-medium">Seller</th>
-                  <th scope="col" className="px-5 py-3 font-medium">Price</th>
-                  <th scope="col" className="px-5 py-3 font-medium">Submitted</th>
-                  <th scope="col" className="px-5 py-3 font-medium">Status</th>
-                  <th scope="col" className="px-5 py-3 text-right font-medium">Actions</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Service</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Seller</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Price</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Status</th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {visible.map((r) => (
                   <Fragment key={r.id}>
                     <tr className="align-top">
-                      <td className="max-w-[320px] px-5 py-4">
+                      <td className="max-w-[360px] px-4 py-4">
                         <button
                           type="button"
                           onClick={() => toggle(r.id)}
                           aria-expanded={expanded[r.id] ?? false}
-                          className="min-h-[44px] py-1 text-left font-semibold text-primary hover:underline"
+                          className="inline-flex min-h-[44px] items-center gap-1.5 py-1 text-left font-semibold text-primary hover:underline"
                         >
                           {r.title}
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            aria-hidden
+                            className={`shrink-0 transition-transform ${expanded[r.id] ? "rotate-180" : ""}`}
+                          >
+                            <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
                         </button>
                         <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-text-muted">{r.description}</p>
-                        <p className="mt-1 font-mono text-xs text-text-subtle">{r.id.slice(0, 8)}</p>
+                        <p className="mt-1 text-xs text-text-subtle">
+                          {r.id.slice(0, 8)} · submitted{" "}
+                          {new Date(r.createdAt).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </p>
                       </td>
-                      <td className="px-5 py-4 text-text-muted">{r.freelancer.email}</td>
-                      <td className="tabular px-5 py-4 text-text">{formatINR(r.price)}</td>
-                      <td className="px-5 py-4 text-[13px] text-text-muted">
-                        {new Date(r.createdAt).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                        })}
+                      <td className="px-4 py-4 text-[13px] text-text-muted">
+                        <span className="block max-w-[180px] truncate" title={r.freelancer.email}>
+                          {r.freelancer.email}
+                        </span>
                       </td>
-                      <td className="px-5 py-4"><StatusBadge status={r.status} /></td>
-                      <td className="px-5 py-4">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => toggle(r.id)}>
-                            {expanded[r.id] ? "Hide" : "Details"}
-                          </Button>
+                      <td className="tabular px-4 py-4 whitespace-nowrap text-text">{formatINR(r.price)}</td>
+                      <td className="px-4 py-4"><StatusBadge status={r.status} /></td>
+                      <td className="px-4 py-4">
+                        <div className="flex flex-nowrap justify-end gap-2">
                           {moderationsFor(r.status).map((m) => (
                             <Button
                               key={m.label}
@@ -336,7 +346,7 @@ export function AdminServices() {
                     </tr>
                     {expanded[r.id] && (
                       <tr className="bg-surface-soft/40">
-                        <td colSpan={6} className="px-5 py-4">
+                        <td colSpan={5} className="px-4 py-4">
                           <ServiceDetail row={r} />
                         </td>
                       </tr>
@@ -393,7 +403,7 @@ export function AdminServices() {
                 </div>
                 {moderationsFor(r.status).length === 0 && (
                   <p className="mt-3 text-[13px] text-text-subtle">
-                    Paused by the seller — no moderation needed.
+                    Paused by the seller. No moderation needed.
                   </p>
                 )}
               </li>
