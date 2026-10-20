@@ -56,7 +56,7 @@ export function ResetPasswordForm() {
           </p>
           <Link
             href="/auth/login"
-            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-[12px] bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-[10px] bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
           >
             Log in
           </Link>

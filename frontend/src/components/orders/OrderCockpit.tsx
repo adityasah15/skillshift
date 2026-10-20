@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { RatingStars } from "@/components/ui/RatingStars";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import {
   CancelDialog,
@@ -14,7 +15,7 @@ import {
   DisputeDialog,
   ReviewDialog,
 } from "@/components/orders/ActionDialogs";
-import { OrderStatusTimeline } from "@/components/orders/OrderStatusTimeline";
+import { EscrowTracker, escrowLabel } from "@/components/orders/EscrowTracker";
 import { ApiRequestError } from "@/lib/api-client";
 import { authApi } from "@/lib/api/auth";
 import { ordersApi } from "@/lib/api/orders";
@@ -40,12 +41,12 @@ const OrderChat = dynamic(
 
 type Dialog = "deliver" | "complete" | "cancel" | "dispute" | "review" | null;
 
-function escrowLine(status: string, price: number): { text: string; tone: string } {
-  if (status === "COMPLETED")
-    return { text: `${formatINR(price)} released to the freelancer`, tone: "bg-success-soft text-success" };
-  if (status === "CANCELLED" || status === "REFUNDED")
-    return { text: `${formatINR(price)} refunded to the client`, tone: "bg-surface-soft text-text-muted" };
-  return { text: `${formatINR(price)} protected in escrow`, tone: "bg-warning-soft text-warning" };
+function dateLabel(value: string): string {
+  return new Date(value).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function countdown(to: string): string {
@@ -87,7 +88,13 @@ export function OrderCockpit({ id }: { id: string }) {
         if (cancelled) return;
         const o = orderRes.data;
         const user = meRes.data;
-        if (o.clientId !== user.sub && o.freelancerId !== user.sub) {
+        // Admins get read-only visibility into any order; participants keep
+        // the private path. Everyone else is denied.
+        if (
+          user.role !== "ADMIN" &&
+          o.clientId !== user.sub &&
+          o.freelancerId !== user.sub
+        ) {
           setDenied(true);
           return;
         }
@@ -135,10 +142,10 @@ export function OrderCockpit({ id }: { id: string }) {
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]" aria-label="Loading order">
         <div className="space-y-4">
           <div className="skeleton-shimmer h-8 w-2/3 rounded-full" />
-          <div className="skeleton-shimmer h-40 rounded-[18px]" />
-          <div className="skeleton-shimmer h-32 rounded-[18px]" />
+          <div className="skeleton-shimmer h-40 rounded-[14px]" />
+          <div className="skeleton-shimmer h-32 rounded-[14px]" />
         </div>
-        <div className="skeleton-shimmer h-80 rounded-[18px]" />
+        <div className="skeleton-shimmer h-80 rounded-[14px]" />
       </div>
     );
   }
@@ -164,7 +171,14 @@ export function OrderCockpit({ id }: { id: string }) {
   }
 
   const isClient = me.sub === order.clientId;
-  const escrow = escrowLine(order.status, order.price);
+  const isAdmin = me.role === "ADMIN";
+  const moneyLabel = escrowLabel(order.status);
+  const moneyNote =
+    moneyLabel === "Held in escrow"
+      ? "Protected until the delivery is approved."
+      : moneyLabel === "Released"
+        ? "Paid out when the delivery was accepted."
+        : "Returned to the client's wallet.";
   const refetch = () => {
     setDialog(null);
     setAttempt((n) => n + 1);
@@ -190,32 +204,58 @@ export function OrderCockpit({ id }: { id: string }) {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-3">
-        <StatusBadge status={order.status} />
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-          {serviceTitle ?? "Order"}
-        </h1>
-        <span className="font-mono text-xs text-text-subtle">#{order.id.slice(0, 8)}</span>
-      </div>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[13px] text-text-subtle">
+            Order #{order.id.slice(0, 8)} · placed {dateLabel(order.createdAt)}
+          </p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+            {serviceTitle ?? "Order"}
+          </h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <StatusBadge status={order.status} />
+            <span className="rounded-full bg-surface-soft px-2.5 py-1 text-[12px] font-medium text-text-muted">
+              {isAdmin
+                ? "Admin view"
+                : isClient
+                  ? "You’re the client"
+                  : "You’re the freelancer"}
+            </span>
+            <span className="text-[12px] text-text-subtle">
+              {order.deliveryDays}-day delivery
+            </span>
+          </div>
+        </div>
+        <Link
+          href={`/services/${order.serviceId}`}
+          className="inline-flex min-h-[44px] items-center justify-center rounded-[10px] border border-border bg-surface px-4 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
+        >
+          View service
+        </Link>
+      </header>
 
       <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
-          <section aria-label="Progress" className="rounded-[18px] border border-border bg-surface p-6">
-            <OrderStatusTimeline status={order.status} />
+          <section aria-label="Progress" className="rounded-[14px] border border-border bg-surface p-6">
+            <EscrowTracker
+              status={order.status}
+              price={order.price}
+              viewer={isAdmin ? "admin" : isClient ? "client" : "freelancer"}
+            />
             {order.status === "DELIVERED" && order.autoCompleteAt && (
               <p className="mt-3 text-sm font-medium text-warning">{countdown(order.autoCompleteAt)}</p>
             )}
           </section>
 
           {order.requirements && (
-            <section aria-label="Requirements" className="rounded-[18px] border border-border bg-surface p-6">
+            <section aria-label="Requirements" className="rounded-[14px] border border-border bg-surface p-6">
               <h2 className="text-lg font-semibold">Requirements</h2>
               <p className="mt-2 text-[15px] leading-7 text-text-muted">{order.requirements}</p>
             </section>
           )}
 
           {(order.deliveryNote || order.deliveryFiles.length > 0) && (
-            <section aria-label="Delivery" className="rounded-[18px] border border-border bg-surface p-6">
+            <section aria-label="Delivery" className="rounded-[14px] border border-border bg-surface p-6">
               <h2 className="text-lg font-semibold">Delivery</h2>
               {order.deliveryNote && (
                 <p className="mt-2 text-[15px] leading-7 text-text-muted">{order.deliveryNote}</p>
@@ -225,7 +265,7 @@ export function OrderCockpit({ id }: { id: string }) {
                   {order.deliveryFiles.map((f) => (
                     <li
                       key={f.id}
-                      className="flex items-center justify-between gap-3 rounded-[12px] bg-surface-soft/70 px-4 py-3"
+                      className="flex items-center justify-between gap-3 rounded-[10px] bg-surface-soft/70 px-4 py-3"
                     >
                       <span className="min-w-0 truncate text-sm font-medium">{f.originalName}</span>
                       <button
@@ -243,53 +283,82 @@ export function OrderCockpit({ id }: { id: string }) {
             </section>
           )}
 
-          <section aria-label="Discussion" id="discussion" className="scroll-mt-24 rounded-[18px] border border-border bg-surface p-6">
-            <h2 className="text-lg font-semibold">Discussion</h2>
-            <div className="mt-2">
-              <OrderChat
-                orderId={order.id}
-                myId={me.sub}
-                peerId={isClient ? order.freelancerId : order.clientId}
-              />
-            </div>
-          </section>
+          {isAdmin ? (
+            <section
+              aria-label="Discussion"
+              className="rounded-[14px] border border-border bg-surface p-6"
+            >
+              <h2 className="text-lg font-semibold">Discussion</h2>
+              <p className="mt-2 text-sm leading-6 text-text-muted">
+                Participant chat stays private to the client and freelancer.
+              </p>
+            </section>
+          ) : (
+            <section aria-label="Discussion" id="discussion" className="scroll-mt-28 rounded-[14px] border border-border bg-surface p-6">
+              <h2 className="text-lg font-semibold">Discussion</h2>
+              <div className="mt-2">
+                <OrderChat
+                  orderId={order.id}
+                  myId={me.sub}
+                  peerId={isClient ? order.freelancerId : order.clientId}
+                />
+              </div>
+            </section>
+          )}
 
           {order.review && (
-            <section aria-label="Review" className="rounded-[18px] border border-border bg-surface p-6">
+            <section aria-label="Review" className="rounded-[14px] border border-border bg-surface p-6">
               <h2 className="text-lg font-semibold">
                 {order.review.reviewerId === me.sub ? "Your review" : "Client review"}
               </h2>
-              <p className="mt-2 text-lg tracking-wider text-warning" role="img" aria-label={`${order.review.rating} out of 5 stars`}>
-                {"★".repeat(order.review.rating)}{"☆".repeat(Math.max(0, 5 - order.review.rating))}
-              </p>
+              <RatingStars value={order.review.rating} size="md" className="mt-2" />
               {order.review.comment && (
                 <p className="mt-2 text-[15px] leading-7 text-text-muted">{order.review.comment}</p>
               )}
-              <p className="mt-2 font-mono text-[13px] text-text-subtle">
-                {new Date(order.review.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+              <p className="mt-2 text-[13px] tabular text-text-subtle">
+                {dateLabel(order.review.createdAt)}
               </p>
             </section>
           )}
         </div>
 
-        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          <section aria-label="Payment" className="rounded-[18px] border border-border bg-surface p-6">
+        <aside className="space-y-4 lg:sticky lg:top-28 lg:self-start">
+          <section aria-label="Payment" className="rounded-[14px] border border-border bg-surface p-6">
             <p className="text-[13px] text-text-subtle">Order value</p>
-            <p className="font-mono text-2xl font-bold">{formatINR(order.price)}</p>
-            <p className={`mt-2 rounded-[12px] px-3 py-2 text-[13px] font-medium ${escrow.tone}`}>
-              {order.status === "COMPLETED" ? "Released" : order.status === "CANCELLED" || order.status === "REFUNDED" ? "Refunded" : "Held in escrow"} · {escrow.text}
+            <p className="tabular mt-1 text-2xl font-bold">{formatINR(order.price)}</p>
+            <p
+              className={`mt-2 rounded-[8px] px-3 py-2 text-[13px] font-medium ${
+                moneyLabel === "Held in escrow"
+                  ? "bg-warning-soft text-warning"
+                  : "bg-success-soft text-success"
+              }`}
+            >
+              {moneyLabel}
             </p>
-            <p className="mt-2 text-[13px] leading-6 text-text-muted">
-              Test mode — no real money moves.
-            </p>
+            <p className="mt-2 text-[12px] leading-5 text-text-muted">{moneyNote}</p>
           </section>
 
-          <section aria-label="Actions" className="rounded-[18px] border border-border bg-surface p-6">
-            <h2 className="text-[15px] font-semibold">Your actions</h2>
+          <section aria-label="Actions" className="rounded-[14px] border border-border bg-surface p-6">
+            <h2 className="text-[15px] font-semibold">
+              {isAdmin ? "Admin view" : "Your actions"}
+            </h2>
             <p className="mt-0.5 text-[13px] text-text-muted">
-              {isClient ? "You ordered this work" : "You're doing this work"}
+              {isAdmin
+                ? "Read-only. Order actions stay with the client and freelancer."
+                : isClient
+                  ? "You ordered this work"
+                  : "You're doing this work"}
             </p>
             <div className="mt-3 flex flex-col gap-2">
+              {isAdmin ? (
+                <Link
+                  href={order.status === "DISPUTED" ? "/admin/disputes" : "/admin/orders"}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-[10px] border border-border px-5 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
+                >
+                  {order.status === "DISPUTED" ? "Open in disputes" : "Back to admin orders"}
+                </Link>
+              ) : (
+              <>
               {order.status === "IN_PROGRESS" && !isClient && (
                 <Button onClick={() => setDialog("deliver")}>Deliver order</Button>
               )}
@@ -308,7 +377,7 @@ export function OrderCockpit({ id }: { id: string }) {
               )}
               {order.status === "DELIVERED" && !isClient && (
                 <p className="text-sm leading-6 text-text-muted">
-                  Waiting on client review{order.autoCompleteAt ? ` — ${countdown(order.autoCompleteAt).toLowerCase()}` : ""}.
+                  Waiting for the client to review{order.autoCompleteAt ? `. ${countdown(order.autoCompleteAt)}` : ""}.
                 </p>
               )}
               {order.status === "COMPLETED" && isClient && !order.review && (
@@ -327,23 +396,18 @@ export function OrderCockpit({ id }: { id: string }) {
               {order.status === "PENDING" && (
                 <p className="text-sm leading-6 text-text-muted">Waiting for the order to start.</p>
               )}
+              </>
+              )}
             </div>
           </section>
-
-          <Link
-            href={`/services/${order.serviceId}`}
-            className="block rounded-[18px] border border-border bg-surface p-6 transition hover:border-border-strong"
-          >
-            <p className="text-[13px] text-text-subtle">Ordered service</p>
-            <p className="mt-1 text-[15px] font-semibold">{serviceTitle ?? "View service →"}</p>
-          </Link>
         </aside>
       </div>
 
       {/* Mobile sticky primary action — mirrors the sidebar on small screens. */}
-      {(order.status === "IN_PROGRESS" && !isClient) ||
-      (order.status === "DELIVERED" && isClient) ||
-      (order.status === "COMPLETED" && isClient && !order.review) ? (
+      {!isAdmin &&
+      ((order.status === "IN_PROGRESS" && !isClient) ||
+        (order.status === "DELIVERED" && isClient) ||
+        (order.status === "COMPLETED" && isClient && !order.review)) ? (
         <div className="sticky bottom-0 -mx-4 mt-6 border-t border-border bg-surface/95 p-4 backdrop-blur lg:hidden">
           {order.status === "IN_PROGRESS" && !isClient && (
             <Button size="lg" className="w-full" onClick={() => setDialog("deliver")}>

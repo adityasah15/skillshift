@@ -82,7 +82,7 @@ export function FreelancerProfile({ id }: { id: string }) {
 
   return (
     <div>
-      <div className="flex flex-col gap-4 rounded-[18px] border border-border bg-surface p-6 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-4 rounded-[14px] border border-border bg-surface p-6 sm:flex-row sm:items-center">
         {resolvePublicImage(profile.avatarUrl) ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -98,7 +98,7 @@ export function FreelancerProfile({ id }: { id: string }) {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">{profile.displayName}</h1>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-text-muted">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden className="text-warning">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden className="text-star">
               <path d="M7 1.2l1.7 3.5 3.9.6-2.8 2.7.7 3.9L7 10.1 3.5 11.9l.7-3.9L1.4 5.3l3.9-.6L7 1.2z" fill="currentColor" />
             </svg>
             <strong className="font-semibold text-text">{profile.rating.toFixed(1)}</strong>
@@ -111,7 +111,7 @@ export function FreelancerProfile({ id }: { id: string }) {
       </div>
 
       {profile.skills.length > 0 && (
-        <section aria-label="Skills" className="mt-6 rounded-[18px] border border-border bg-surface p-6">
+        <section aria-label="Skills" className="mt-6 rounded-[14px] border border-border bg-surface p-6">
           <h2 className="text-lg font-semibold">Skills</h2>
           <div className="mt-3 flex flex-wrap gap-2">
             {profile.skills.map((s) => (
@@ -124,7 +124,7 @@ export function FreelancerProfile({ id }: { id: string }) {
       )}
 
       {profile.portfolioUrls.length > 0 && (
-        <section aria-label="Portfolio" className="mt-6 rounded-[18px] border border-border bg-surface p-6">
+        <section aria-label="Portfolio" className="mt-6 rounded-[14px] border border-border bg-surface p-6">
           <h2 className="text-lg font-semibold">Portfolio</h2>
           <ul className="mt-3 space-y-2">
             {profile.portfolioUrls.map((u) => {
@@ -152,7 +152,7 @@ export function FreelancerProfile({ id }: { id: string }) {
       <div className="mt-6">
         <Link
           href="/services"
-          className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] bg-text px-6 text-sm font-semibold text-white transition hover:opacity-85"
+          className="inline-flex min-h-[44px] items-center justify-center rounded-[10px] bg-primary px-6 text-sm font-semibold text-white transition hover:bg-primary-hover"
         >
           Browse services
         </Link>

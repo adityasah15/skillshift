@@ -43,7 +43,7 @@ function CreateService() {
       setServerError(
         err instanceof ApiRequestError
           ? err.message
-          : "Could not reach the server. Check your connection and try again — nothing was published.",
+          : "Could not reach the server. Check your connection and try again. Nothing was published.",
       );
       setPhase({ name: "editing" });
     }
@@ -86,17 +86,17 @@ function CreateService() {
 
   if (phase.name === "done") {
     return (
-      <div className="rounded-[18px] border border-border bg-surface p-6 sm:p-8">
+      <div className="rounded-[10px] border border-border bg-surface p-6 sm:p-8">
         <h2 className="text-xl font-bold">Sent for review</h2>
         <p className="mt-2 max-w-[68ch] text-[15px] leading-7 text-text-muted">
           Your service is now <strong className="text-text">in review</strong>. It
-          becomes visible to clients once approved — usually within a day. You can
+          becomes visible to clients once approved, usually within a day. You can
           edit details anytime from My services.
         </p>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
           <Link
             href="/services/mine"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] bg-primary px-6 text-sm font-semibold text-white transition hover:bg-primary-hover"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-[10px] bg-primary px-6 text-sm font-semibold text-white transition hover:bg-primary-hover"
           >
             Go to My services
           </Link>
@@ -110,11 +110,11 @@ function CreateService() {
 
   if (phase.name === "upload-failed") {
     return (
-      <div className="rounded-[18px] border border-border bg-surface p-6 sm:p-8">
-        <h2 className="text-xl font-bold">Published — images need attention</h2>
+      <div className="rounded-[10px] border border-border bg-surface p-6 sm:p-8">
+        <h2 className="text-xl font-bold">Published. Images need attention</h2>
         <p className="mt-2 max-w-[68ch] text-[15px] leading-7 text-text-muted">
           Good news: your service was created and is{" "}
-          <strong className="text-text">in review</strong> — nothing was lost and
+          <strong className="text-text">in review</strong>. Nothing was lost and
           retrying will <strong className="text-text">not</strong> create a
           duplicate. {phase.done} of {phase.total} images uploaded.
         </p>
@@ -125,7 +125,7 @@ function CreateService() {
           <Button onClick={retryUpload}>Retry remaining images</Button>
           <Link
             href="/services/mine"
-            className="inline-flex min-h-[44px] items-center justify-center rounded-[12px] border border-border px-6 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-[10px] border border-border px-6 text-sm font-semibold transition hover:border-border-strong hover:bg-surface-soft"
           >
             Finish later from My services
           </Link>
@@ -138,17 +138,18 @@ function CreateService() {
     phase.name === "publishing"
       ? "Creating your listing…"
       : phase.name === "uploading"
-        ? `Listing created ✓ — uploading image ${Math.min(phase.done + 1, phase.total)} of ${phase.total}…`
+        ? `Listing created ✓. Uploading image ${Math.min(phase.done + 1, phase.total)} of ${phase.total}…`
         : null;
 
   return (
-    <div className="rounded-[18px] border border-border bg-surface p-6 sm:p-8">
+    <div className="rounded-[10px] border border-border bg-surface p-6 sm:p-8">
       <ServiceForm
         key={formKey}
         submitLabel="Publish service"
         submitting={busy}
         busyNote={busyNote}
         serverError={serverError}
+        showPreview
         onSubmit={createOnce}
       />
     </div>

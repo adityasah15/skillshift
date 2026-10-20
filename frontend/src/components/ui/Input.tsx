@@ -1,7 +1,7 @@
 import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 const field =
-  "w-full rounded-[12px] border border-border bg-surface px-4 py-3 text-[15px] text-text placeholder:text-text-subtle transition hover:border-border-strong focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-soft disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-[10px] border border-border bg-surface px-4 py-3 text-[15px] text-text placeholder:text-text-subtle transition hover:border-border-strong focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-soft disabled:cursor-not-allowed disabled:opacity-60";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;

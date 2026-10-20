@@ -31,7 +31,7 @@ export function OfflineBanner() {
       role="status"
       className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-[640px] rounded-[14px] border border-border bg-text px-5 py-3.5 text-center text-sm font-medium text-white shadow-lg"
     >
-      You are offline — browsing works, but actions like ordering or messaging
+      You are offline. Browsing works, but actions like ordering or messaging
       will fail until you reconnect.
     </div>
   );

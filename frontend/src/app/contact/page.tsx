@@ -17,12 +17,12 @@ export default function ContactPage() {
             Talk to a human.
           </h1>
           <p className="mt-4 text-lg leading-8 text-text-muted">
-            Order issue, payment question, or account help — write to us and
+            Order issue, payment question, or account help? Write to us and
             we&apos;ll sort it out.
           </p>
         </Reveal>
         <Reveal delay={90}>
-          <section aria-label="Contact details" className="mt-10 rounded-[18px] border border-border bg-surface p-6 sm:p-8">
+          <section aria-label="Contact details" className="mt-10 rounded-[14px] border border-border bg-surface p-6 sm:p-8">
             <h2 className="text-xl font-bold">Support</h2>
             <p className="mt-2 text-[15px] leading-7 text-text-muted">
               Email us at{" "}
@@ -34,7 +34,7 @@ export default function ContactPage() {
             </p>
             <h2 className="mt-6 text-xl font-bold">Disputes</h2>
             <p className="mt-2 text-[15px] leading-7 text-text-muted">
-              Already in a dispute? Open it from your order page — an admin
+              Already in a dispute? Open it from your order page. An admin
               reviews the full order context and decides. No email needed.
             </p>
           </section>

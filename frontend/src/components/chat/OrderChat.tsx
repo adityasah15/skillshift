@@ -163,7 +163,7 @@ export function OrderChat({
     }
     const socket = socketRef.current;
     if (!socket?.connected) {
-      setError("Not connected to chat — your message is kept below. Reconnect and send again.");
+      setError("Not connected to chat. Your message is kept below. Reconnect and send again.");
       if (effectiveConn === "offline") retry();
       return;
     }
@@ -200,7 +200,7 @@ export function OrderChat({
               ? "Connected"
               : effectiveConn === "connecting"
                 ? "Connecting…"
-                : "Offline — history still available"}
+                : "Offline. History still available"}
         </span>
         {effectiveConn === "offline" && (
           <button
@@ -268,7 +268,7 @@ export function OrderChat({
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Write a message…"
           maxLength={2000}
-          className="min-h-[44px] w-full min-w-0 flex-1 rounded-[12px] border border-border bg-surface px-4 text-[15px] placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary-soft focus:outline-none disabled:opacity-60"
+          className="min-h-[44px] w-full min-w-0 flex-1 rounded-[10px] border border-border bg-surface px-4 text-[15px] placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary-soft focus:outline-none disabled:opacity-60"
         />
         <Button type="submit" loading={sending} disabled={draft.trim().length === 0} className="shrink-0">
           Send

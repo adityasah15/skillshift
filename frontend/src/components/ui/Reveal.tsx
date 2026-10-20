@@ -13,14 +13,15 @@ export function Reveal({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  // No observer (very old browsers / SSR) → visible immediately, no hiding.
-  const [visible, setVisible] = useState(
-    () => typeof IntersectionObserver === "undefined",
-  );
+  // Render visible on both server and client so hydration matches; the effect
+  // hides only blocks that are still below the fold and animates them in.
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     const el = ref.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
+    if (el.getBoundingClientRect().top < window.innerHeight) return;
+    setVisible(false);
     const io = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {

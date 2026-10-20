@@ -22,7 +22,7 @@ const sections: Array<{ heading: string; body: string[] }> = [
     heading: "How we use it",
     body: [
       "To run the marketplace: matching clients with freelancers, holding escrow, resolving disputes, and keeping both sides informed through notifications.",
-      "We do not sell personal data. The other party in your order can see your discussion, delivery, and public profile — that is how the work gets done.",
+      "We do not sell personal data. The other party in your order can see your discussion, delivery, and public profile. That is how the work gets done.",
       "Admins can view order context, including messages and files, when resolving a dispute.",
     ],
   },
@@ -51,26 +51,33 @@ const sections: Array<{ heading: string; body: string[] }> = [
 export default function PrivacyPage() {
   return (
     <main className="bg-bg">
-      <div className="mx-auto max-w-[800px] px-4 py-14 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[760px] px-4 py-14 sm:px-6 lg:px-8">
         <Reveal>
           <p className="text-sm font-medium text-text-muted">Legal</p>
           <h1 className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
             Privacy policy
           </h1>
-          <p className="mt-4 text-[15px] leading-7 text-text-muted">
+          <p className="mt-4 max-w-[68ch] text-[15px] leading-7 text-text-muted">
             Last updated October 2026. Your work stays yours; your data is used
             to run the marketplace and nothing else.
           </p>
         </Reveal>
         {sections.map((s, i) => (
           <Reveal key={s.heading} delay={60 + i * 40}>
-            <section aria-label={s.heading} className="mt-8 rounded-[18px] border border-border bg-surface p-6 sm:p-8">
-              <h2 className="text-xl font-bold">{s.heading}</h2>
-              {s.body.map((p) => (
-                <p key={p.slice(0, 24)} className="mt-3 max-w-[68ch] text-[15px] leading-7 text-text-muted">
-                  {p}
-                </p>
-              ))}
+            <section aria-label={s.heading} className="mt-8 border-t border-border pt-8">
+              <h2 className="flex items-baseline gap-3 text-xl font-semibold">
+                <span className="tabular text-[13px] font-semibold text-text-subtle">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                {s.heading}
+              </h2>
+              <div className="mt-3 max-w-[70ch] space-y-3 sm:pl-8">
+                {s.body.map((p) => (
+                  <p key={p.slice(0, 24)} className="text-[15px] leading-7 text-text-muted">
+                    {p}
+                  </p>
+                ))}
+              </div>
             </section>
           </Reveal>
         ))}

@@ -13,7 +13,7 @@ export default async function CheckEmailPage({
   const { email } = await searchParams;
   return (
     <main className="bg-bg">
-      <div className="mx-auto max-w-[1280px] px-4 py-14 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1200px] px-4 py-14 sm:px-6 lg:px-8">
         <AuthCard
           title="Check your email"
           subtitle={
@@ -31,7 +31,7 @@ export default async function CheckEmailPage({
           }
         >
           <p className="rounded-[14px] bg-info-soft px-4 py-3 text-sm leading-6 text-info">
-            Log in stays locked until your email is verified — this keeps the
+            Log in stays locked until your email is verified. This keeps the
             marketplace free of throwaway accounts.
           </p>
           <div className="mt-4 border-t border-border pt-4">

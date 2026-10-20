@@ -9,6 +9,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import {
   NotificationType,
   OrderStatus,
+  Role,
   ServiceStatus,
   TransactionType,
 } from 'generated/prisma/enums';
@@ -104,7 +105,7 @@ export class OrderService {
     return order;
   }
 
-  async findOne(userId: string, orderId: string) {
+  async findOne(userId: string, orderId: string, role?: Role) {
     const order = await this.prismaService.order.findUnique({
       where: { id: orderId },
       include: { deliveryFiles: true, review: true },
@@ -114,7 +115,14 @@ export class OrderService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.clientId !== userId && order.freelancerId !== userId) {
+    // Admins moderate the marketplace and need read-only visibility into any
+    // order (e.g. to review a dispute). Participants keep the private path.
+    const isAdmin = role === Role.ADMIN;
+    if (
+      !isAdmin &&
+      order.clientId !== userId &&
+      order.freelancerId !== userId
+    ) {
       throw new ForbiddenException('You are not allowed to view this order');
     }
     return order;

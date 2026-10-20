@@ -9,6 +9,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import { chatApi, type ChatMessage } from "@/lib/api/chat";
 import { ordersApi } from "@/lib/api/orders";
 import { useSessionToken } from "@/lib/session";
+import { useCurrentUser } from "@/lib/useCurrentUser";
 import type { OrderListItem } from "@/lib/types";
 
 interface Thread {
@@ -36,9 +37,15 @@ function previewDate(iso: string): string {
 export function MessagesInbox() {
   const router = useRouter();
   const token = useSessionToken();
+  const { role } = useCurrentUser();
   const [threads, setThreads] = useState<Thread[] | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+
+  // Messages belong to order participants; admins moderate from /admin.
+  useEffect(() => {
+    if (role === "ADMIN") router.replace("/admin");
+  }, [role, router]);
 
   useEffect(() => {
     if (token === null) return;
@@ -92,6 +99,8 @@ export function MessagesInbox() {
     );
   }
 
+  if (role === "ADMIN") return <SkeletonGrid count={2} />;
+
   if (threads === null && !failed) return <SkeletonGrid count={4} />;
 
   if (failed) {
@@ -123,7 +132,7 @@ export function MessagesInbox() {
         <li key={order.id}>
           <Link
             href={`/chat/${order.id}`}
-            className="lift flex items-center gap-4 rounded-[16px] border border-border bg-surface p-5"
+            className="lift flex items-center gap-4 rounded-[10px] border border-border bg-surface p-5"
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-3">
@@ -131,7 +140,7 @@ export function MessagesInbox() {
                 <span className="shrink-0 text-[13px] text-text-subtle">{previewDate(lastActive)}</span>
               </div>
               <p className="mt-1 truncate text-sm text-text-muted">
-                {preview ? preview.content : "No messages yet — say hello and align on scope."}
+                {preview ? preview.content : "No messages yet. Say hello and align on scope."}
               </p>
               <p className="mt-1.5 text-[13px] text-text-subtle">
                 {order.roleLabel} · #{order.id.slice(0, 8)}

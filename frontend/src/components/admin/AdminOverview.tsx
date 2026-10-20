@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { RatingStars } from "@/components/ui/RatingStars";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { ApiRequestError } from "@/lib/api-client";
 import { adminApi, type AdminAnalytics } from "@/lib/api/admin";
@@ -10,9 +11,9 @@ import { formatCount, formatINR } from "@/lib/format";
 
 function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-[16px] border border-border bg-surface p-5">
+    <div className="rounded-[10px] border border-border bg-surface p-5">
       <p className="text-[13px] font-medium text-text-muted">{label}</p>
-      <p className="mt-1 font-mono text-2xl font-bold tracking-tight text-text">{value}</p>
+      <p className="tabular mt-1 text-2xl font-bold tracking-tight text-text">{value}</p>
       {hint && <p className="mt-1 text-[13px] leading-5 text-text-subtle">{hint}</p>}
     </div>
   );
@@ -30,7 +31,7 @@ function Bar({ label, count, max }: { label: React.ReactNode; count: number; max
       >
         <div className="h-full rounded-full bg-primary" style={{ width: `${width}%` }} />
       </div>
-      <span className="w-12 shrink-0 text-right font-mono text-[13px] text-text-muted">
+      <span className="tabular w-12 shrink-0 text-right text-[13px] text-text-muted">
         {formatCount(count)}
       </span>
     </div>
@@ -72,10 +73,10 @@ export function AdminOverview() {
       <div className="space-y-4" aria-label="Loading analytics">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="skeleton-shimmer h-28 rounded-[16px]" />
+            <div key={i} className="skeleton-shimmer h-28 rounded-[10px]" />
           ))}
         </div>
-        <div className="skeleton-shimmer h-56 rounded-[16px]" />
+        <div className="skeleton-shimmer h-56 rounded-[10px]" />
       </div>
     );
   }
@@ -115,7 +116,7 @@ export function AdminOverview() {
 
       <section
         aria-label="Orders by status"
-        className="rounded-[16px] border border-border bg-surface p-5 sm:p-6"
+        className="rounded-[10px] border border-border bg-surface p-5 sm:p-6"
       >
         <h2 className="text-lg font-semibold">Orders by status</h2>
         <p className="mt-1 text-sm text-text-muted">Where every order currently sits.</p>
@@ -135,7 +136,7 @@ export function AdminOverview() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section
           aria-label="New users per day"
-          className="rounded-[16px] border border-border bg-surface p-5 sm:p-6"
+          className="rounded-[10px] border border-border bg-surface p-5 sm:p-6"
         >
           <h2 className="text-lg font-semibold">New users · last 30 days</h2>
           <p className="mt-1 text-sm text-text-muted">Daily signups, oldest to newest.</p>
@@ -145,7 +146,7 @@ export function AdminOverview() {
             <ul className="mt-4 space-y-2">
               {data.newUsersPerDay.slice(-14).map((d) => (
                 <li key={String(d.date)} className="flex items-center gap-3">
-                  <span className="w-24 shrink-0 font-mono text-[13px] text-text-muted">
+                  <span className="tabular w-24 shrink-0 text-[13px] text-text-muted">
                     {new Date(d.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                   </span>
                   <div
@@ -158,7 +159,7 @@ export function AdminOverview() {
                       style={{ width: `${maxDay > 0 ? Math.max(4, Math.round((d.count / maxDay) * 100)) : 0}%` }}
                     />
                   </div>
-                  <span className="w-10 shrink-0 text-right font-mono text-[13px] text-text-muted">
+                  <span className="tabular w-10 shrink-0 text-right text-[13px] text-text-muted">
                     {d.count}
                   </span>
                 </li>
@@ -169,7 +170,7 @@ export function AdminOverview() {
 
         <section
           aria-label="Top freelancers"
-          className="rounded-[16px] border border-border bg-surface p-5 sm:p-6"
+          className="rounded-[10px] border border-border bg-surface p-5 sm:p-6"
         >
           <h2 className="text-lg font-semibold">Top freelancers</h2>
           <p className="mt-1 text-sm text-text-muted">Highest rated with completed profiles.</p>
@@ -185,10 +186,13 @@ export function AdminOverview() {
                     </p>
                     <p className="truncate text-[13px] text-text-muted">{f.email}</p>
                   </div>
-                  <p className="shrink-0 font-mono text-[13px] text-text-muted">
-                    ★ {f.profile ? f.profile.rating.toFixed(1) : "—"} ·{" "}
-                    {f.profile ? formatCount(f.profile.totalReviews) : 0} reviews
-                  </p>
+                  <div className="shrink-0 text-right">
+                    {f.profile ? (
+                      <RatingStars value={f.profile.rating} count={f.profile.totalReviews} />
+                    ) : (
+                      <span className="text-[13px] text-text-muted">-</span>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

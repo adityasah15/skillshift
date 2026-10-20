@@ -8,6 +8,10 @@ import { ApiRequestError } from "@/lib/api-client";
 import { adminApi, type AdminUser } from "@/lib/api/admin";
 import { useSessionToken } from "@/lib/session";
 
+function roleLabel(role: string): string {
+  return role.charAt(0) + role.slice(1).toLowerCase();
+}
+
 export function AdminUsers() {
   const token = useSessionToken();
   const [rows, setRows] = useState<AdminUser[] | null>(null);
@@ -75,7 +79,7 @@ export function AdminUsers() {
     return (
       <div className="space-y-3" aria-label="Loading users">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="skeleton-shimmer h-20 rounded-[16px]" />
+          <div key={i} className="skeleton-shimmer h-20 rounded-[10px]" />
         ))}
       </div>
     );
@@ -104,7 +108,7 @@ export function AdminUsers() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search email or name"
-            className="min-h-[44px] w-full rounded-[12px] border border-border bg-surface px-4 text-[15px] text-text placeholder:text-text-subtle transition hover:border-border-strong focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-soft"
+            className="min-h-[44px] w-full rounded-[10px] border border-border bg-surface px-4 text-[15px] text-text placeholder:text-text-subtle transition hover:border-border-strong focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-soft"
           />
         </label>
       </div>
@@ -116,7 +120,7 @@ export function AdminUsers() {
         />
       ) : (
         <>
-          <div className="hidden overflow-hidden rounded-[16px] border border-border bg-surface md:block">
+          <div className="hidden overflow-hidden rounded-[10px] border border-border bg-surface md:block">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-[13px] text-text-muted">
@@ -133,8 +137,8 @@ export function AdminUsers() {
                       <p className="font-semibold text-text">{u.profile?.displayName ?? u.email}</p>
                       <p className="text-[13px] text-text-muted">{u.email}</p>
                     </td>
-                    <td className="px-5 py-4 text-text-muted">{u.role}</td>
-                    <td className="px-5 py-4 font-mono text-[13px] text-text-muted">
+                    <td className="px-5 py-4 text-text-muted">{roleLabel(u.role)}</td>
+                    <td className="tabular px-5 py-4 text-[13px] text-text-muted">
                       {new Date(u.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                     </td>
                     <td className="px-5 py-4 text-right">
@@ -161,13 +165,13 @@ export function AdminUsers() {
 
           <ul className="space-y-3 md:hidden">
             {visible.map((u) => (
-              <li key={u.id} className={`rounded-[16px] border border-border bg-surface p-4 ${u.deletedAt ? "opacity-60" : ""}`}>
+              <li key={u.id} className={`rounded-[10px] border border-border bg-surface p-4 ${u.deletedAt ? "opacity-60" : ""}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-semibold text-text">{u.profile?.displayName ?? u.email}</p>
                     <p className="truncate text-sm text-text-muted">{u.email}</p>
                     <p className="mt-1 text-[13px] text-text-subtle">
-                      {u.role}
+                      {roleLabel(u.role)}
                       {u.deletedAt ? <span className="ml-2 font-semibold text-danger">Disabled</span> : null}
                     </p>
                   </div>
@@ -195,7 +199,7 @@ export function AdminUsers() {
         title={target?.action === "disable" ? "Disable account?" : "Enable account?"}
         description={
           target?.action === "disable"
-            ? "The user loses access immediately. Use for spam, fraud, or abuse — you can re-enable them here later."
+            ? "The user loses access immediately. Use for spam, fraud, or abuse. You can re-enable them here later."
             : "The account regains access immediately."
         }
       >

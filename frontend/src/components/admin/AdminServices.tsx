@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState, ErrorState } from "@/components/ui/States";
@@ -49,15 +50,15 @@ function ServiceDetail({ row }: { row: AdminServiceRow }) {
         <p className="text-[13px] font-semibold text-text-muted">Delivery</p>
         <p className="mt-1 text-text">
           {row.deliveryDays} day{row.deliveryDays === 1 ? "" : "s"} ·{" "}
-          <span className="font-mono">{formatINR(row.price)}</span>
+          <span className="tabular">{formatINR(row.price)}</span>
         </p>
         <p className="mt-3 text-[13px] font-semibold text-text-muted">Seller</p>
         <p className="mt-1 break-all text-text-muted">{row.freelancer.email}</p>
       </div>
       <div>
         <p className="text-[13px] font-semibold text-text-muted">Submitted</p>
-        <p className="mt-1 font-mono text-[13px] text-text-muted">
-          {new Date(row.createdAt).toLocaleString("en-IN", {
+        <p className="tabular mt-1 text-[13px] text-text-muted">
+          {new Date(row.createdAt).toLocaleDateString("en-IN", {
             day: "numeric",
             month: "short",
             year: "numeric",
@@ -89,7 +90,7 @@ function ServiceDetail({ row }: { row: AdminServiceRow }) {
         )}
         {row.imageUrls.length > 0 && !resolvePublicImage(row.imageUrls[0]) && (
           <p className="mt-1.5 text-[13px] text-text-subtle">
-            Keys stored — set NEXT_PUBLIC_S3_PUBLIC_BASE for previews.
+            Keys stored. Set NEXT_PUBLIC_S3_PUBLIC_BASE for previews.
           </p>
         )}
       </div>
@@ -196,10 +197,18 @@ export function AdminServices() {
     });
   }, [rows, filter]);
 
-  const pendingCount = useMemo(
-    () => rows?.filter((r) => r.status === "PENDING_REVIEW").length ?? 0,
-    [rows],
-  );
+  const filterCounts = useMemo(() => {
+    const list = rows ?? [];
+    const count = (status: Filter) =>
+      status === "ALL" ? list.length : list.filter((r) => r.status === status).length;
+    return {
+      PENDING_REVIEW: count("PENDING_REVIEW"),
+      ALL: count("ALL"),
+      ACTIVE: count("ACTIVE"),
+      REJECTED: count("REJECTED"),
+      PAUSED: count("PAUSED"),
+    } as Record<Filter, number>;
+  }, [rows]);
 
   async function confirm() {
     if (!target) return;
@@ -222,7 +231,7 @@ export function AdminServices() {
     return (
       <div className="space-y-3" aria-label="Loading services">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="skeleton-shimmer h-24 rounded-[16px]" />
+          <div key={i} className="skeleton-shimmer h-24 rounded-[10px]" />
         ))}
       </div>
     );
@@ -242,20 +251,14 @@ export function AdminServices() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter services">
         {filters.map((f) => (
-          <button
+          <Chip
             key={f.value}
-            type="button"
+            selected={filter === f.value}
+            count={filterCounts[f.value]}
             onClick={() => setFilter(f.value)}
-            aria-pressed={filter === f.value}
-            className={`min-h-[44px] rounded-full px-4 text-sm font-semibold transition ${
-              filter === f.value
-                ? "bg-text text-white"
-                : "border border-border bg-surface text-text-muted hover:border-border-strong hover:text-text"
-            }`}
           >
             {f.label}
-            {f.value === "PENDING_REVIEW" && pendingCount > 0 ? ` · ${pendingCount}` : ""}
-          </button>
+          </Chip>
         ))}
       </div>
 
@@ -271,45 +274,62 @@ export function AdminServices() {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden overflow-hidden rounded-[16px] border border-border bg-surface md:block">
+          <div className="hidden overflow-x-auto rounded-[10px] border border-border bg-surface md:block">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-[13px] text-text-muted">
-                  <th scope="col" className="px-5 py-3 font-medium">Service</th>
-                  <th scope="col" className="px-5 py-3 font-medium">Seller</th>
-                  <th scope="col" className="px-5 py-3 font-medium">Price</th>
-                  <th scope="col" className="px-5 py-3 font-medium">Status</th>
-                  <th scope="col" className="px-5 py-3 text-right font-medium">Actions</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Service</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Seller</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Price</th>
+                  <th scope="col" className="px-4 py-3 font-medium">Status</th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {visible.map((r) => (
                   <Fragment key={r.id}>
                     <tr className="align-top">
-                      <td className="max-w-[320px] px-5 py-4">
+                      <td className="max-w-[360px] px-4 py-4">
                         <button
                           type="button"
                           onClick={() => toggle(r.id)}
                           aria-expanded={expanded[r.id] ?? false}
-                          className="min-h-[44px] py-1 text-left font-semibold text-primary hover:underline"
+                          className="inline-flex min-h-[44px] items-center gap-1.5 py-1 text-left font-semibold text-primary hover:underline"
                         >
                           {r.title}
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            aria-hidden
+                            className={`shrink-0 transition-transform ${expanded[r.id] ? "rotate-180" : ""}`}
+                          >
+                            <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
                         </button>
                         <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-text-muted">{r.description}</p>
-                        <p className="mt-1 font-mono text-xs text-text-subtle">{r.id.slice(0, 8)}</p>
+                        <p className="mt-1 text-xs text-text-subtle">
+                          {r.id.slice(0, 8)} · submitted{" "}
+                          {new Date(r.createdAt).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </p>
                       </td>
-                      <td className="px-5 py-4 text-text-muted">{r.freelancer.email}</td>
-                      <td className="px-5 py-4 font-mono text-text">{formatINR(r.price)}</td>
-                      <td className="px-5 py-4"><StatusBadge status={r.status} /></td>
-                      <td className="px-5 py-4">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => toggle(r.id)}>
-                            {expanded[r.id] ? "Hide" : "Details"}
-                          </Button>
+                      <td className="px-4 py-4 text-[13px] text-text-muted">
+                        <span className="block max-w-[180px] truncate" title={r.freelancer.email}>
+                          {r.freelancer.email}
+                        </span>
+                      </td>
+                      <td className="tabular px-4 py-4 whitespace-nowrap text-text">{formatINR(r.price)}</td>
+                      <td className="px-4 py-4"><StatusBadge status={r.status} /></td>
+                      <td className="px-4 py-4">
+                        <div className="flex flex-nowrap justify-end gap-2">
                           {moderationsFor(r.status).map((m) => (
                             <Button
                               key={m.label}
-                              variant={m.action === "REJECTED" ? "danger" : "secondary"}
+                              variant={m.action === "REJECTED" ? "danger" : "primary"}
                               size="sm"
                               onClick={() => setTarget({ row: r, action: m.action })}
                             >
@@ -326,7 +346,7 @@ export function AdminServices() {
                     </tr>
                     {expanded[r.id] && (
                       <tr className="bg-surface-soft/40">
-                        <td colSpan={5} className="px-5 py-4">
+                        <td colSpan={5} className="px-4 py-4">
                           <ServiceDetail row={r} />
                         </td>
                       </tr>
@@ -340,14 +360,22 @@ export function AdminServices() {
           {/* Mobile stacked cards */}
           <ul className="space-y-3 md:hidden">
             {visible.map((r) => (
-              <li key={r.id} className="rounded-[16px] border border-border bg-surface p-4">
+              <li key={r.id} className="rounded-[10px] border border-border bg-surface p-4">
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-[15px] font-semibold text-text">{r.title}</p>
                   <StatusBadge status={r.status} />
                 </div>
                 <p className="mt-1 line-clamp-3 text-sm leading-6 text-text-muted">{r.description}</p>
-                <p className="mt-2 text-[13px] text-text-muted">{r.freelancer.email}</p>
-                <p className="mt-1 font-mono text-sm text-text">{formatINR(r.price)}</p>
+                <p className="mt-1 text-[13px] text-text-muted">
+                  {r.freelancer.email} · submitted{" "}
+                  {new Date(r.createdAt).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </p>
+                <p className="tabular mt-1 text-sm font-semibold text-text">
+                  {formatINR(r.price)}
+                </p>
                 <button
                   type="button"
                   onClick={() => toggle(r.id)}
@@ -365,7 +393,7 @@ export function AdminServices() {
                   {moderationsFor(r.status).map((m) => (
                     <Button
                       key={m.label}
-                      variant={m.action === "REJECTED" ? "danger" : "secondary"}
+                      variant={m.action === "REJECTED" ? "danger" : "primary"}
                       size="sm"
                       onClick={() => setTarget({ row: r, action: m.action })}
                     >
@@ -375,7 +403,7 @@ export function AdminServices() {
                 </div>
                 {moderationsFor(r.status).length === 0 && (
                   <p className="mt-3 text-[13px] text-text-subtle">
-                    Paused by the seller — no moderation needed.
+                    Paused by the seller. No moderation needed.
                   </p>
                 )}
               </li>
@@ -392,9 +420,9 @@ export function AdminServices() {
       >
         {target && (
           <div className="space-y-4">
-            <div className="rounded-[12px] border border-border bg-surface-soft/60 p-4">
+            <div className="rounded-[10px] border border-border bg-surface-soft/60 p-4">
               <p className="text-sm font-semibold text-text">{target.row.title}</p>
-              <p className="mt-1 font-mono text-[13px] text-text-muted">
+              <p className="tabular mt-1 text-[13px] text-text-muted">
                 {formatINR(target.row.price)} · {target.row.freelancer.email}
               </p>
             </div>

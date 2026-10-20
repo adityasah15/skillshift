@@ -1,11 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { ApiRequestError } from "@/lib/api-client";
 import { authApi } from "@/lib/api/auth";
@@ -21,6 +21,60 @@ const TX_LABEL: Record<Transaction["type"], string> = {
   ESCROW_RELEASE: "Released to freelancer",
   ESCROW_REFUND: "Refunded to wallet",
   WITHDRAWAL: "Withdrawal",
+};
+
+const TX_STYLE: Record<
+  Transaction["type"],
+  { tone: string; bg: string; icon: ReactNode }
+> = {
+  DEPOSIT: {
+    tone: "text-success",
+    bg: "bg-success-soft",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+        <path d="M8 2.5v7M5.2 6.8L8 9.6l2.8-2.8M3 11.5v1.2c0 .4.3.8.8.8h8.4c.5 0 .8-.4.8-.8v-1.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  ESCROW_HOLD: {
+    tone: "text-warning",
+    bg: "bg-warning-soft",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+        <path d="M8 1.8l5 2v3.7c0 3.2-2.1 5.6-5 6.7-2.9-1.1-5-3.5-5-6.7V3.8l5-2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+        <path d="M6 7.2v-1a2 2 0 014 0v1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        <rect x="5.4" y="7.2" width="5.2" height="3.6" rx="0.9" stroke="currentColor" strokeWidth="1.4" />
+      </svg>
+    ),
+  },
+  ESCROW_RELEASE: {
+    tone: "text-success",
+    bg: "bg-success-soft",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+        <path d="M8 13.5v-7M5.2 9.2L8 6.4l2.8 2.8M3 4.5V3.3c0-.4.3-.8.8-.8h8.4c.5 0 .8.4.8.8v1.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  ESCROW_REFUND: {
+    tone: "text-primary",
+    bg: "bg-primary-soft",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+        <path d="M3.5 5h6a3.5 3.5 0 110 7H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M5.8 2.8L3.3 5l2.5 2.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  WITHDRAWAL: {
+    tone: "text-text-muted",
+    bg: "bg-surface-soft",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+        <path d="M8 13.5v-7M5.2 9.2L8 6.4l2.8 2.8M3 4.5V3.3c0-.4.3-.8.8-.8h8.4c.5 0 .8.4.8.8v1.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
 };
 
 function toPaise(rupees: string): number | null {
@@ -73,12 +127,7 @@ function MoneyDialog({
     <Modal
       open={open}
       onClose={onClose}
-      title={kind === "deposit" ? "Add test funds" : "Withdraw funds"}
-      description={
-        kind === "deposit"
-          ? "Top up your available balance instantly."
-          : "Move available balance out of SkillShift."
-      }
+      title={kind === "deposit" ? "Add funds" : "Withdraw funds"}
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Input
@@ -94,10 +143,10 @@ function MoneyDialog({
           placeholder="1000"
           hint={paise !== null ? `= ${formatINR(paise)} added to your balance.` : undefined}
         />
-        <p className="rounded-[14px] bg-surface-soft px-4 py-3 text-[13px] leading-6 text-text-muted">
+        <p className="rounded-[10px] bg-surface-soft px-4 py-3 text-[13px] leading-6 text-text-muted">
           {kind === "deposit"
-            ? "Test mode — no real money moves. Funds appear as Available immediately."
-            : "Only available balance can be withdrawn — amounts held in escrow stay protected until orders complete."}
+            ? "Added funds are available immediately."
+            : "Only available balance can be withdrawn. Amounts held in escrow stay protected until orders complete."}
         </p>
         {error && (
           <p role="alert" className="text-sm leading-6 text-danger">
@@ -121,18 +170,40 @@ function TransactionRow({ tx }: { tx: Transaction }) {
   const date = new Date(tx.createdAt).toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
-    year: "numeric",
   });
   const outgoing = tx.type === "WITHDRAWAL" || tx.type === "ESCROW_HOLD";
+  const style = TX_STYLE[tx.type];
+
   return (
-    <li className="flex items-center justify-between gap-3 rounded-[14px] border border-border bg-surface px-4 py-3.5">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold">{TX_LABEL[tx.type]}</p>
-        <p className="mt-0.5 truncate text-[13px] text-text-subtle">
-          {tx.description} · {date}
+    <li className="flex items-start gap-3 rounded-[10px] border border-border bg-surface px-4 py-3.5">
+      <span
+        aria-hidden
+        className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${style.bg} ${style.tone}`}
+      >
+        {style.icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-text">{TX_LABEL[tx.type]}</p>
+        <p className="mt-0.5 line-clamp-2 text-[13px] leading-5 text-text-muted">
+          {tx.description}
+        </p>
+        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-text-subtle">
+          <span>{date}</span>
+          {tx.orderId && (
+            <Link
+              href={`/orders/${tx.orderId}`}
+              className="font-semibold text-primary hover:underline"
+            >
+              View order
+            </Link>
+          )}
         </p>
       </div>
-      <p className={`shrink-0 font-mono text-[15px] font-bold ${outgoing ? "text-text-muted" : "text-success"}`}>
+      <p
+        className={`tabular shrink-0 text-[15px] font-bold ${
+          outgoing ? "text-danger" : "text-success"
+        }`}
+      >
         {outgoing ? "−" : "+"}
         {formatINR(tx.amount)}
       </p>
@@ -178,10 +249,12 @@ export function WalletDashboard() {
               orders
                 .filter(
                   (o) =>
-                    o.roleLabel === "Client order" &&
-                    (o.status === "IN_PROGRESS" ||
-                      o.status === "DELIVERED" ||
-                      o.status === "DISPUTED"),
+                    (o.roleLabel === "Client order" &&
+                      o.status !== "COMPLETED" &&
+                      o.status !== "CANCELLED" &&
+                      o.status !== "REFUNDED") ||
+                    (o.roleLabel === "Freelancer order" &&
+                      (o.status === "IN_PROGRESS" || o.status === "DELIVERED")),
                 )
                 .reduce((sum, o) => sum + o.price, 0),
             );
@@ -203,6 +276,10 @@ export function WalletDashboard() {
     };
   }, [token, attempt]);
 
+  useEffect(() => {
+    if (role === "ADMIN") router.replace("/admin");
+  }, [role, router]);
+
   if (token === null) {
     return (
       <EmptyState
@@ -216,11 +293,17 @@ export function WalletDashboard() {
   if (loading) {
     return (
       <div className="space-y-4" aria-label="Loading wallet">
-        <div className="skeleton-shimmer h-44 rounded-[18px]" />
-        <div className="skeleton-shimmer h-14 rounded-[14px]" />
-        <div className="skeleton-shimmer h-14 rounded-[14px]" />
+        <div className="skeleton-shimmer h-40 rounded-[10px]" />
+        <div className="skeleton-shimmer h-24 rounded-[10px]" />
+        <div className="skeleton-shimmer h-16 rounded-[10px]" />
+        <div className="skeleton-shimmer h-16 rounded-[10px]" />
       </div>
     );
+  }
+
+  // Admins moderate the marketplace and never hold funds.
+  if (role === "ADMIN") {
+    return <div className="skeleton-shimmer h-40 rounded-[10px]" aria-label="Redirecting" />;
   }
 
   if (failed || balance === null) {
@@ -233,40 +316,92 @@ export function WalletDashboard() {
     );
   }
 
-  const heldLine = held;
+  const releasedTotal = transactions
+    .filter((tx) => tx.type === "ESCROW_RELEASE")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+  const refundedTotal = transactions
+    .filter((tx) => tx.type === "ESCROW_REFUND")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+  const third =
+    role === "FREELANCER"
+      ? {
+          label: "Released to you",
+          value: releasedTotal,
+          note: "Recorded payouts from completed orders.",
+        }
+      : role === "CLIENT"
+        ? {
+            label: "Refunded to you",
+            value: refundedTotal,
+            note: "Returned from cancelled or disputed orders.",
+          }
+        : null;
+
+  const groups = new Map<string, Transaction[]>();
+  for (const tx of transactions) {
+    const label = new Date(tx.createdAt).toLocaleDateString("en-IN", {
+      month: "long",
+      year: "numeric",
+    });
+    const list = groups.get(label) ?? [];
+    list.push(tx);
+    groups.set(label, list);
+  }
+  const grouped = [...groups.entries()].sort(
+    (a, b) =>
+      +new Date(b[1][0]?.createdAt ?? 0) - +new Date(a[1][0]?.createdAt ?? 0),
+  );
 
   return (
     <div>
-      <section aria-label="Balance" className="rounded-[18px] border border-border bg-surface p-6">
+      <section aria-label="Available balance" className="rounded-[10px] border border-border bg-surface p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-[13px] text-text-subtle">Available in wallet</p>
-            <p className="text-3xl font-mono font-bold break-words sm:text-4xl">{formatINR(balance)}</p>
-            {heldLine !== null && heldLine > 0 && (
-              <p className="mt-1.5 text-sm font-medium text-warning">
-                + {formatINR(heldLine)} held in escrow across open orders
-              </p>
-            )}
-            <p className="mt-2 text-[13px] text-text-muted">Test mode — no real money moves.</p>
+            <p className="text-[13px] text-text-subtle">Available</p>
+            <p className="tabular mt-1 text-3xl font-bold break-words sm:text-4xl">
+              {formatINR(balance)}
+            </p>
+            <p className="mt-1.5 text-[13px] text-text-muted">
+              {role === "FREELANCER" ? "Ready to withdraw." : "Ready to spend or withdraw."}
+            </p>
           </div>
-          <StatusBadge status="ACTIVE" />
-        </div>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          {role !== "ADMIN" && (
-            <Button onClick={() => setDialog("deposit")}>Add funds</Button>
-          )}
-          {role === "FREELANCER" || role === "CLIENT" || role === null ? (
+          <div className="flex flex-wrap gap-2">
+            {role !== "FREELANCER" && (
+              <Button onClick={() => setDialog("deposit")}>Add funds</Button>
+            )}
             <Button variant="secondary" onClick={() => setDialog("withdraw")}>
               Withdraw
             </Button>
-          ) : (
-            <p className="self-center text-[13px] text-text-muted">
-              Admin accounts don’t hold funds — balances live on client and
-              freelancer accounts.
-            </p>
-          )}
+          </div>
         </div>
       </section>
+
+      <div className={`mt-4 grid gap-4 ${third ? "sm:grid-cols-2" : ""}`}>
+        <div className="rounded-[10px] border border-border bg-surface p-5">
+          <p className="text-[13px] text-text-subtle">
+            {role === "FREELANCER" ? "In escrow for your orders" : "Held in escrow"}
+          </p>
+          <p className="tabular mt-1 text-2xl font-bold">
+            {held === null ? "-" : formatINR(held)}
+          </p>
+          <p className="mt-1 text-[12px] leading-5 text-text-muted">
+            {role === "FREELANCER"
+              ? "Releases when clients approve deliveries."
+              : "Protected across your open orders."}
+          </p>
+        </div>
+        {third && (
+          <div className="rounded-[10px] border border-border bg-surface p-5">
+            <p className="text-[13px] text-text-subtle">{third.label}</p>
+            <p className="tabular mt-1 text-2xl font-bold">
+              {formatINR(third.value)}
+            </p>
+            <p className="mt-1 text-[12px] leading-5 text-text-muted">
+              {third.note}
+            </p>
+          </div>
+        )}
+      </div>
 
       <section aria-label="Transactions" className="mt-6">
         <h2 className="text-lg font-semibold">History</h2>
@@ -274,15 +409,24 @@ export function WalletDashboard() {
           <div className="mt-3">
             <EmptyState
               title="No transactions yet"
-              body="Deposits, escrow holds, releases, and withdrawals will appear here with clear labels."
+              body="Your deposits, escrow holds, releases, and withdrawals will appear here."
             />
           </div>
         ) : (
-          <ul className="mt-3 space-y-2.5">
-            {transactions.map((t) => (
-              <TransactionRow key={t.id} tx={t} />
+          <div className="mt-1">
+            {grouped.map(([month, list]) => (
+              <section key={month} aria-label={month} className="mt-5">
+                <h3 className="text-[12px] font-semibold text-text-subtle">
+                  {month}
+                </h3>
+                <ul className="mt-2 space-y-2">
+                  {list.map((tx) => (
+                    <TransactionRow key={tx.id} tx={tx} />
+                  ))}
+                </ul>
+              </section>
             ))}
-          </ul>
+          </div>
         )}
       </section>
 

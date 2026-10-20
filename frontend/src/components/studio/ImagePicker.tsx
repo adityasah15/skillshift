@@ -71,7 +71,7 @@ export function ImagePicker({
       {files.length > 0 && (
         <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
           {files.map((f) => (
-            <li key={`${f.name}-${f.size}`} className="relative overflow-hidden rounded-[12px] border border-border">
+            <li key={`${f.name}-${f.size}`} className="relative overflow-hidden rounded-[10px] border border-border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={URL.createObjectURL(f)}
