@@ -222,10 +222,12 @@ Sign in with any of the seeded accounts:
 | ---------- | -------------------------- | ---------- |
 | Client     | `client.one@skillshift.demo` | `Demo1234!` |
 | Client     | `client.two@skillshift.demo` | `Demo1234!` |
+| Client     | `priya@skillshift.demo`      | `Demo1234!` |
+| Client     | `daniel@skillshift.demo`     | `Demo1234!` |
 | Freelancer | `maya@skillshift.demo`       | `Demo1234!` |
 | Freelancer | `noah@skillshift.demo`       | `Demo1234!` |
 
-The demo is seeded with a 27-service catalog, funded wallets, active orders, and reviews. Payments run in test mode — no real money moves. These are shared accounts on a public deployment: don't enter personal or sensitive data, and expect demo data to be reset.
+See [`docs/demo-data.md`](docs/demo-data.md) for the full account list and dataset details. The demo is seeded with 27 live services across 33 listings (4 awaiting moderation), plus funded wallets, active orders, and reviews. Payments run in test mode — no real money moves. These are shared accounts on a public deployment: don't enter personal or sensitive data, and expect demo data to be reset.
 
 ## Getting started
 

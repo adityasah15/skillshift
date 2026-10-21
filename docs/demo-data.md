@@ -16,7 +16,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres re
 docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U postgres -d skillshift < backend/prisma/demo-seed.sql
 ```
 
-The seed is safe to re-run: it uses fixed IDs and upserts, so it refreshes the demo records instead of creating duplicates, and it never overwrites password hashes.
+The seed is safe to re-run: it uses fixed IDs and upserts, so it refreshes the demo-owned rows in place instead of creating duplicates. It never overwrites password hashes, and user-created records beyond the seed are left untouched.
 
 ## Demo accounts
 
@@ -26,6 +26,8 @@ Every demo account uses the password `Demo1234!`.
 | ---------- | ---------------------------- |
 | Client     | `client.one@skillshift.demo` |
 | Client     | `client.two@skillshift.demo` |
+| Client     | `priya@skillshift.demo`      |
+| Client     | `daniel@skillshift.demo`     |
 | Freelancer | `maya@skillshift.demo`       |
 | Freelancer | `noah@skillshift.demo`       |
 | Freelancer | `zara@skillshift.demo`       |
@@ -44,27 +46,32 @@ Three accounts demonstrate the complete order lifecycle end to end — order →
 
 | Role       | Email                        | What it brings to the demo |
 | ---------- | ---------------------------- | -------------------------- |
-| Client     | `client.one@skillshift.demo` | Funded wallet (₹1,25,003) and orders across in-progress, delivered, completed, and cancelled states |
-| Freelancer | `maya@skillshift.demo`       | Four live services plus one awaiting moderation, including "Brand identity starter kit" (₹29,999), and completed-order history |
-| Admin      | `admin@skillshift.demo`      | Platform analytics, the moderation queue, and dispute resolution — release escrow to the freelancer or refund the client |
+| Client     | `client.one@skillshift.demo` | Funded wallet (₹1,82,011) and orders spanning in-progress, delivered, completed, cancelled, and refunded states |
+| Freelancer | `maya@skillshift.demo`       | Four live services plus two awaiting moderation, including "Brand identity starter kit" (₹29,999), and a deep completed-order history |
+| Admin      | `admin@skillshift.demo`      | Platform analytics, a four-item moderation queue, and dispute resolution — release escrow to the freelancer or refund the client |
 
 ### Suggested demo flow
 
 1. **Order** — as `client.one`, order Maya's "Brand identity starter kit" (₹29,999 / `2999900` minor units) with requirements. The order starts `IN_PROGRESS` and the wallet shows the escrow hold. The pre-seeded in-progress order between the same two accounts works as a shortcut.
 2. **Deliver** — as `maya`, deliver from the Order Cockpit with a note. The order becomes `DELIVERED` and a 7-day auto-complete clock starts.
-3. **Complete** — as `client.one`, approve the delivery. Escrow is released to Maya, both parties are notified, and the client can leave a review afterwards.
+3. **Complete** — as `client.one`, approve the delivery. Escrow is released to Maya, Maya is notified, and the client can leave a review afterwards.
 4. **Dispute variant** — instead of completing, the client can open a dispute on a delivered order (order becomes `DISPUTED`, escrow stays held). As `admin`, resolve it under `/admin/disputes`: `RESOLVED_FREELANCER` releases escrow to the freelancer, `RESOLVED_CLIENT` refunds the client.
-5. **Admin extras** — approve or reject Maya's "Design system audit" listing in the moderation queue, and resolve the pre-seeded open dispute between `client.two` and `zara`.
+5. **Admin extras** — approve or reject one of Maya's two pending listings in the moderation queue, and resolve the pre-seeded open dispute between `client.two` and `zara`.
 
 > Sign the three accounts in through separate browser profiles or incognito windows: the refresh cookie is per-browser, so two accounts in one profile overwrite each other's session.
 
 ## What the dataset contains
 
-- 11 accounts: 2 clients, 8 freelancers, and 1 admin
-- 30 service listings across all moderation states — 27 of them live in the public catalog
-- 8 orders spanning in-progress, delivered, completed, disputed, and cancelled states
-- Wallets with deposits, escrow holds, releases, refunds, and withdrawals
-- Reviews, notifications, chat messages, disputes, escrows, and audit records
+- 13 accounts: 4 clients, 8 freelancers, and 1 admin
+- 33 service listings across all moderation states — 27 live, 4 awaiting moderation, 1 rejected, and 1 paused
+- 39 orders spanning in-progress, delivered, completed, disputed, cancelled, and refunded states
+- 32 reviews, with every live service reviewed at least once
+- 2 disputes: one open and one resolved in the client's favour
+- 13 conversations and 36 chat messages
+- 24 notifications and 101 audit records on one chronological timeline
+- Wallets with deposits, escrow holds, releases, refunds, and withdrawals whose ledgers reconcile to the available balances
+
+Freelancer `rating` and `totalReviews` are recomputed from the `Review` rows at the end of the seed, so reputation and review history always agree.
 
 ## Local URLs
 
