@@ -231,7 +231,7 @@ See [`docs/demo-data.md`](docs/demo-data.md) for the full account list and datas
 
 ## Getting started
 
-**Prerequisites:** Node.js 20+ and Docker.
+**Prerequisites:** Node.js 22.12+ (24 LTS recommended) and Docker.
 
 ```bash
 git clone https://github.com/adityasah15/skillshift.git

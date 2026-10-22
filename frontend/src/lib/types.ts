@@ -1,7 +1,7 @@
 /**
  * Contract-driven API types.
- * Reflect actual controller payloads (see docs/frontend-context.md),
- * not 1:1 Prisma models. Money = integer minor units (paise).
+ * Reflect actual controller payloads, not 1:1 Prisma models.
+ * Money = integer minor units (paise).
  */
 
 export type Role = "CLIENT" | "FREELANCER" | "ADMIN";
